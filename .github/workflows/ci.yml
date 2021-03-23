@@ -43,5 +43,5 @@ jobs:
       - name: Typecheck
         run: deno cache deployctl.ts
 
-      # - name: Run tests
-      #   run: deno test -A
+      - name: Run tests
+        run: deno test -A

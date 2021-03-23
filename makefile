@@ -7,3 +7,6 @@ fmt:
 
 lint:
 	deno lint
+
+test:
+	deno test -A

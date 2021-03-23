@@ -57,6 +57,6 @@ switch (subcommand) {
     await typesSubcommand(args);
     break;
   default:
-    console.log(help);
+    console.error(help);
     Deno.exit(1);
 }

@@ -15,9 +15,9 @@ export async function analyzeDeps(specifier: URL): Promise<string[]> {
     ],
     stdout: "piped",
   });
+  const raw = await proc.output();
   const status = await proc.status();
   if (!status) throw new Error("Failed to analyze dependencies.");
-  const raw = await proc.output();
   const modules: Array<{ specifier: string }> =
     JSON.parse(new TextDecoder().decode(raw)).modules;
   return modules.map((module) => module.specifier)
