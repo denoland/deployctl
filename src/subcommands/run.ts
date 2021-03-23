@@ -18,15 +18,17 @@ USAGE:
     deployctl run [OPTIONS] <ENTRYPOINT>
 
 OPTIONS:
+        --addr=<addr>   The address to listen on (default ":8080")
     -h, --help          Prints help information
         --inspect       Activate inspector on 127.0.0.1:9229
-        --libs <libs>   The deploy type libs that are loaded (default "ns,window,fetchevent")
+        --libs=<libs>   The deploy type libs that are loaded (default "ns,window,fetchevent")
         --no-check      Skip type checking modules
     -r, --reload        Reload source code cache (recompile TypeScript)
         --watch         Watch for file changes and restart process automatically
 `;
 
 export interface Args {
+  addr: string;
   help: boolean;
   noCheck: boolean;
   inspect: boolean;
@@ -43,6 +45,7 @@ export interface Args {
 export default async function (rawArgs: Record<string, any>): Promise<void> {
   const libs = String(rawArgs.libs).split(",");
   const args: Args = {
+    addr: String(rawArgs.addr),
     help: !!rawArgs.help,
     noCheck: !rawArgs.check,
     inspect: !!rawArgs.inspect,
@@ -94,7 +97,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
 
   const opts = {
     entrypoint: entrypointSpecifier,
-    listenAddress: ":8080",
+    listenAddress: args.addr,
     inspect: args.inspect,
     noCheck: args.noCheck,
     reload: args.reload,
