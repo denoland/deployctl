@@ -46,15 +46,15 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     ? rawArgs._[0]
     : null;
   if (args.help) {
-    console.log(help);
+    console.error(help);
     Deno.exit(1);
   }
   if (entrypoint === null) {
-    console.log(help);
+    console.error(help);
     error("No entrypoint specifier given.");
   }
   if (rawArgs._.length > 1) {
-    console.log(help);
+    console.error(help);
     error("Too many positional arguments given.");
   }
 
@@ -110,7 +110,7 @@ async function watch(opts: RunOpts) {
     for await (const event of watcher) {
       if (typeof debouncer == "number") clearTimeout(debouncer);
       debouncer = setTimeout(async () => {
-        console.log(yellow(`${event.paths[0]} changed. Restarting...`));
+        console.warn(yellow(`${event.paths[0]} changed. Restarting...`));
         if (proc) {
           proc.close();
         }

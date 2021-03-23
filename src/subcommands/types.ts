@@ -26,11 +26,11 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     help: !!rawArgs.help,
   };
   if (args.help) {
-    console.log(help);
+    console.error(help);
     Deno.exit(1);
   }
   if (rawArgs._.length > 0) {
-    console.log(help);
+    console.error(help);
     error("Too many positional arguments given.");
   }
 
