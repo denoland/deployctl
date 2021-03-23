@@ -37,14 +37,18 @@ const args = parseArgs(Deno.args, {
     "reload": "r",
   },
   boolean: [
-    "help",
     "check",
+    "help",
     "inspect",
     "reload",
     "watch",
   ],
+  string: [
+    "libs",
+  ],
   default: {
     check: true,
+    libs: "ns,window,fetchevent",
   },
 });
 

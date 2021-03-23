@@ -1,7 +1,11 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
 import { tsconfig } from "./tsconfig.ts";
-import { DEPLOY_D_TS_URL } from "./types.ts";
+import {
+  DEPLOY_FETCHEVENT_D_TS_URL,
+  DEPLOY_NS_D_TS_URL,
+  DEPLOY_WINDOW_D_TS_URL,
+} from "./types.ts";
 
 /**
  * This function generates a snippet of code that can be used to run a Deploy
@@ -14,9 +18,18 @@ import { DEPLOY_D_TS_URL } from "./types.ts";
 // use the custom typings. This is done by dynamically importing a _inline_
 // module (base64 data url). This module loads the new type definitions, and
 // statically imports the new user supplied entrypoint.
-function loaderCode(specifier: URL, addr: string) {
-  const loader =
-    `import type {} from "${DEPLOY_D_TS_URL}";import "${specifier}";`;
+function loaderCode(specifier: URL, addr: string, libs: {
+  ns: boolean;
+  window: boolean;
+  fetchevent: boolean;
+}) {
+  let loader = "";
+  if (libs.ns) loader += `import type {} from "${DEPLOY_NS_D_TS_URL}";`;
+  if (libs.window) loader += `import type {} from "${DEPLOY_WINDOW_D_TS_URL}";`;
+  if (libs.fetchevent) {
+    loader += `import type {} from "${DEPLOY_FETCHEVENT_D_TS_URL}";`;
+  }
+  loader += `import "${specifier}";`;
 
   const runtimeBundleUrl = new URL(
     "../runtime.bundle.js",
@@ -40,6 +53,12 @@ export interface RunOpts {
   inspect: boolean;
   /** If modules should be reloaded. */
   reload: boolean;
+
+  libs: {
+    ns: boolean;
+    window: boolean;
+    fetchevent: boolean;
+  };
 }
 
 /**
@@ -53,7 +72,7 @@ export async function run(opts: RunOpts): Promise<Deno.Process> {
   if (opts.inspect) args.push("--inspect");
   if (opts.reload) args.push("--reload");
 
-  const loader = loaderCode(opts.entrypoint, opts.listenAddress);
+  const loader = loaderCode(opts.entrypoint, opts.listenAddress, opts.libs);
 
   const proc = Deno.run({
     cmd: [Deno.execPath(), "eval", ...args, loader],

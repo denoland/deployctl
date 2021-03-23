@@ -20,6 +20,7 @@ USAGE:
 OPTIONS:
     -h, --help          Prints help information
         --inspect       Activate inspector on 127.0.0.1:9229
+        --libs <libs>   The deploy type libs that are loaded (default "ns,window,fetchevent")
         --no-check      Skip type checking modules
     -r, --reload        Reload source code cache (recompile TypeScript)
         --watch         Watch for file changes and restart process automatically
@@ -31,16 +32,27 @@ export interface Args {
   inspect: boolean;
   reload: boolean;
   watch: boolean;
+  libs: {
+    ns: boolean;
+    window: boolean;
+    fetchevent: boolean;
+  };
 }
 
 // deno-lint-ignore no-explicit-any
 export default async function (rawArgs: Record<string, any>): Promise<void> {
+  const libs = String(rawArgs.libs).split(",");
   const args: Args = {
     help: !!rawArgs.help,
     noCheck: !rawArgs.check,
     inspect: !!rawArgs.inspect,
     reload: !!rawArgs.reload,
     watch: !!rawArgs.watch,
+    libs: {
+      ns: libs.includes("ns"),
+      window: libs.includes("window"),
+      fetchevent: libs.includes("fetchevent"),
+    },
   };
   const entrypoint: string | null = typeof rawArgs._[0] === "string"
     ? rawArgs._[0]
@@ -86,6 +98,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     inspect: args.inspect,
     noCheck: args.noCheck,
     reload: args.reload,
+    libs: args.libs,
   };
   if (args.watch) {
     await watch(opts);

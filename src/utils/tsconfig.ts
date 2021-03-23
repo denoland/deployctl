@@ -1,7 +1,7 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
 const DEPLOY_COMPILER_OPTS: unknown = {
-  lib: [],
+  lib: ["esnext"],
   jsxFactory: "h",
   jsxFragmentFactory: "Fragment",
 };
