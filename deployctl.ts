@@ -44,9 +44,11 @@ const args = parseArgs(Deno.args, {
     "watch",
   ],
   string: [
+    "addr",
     "libs",
   ],
   default: {
+    addr: ":8080",
     check: true,
     libs: "ns,window,fetchevent",
   },
