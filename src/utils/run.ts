@@ -1,11 +1,8 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
+import { toFileUrl } from "../../deps.ts";
 import { tsconfig } from "./tsconfig.ts";
-import {
-  DEPLOY_FETCHEVENT_D_TS_URL,
-  DEPLOY_NS_D_TS_URL,
-  DEPLOY_WINDOW_D_TS_URL,
-} from "./types.ts";
+import { types } from "./types.ts";
 
 interface Libs {
   ns: boolean;
@@ -24,29 +21,33 @@ interface Libs {
 // use the custom typings. This is done by dynamically importing a _inline_
 // module (base64 data url). This module loads the new type definitions, and
 // statically imports the new user supplied entrypoint.
-function runnerCode(specifier: URL, addr: string, libs: Libs): string {
+async function runnerCode(
+  specifier: URL,
+  addr: string,
+  libs: Libs,
+): Promise<string> {
   const runtimeBundleUrl = new URL(
     "../runtime.bundle.js",
     import.meta.url,
   );
-  return `
-    import{serve}from "${runtimeBundleUrl.toString()}";
-    serve("${addr}");
-    await import("${loaderDataUrl(specifier, libs)}");
-  `;
+  return `import{shim}from "${runtimeBundleUrl.toString()}";shim("${addr}");await import("${await loaderDataUrl(
+    specifier,
+    libs,
+  )}");`;
 }
 /**
  * Returns a loader script of the given Deno Deploy script as a Data URL.
  */
-export function loaderDataUrl(
+export async function loaderDataUrl(
   specifier: URL,
   { ns, window, fetchevent }: Libs,
-): string {
+): Promise<string> {
   let loader = "";
-  if (ns) loader += `import type {} from "${DEPLOY_NS_D_TS_URL}";`;
-  if (window) loader += `import type {} from "${DEPLOY_WINDOW_D_TS_URL}";`;
+  const typePaths = await types();
+  if (ns) loader += `import type {} from "${toFileUrl(typePaths.ns)}";`;
+  if (window) loader += `import type {} from "${toFileUrl(typePaths.window)}";`;
   if (fetchevent) {
-    loader += `import type {} from "${DEPLOY_FETCHEVENT_D_TS_URL}";`;
+    loader += `import type {} from "${toFileUrl(typePaths.fetchevent)}";`;
   }
   loader += `import "${specifier}";`;
   return `data:application/typescript;base64,${btoa(loader)}`;
@@ -83,7 +84,11 @@ export async function run(opts: RunOpts): Promise<Deno.Process> {
   if (opts.inspect) args.push("--inspect");
   if (opts.reload) args.push("--reload");
 
-  const runner = runnerCode(opts.entrypoint, opts.listenAddress, opts.libs);
+  const runner = await runnerCode(
+    opts.entrypoint,
+    opts.listenAddress,
+    opts.libs,
+  );
 
   const proc = Deno.run({
     cmd: [Deno.execPath(), "eval", ...args, runner],

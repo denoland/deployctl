@@ -75,3 +75,13 @@ export async function serve(addr) {
     );
   }
 }
+
+export function shim(addr) {
+  const originalAddEventListener = window.addEventListener;
+  window.addEventListener = (type, handler) => {
+    if (type == "fetch") {
+      serve(addr);
+    }
+    originalAddEventListener(type, handler);
+  };
+}

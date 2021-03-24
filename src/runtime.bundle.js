@@ -1421,5 +1421,15 @@ async function serve1(addr1) {
         window.dispatchEvent(new FetchEvent(req, host1));
     }
 }
+function shim1(addr1) {
+    const originalAddEventListener = window.addEventListener;
+    window.addEventListener = (type, handler)=>{
+        if (type == "fetch") {
+            serve1(addr1);
+        }
+        originalAddEventListener(type, handler);
+    };
+}
 export { serve1 as serve };
+export { shim1 as shim };
 
