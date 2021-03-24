@@ -1,5 +1,6 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
+import { toFileUrl } from "../../deps.ts";
 import { tsconfig } from "./tsconfig.ts";
 import { types } from "./types.ts";
 
@@ -43,10 +44,10 @@ export async function loaderDataUrl(
 ): Promise<string> {
   let loader = "";
   const typePaths = await types();
-  if (ns) loader += `import type {} from "file://${typePaths.ns}";`;
-  if (window) loader += `import type {} from "file://${typePaths.window}";`;
+  if (ns) loader += `import type {} from "${toFileUrl(typePaths.ns)}";`;
+  if (window) loader += `import type {} from "${toFileUrl(typePaths.window)}";`;
   if (fetchevent) {
-    loader += `import type {} from "file://${typePaths.fetchevent}";`;
+    loader += `import type {} from "${toFileUrl(typePaths.fetchevent)}";`;
   }
   loader += `import "${specifier}";`;
   return `data:application/typescript;base64,${btoa(loader)}`;
