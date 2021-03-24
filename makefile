@@ -9,4 +9,4 @@ lint:
 	deno lint --unstable
 
 test:
-	deno test -A
+	deno test -A --unstable

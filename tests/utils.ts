@@ -1,3 +1,5 @@
+import { BufReader } from "./deps.ts";
+
 export interface Permissions {
   net: boolean;
   read: boolean;
@@ -16,22 +18,26 @@ export function deployctl(
     run: true,
   },
 ): Deno.Process {
-  const cmd = [
+  const deno = [
     Deno.execPath(),
     "run",
     "--no-check",
   ];
 
-  if (permissions?.net) cmd.push("--allow-net");
-  if (permissions?.read) cmd.push("--allow-read");
-  if (permissions?.write) cmd.push("--allow-write");
-  if (permissions?.env) cmd.push("--allow-env");
-  if (permissions?.run) cmd.push("--allow-run");
+  if (permissions?.net) deno.push("--allow-net");
+  if (permissions?.read) deno.push("--allow-read");
+  if (permissions?.write) deno.push("--allow-write");
+  if (permissions?.env) deno.push("--allow-env");
+  if (permissions?.run) deno.push("--allow-run");
 
-  cmd.push(new URL("../deployctl.ts", import.meta.url).toString());
+  deno.push(new URL("../deployctl.ts", import.meta.url).toString());
+
+  const cmd = Deno.build.os == "linux"
+    ? ["bash", "-c", [...deno, ...args].join(" ")]
+    : [...deno, ...args];
 
   return Deno.run({
-    cmd: [...cmd, ...args],
+    cmd,
     stdin: "null",
     stdout: "piped",
     stderr: "piped",
@@ -62,12 +68,36 @@ export function test(
 export async function output(
   proc: Deno.Process,
 ): Promise<[string, string, Deno.ProcessStatus]> {
-  const stdout = await proc.output();
-  const stderr = await proc.stderrOutput();
-  const status = await proc.status();
+  const [status, stdout, stderr] = await Promise.all([
+    proc.status(),
+    proc.output(),
+    proc.stderrOutput(),
+  ]);
   return [
     new TextDecoder().decode(stdout),
     new TextDecoder().decode(stderr),
     status,
   ];
+}
+
+export async function waitReady(proc: Deno.Process) {
+  const stderr = new BufReader(proc.stderr!);
+  while (true) {
+    const line = await stderr.readString("\n");
+    if (line?.includes("Listening on")) {
+      return;
+    }
+    if (line?.includes("error")) {
+      throw new Error("Subprocess failed");
+    }
+  }
+}
+
+export async function kill(proc: Deno.Process) {
+  if (Deno.build.os == "linux" || Deno.build.os == "darwin") {
+    const pkill = Deno.run({ cmd: ["pkill", "-2", "-P", String(proc.pid)] });
+    await pkill.status();
+    pkill.close();
+  }
+  proc.kill(2);
 }
