@@ -1415,7 +1415,7 @@ async function serve1(addr1) {
     }
     const listener1 = Deno.listen(addr1);
     const host1 = `${listener1.addr.hostname}:${listener1.addr.port}`;
-    console.log(green(`Listening on http://${host1}`));
+    console.error(green(`Listening on http://${host1}`));
     const server = new Server(listener1);
     for await (const req of server){
         window.dispatchEvent(new FetchEvent(req, host1));
