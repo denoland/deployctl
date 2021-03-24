@@ -112,13 +112,13 @@ interface CheckOpts {
 
 async function check({ entrypoint, reload, libs }: CheckOpts): Promise<number> {
   const tsconfigPath = await tsconfig();
-  const dataUrl = loaderDataUrl(entrypoint, libs);
-  const args = [];
+  const dataUrl = await loaderDataUrl(entrypoint, libs);
+  const args = ["--config", tsconfigPath];
   if (reload) {
     args.push("--reload");
   }
   // TODO(kt3k): Filter "Check data:..." lines
-  const p = await Deno.run({
+  const p = Deno.run({
     cmd: [Deno.execPath(), "cache", ...args, dataUrl],
   });
   const [status] = await Promise.all([p.status()]);

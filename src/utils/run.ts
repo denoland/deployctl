@@ -20,16 +20,19 @@ interface Libs {
 // use the custom typings. This is done by dynamically importing a _inline_
 // module (base64 data url). This module loads the new type definitions, and
 // statically imports the new user supplied entrypoint.
-function runnerCode(specifier: URL, addr: string, libs: Libs): string {
+async function runnerCode(
+  specifier: URL,
+  addr: string,
+  libs: Libs,
+): Promise<string> {
   const runtimeBundleUrl = new URL(
     "../runtime.bundle.js",
     import.meta.url,
   );
-  return `
-    import{serve}from "${runtimeBundleUrl.toString()}";
-    serve("${addr}");
-    await import("${loaderDataUrl(specifier, libs)}");
-  `;
+  return `import{shim}from "${runtimeBundleUrl.toString()}";shim("${addr}");await import("${await loaderDataUrl(
+    specifier,
+    libs,
+  )}");`;
 }
 /**
  * Returns a loader script of the given Deno Deploy script as a Data URL.
@@ -43,7 +46,7 @@ export async function loaderDataUrl(
   if (ns) loader += `import type {} from "file://${typePaths.ns}";`;
   if (window) loader += `import type {} from "file://${typePaths.window}";`;
   if (fetchevent) {
-    loader += `import type {} from file://${typePaths.fetchevent}";`;
+    loader += `import type {} from "file://${typePaths.fetchevent}";`;
   }
   loader += `import "${specifier}";`;
   return `data:application/typescript;base64,${btoa(loader)}`;
@@ -80,7 +83,11 @@ export async function run(opts: RunOpts): Promise<Deno.Process> {
   if (opts.inspect) args.push("--inspect");
   if (opts.reload) args.push("--reload");
 
-  const runner = runnerCode(opts.entrypoint, opts.listenAddress, opts.libs);
+  const runner = await runnerCode(
+    opts.entrypoint,
+    opts.listenAddress,
+    opts.libs,
+  );
 
   const proc = Deno.run({
     cmd: [Deno.execPath(), "eval", ...args, runner],
