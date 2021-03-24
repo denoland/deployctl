@@ -84,6 +84,7 @@ export async function waitReady(proc: Deno.Process) {
   const stderr = new BufReader(proc.stderr!);
   while (true) {
     const line = await stderr.readString("\n");
+    console.log(line);
     if (line?.includes("Listening on")) {
       return;
     }
