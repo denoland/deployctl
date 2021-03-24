@@ -1,4 +1,4 @@
-import { assertEquals, assertStringIncludes } from "./deps.ts";
+import { assert, assertEquals, assertStringIncludes } from "./deps.ts";
 import { output, test } from "./utils.ts";
 
 test({ args: [] }, async (proc) => {
@@ -8,6 +8,20 @@ test({ args: [] }, async (proc) => {
   assertStringIncludes(stderr, "types ");
   assertEquals(code, 1);
   assertEquals(stdout, "");
+});
+
+test({ args: ["-V"] }, async (proc) => {
+  const [stdout, stderr, { code }] = await output(proc);
+  assertEquals(stderr, "");
+  assertEquals(code, 0);
+  assert(stdout.startsWith("deployctl "));
+});
+
+test({ args: ["--version"] }, async (proc) => {
+  const [stdout, stderr, { code }] = await output(proc);
+  assertEquals(stderr, "");
+  assertEquals(code, 0);
+  assert(stdout.startsWith("deployctl "));
 });
 
 test({ args: ["-h"] }, async (proc) => {
