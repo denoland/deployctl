@@ -104,6 +104,8 @@ export async function kill(proc: Deno.Process) {
   } else {
     const pkill = Deno.run({
       cmd: ["taskkill", "/t", "/f", "/pid", String(proc.pid)],
+      stderr: "null",
+      stdout: "null",
     });
     await pkill.status();
     pkill.close();
