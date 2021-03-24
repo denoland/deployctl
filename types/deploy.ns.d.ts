@@ -8,7 +8,7 @@
 /** Deno provides extra properties on `import.meta`.  These are included here
  * to ensure that these are still available when using the Deno namespace in
  * conjunction with other type libs, like `dom`. */
- declare interface ImportMeta {
+declare interface ImportMeta {
   /** A string representation of the fully qualified module URL. */
   url: string;
 

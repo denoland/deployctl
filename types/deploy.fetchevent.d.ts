@@ -25,5 +25,5 @@ interface FetchEventListenerObject {
 declare function addEventListener(
   type: "fetch",
   callback: FetchEventListenerOrFetchEventListenerObject | null,
-  options?: boolean | AddEventListenerOptions | undefined
+  options?: boolean | AddEventListenerOptions | undefined,
 ): void;
