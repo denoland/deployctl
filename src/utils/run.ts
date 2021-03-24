@@ -1,11 +1,7 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
 import { tsconfig } from "./tsconfig.ts";
-import {
-  DEPLOY_FETCHEVENT_D_TS_URL,
-  DEPLOY_NS_D_TS_URL,
-  DEPLOY_WINDOW_D_TS_URL,
-} from "./types.ts";
+import { types } from "./types.ts";
 
 interface Libs {
   ns: boolean;
@@ -38,15 +34,16 @@ function runnerCode(specifier: URL, addr: string, libs: Libs): string {
 /**
  * Returns a loader script of the given Deno Deploy script as a Data URL.
  */
-export function loaderDataUrl(
+export async function loaderDataUrl(
   specifier: URL,
   { ns, window, fetchevent }: Libs,
-): string {
+): Promise<string> {
   let loader = "";
-  if (ns) loader += `import type {} from "${DEPLOY_NS_D_TS_URL}";`;
-  if (window) loader += `import type {} from "${DEPLOY_WINDOW_D_TS_URL}";`;
+  const typePaths = await types();
+  if (ns) loader += `import type {} from "file://${typePaths.ns}";`;
+  if (window) loader += `import type {} from "file://${typePaths.window}";`;
   if (fetchevent) {
-    loader += `import type {} from "${DEPLOY_FETCHEVENT_D_TS_URL}";`;
+    loader += `import type {} from file://${typePaths.fetchevent}";`;
   }
   loader += `import "${specifier}";`;
   return `data:application/typescript;base64,${btoa(loader)}`;

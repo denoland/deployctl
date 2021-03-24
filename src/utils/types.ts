@@ -1,17 +1,31 @@
-export const DEPLOY_NS_D_TS_URL =
-  "https://dotcom-7sw6g9ofe-denoland.vercel.app/deploy.ns.d.ts";
-export const DEPLOY_WINDOW_D_TS_URL =
-  "https://dotcom-7sw6g9ofe-denoland.vercel.app/deploy.window.d.ts";
-export const DEPLOY_FETCHEVENT_D_TS_URL =
-  "https://dotcom-7sw6g9ofe-denoland.vercel.app/deploy.fetchevent.d.ts";
+import { cache } from "../../deps.ts";
+
+export async function types(): Promise<
+  { ns: string; window: string; fetchevent: string }
+> {
+  const ns = await cache(
+    new URL("../../types/deploy.ns.d.ts", import.meta.url),
+  );
+  const window = await cache(
+    new URL("../../types/deploy.window.d.ts", import.meta.url),
+  );
+  const fetchevent = await cache(
+    new URL("../../types/deploy.fetchevent.d.ts", import.meta.url),
+  );
+  return {
+    ns: ns.path,
+    window: window.path,
+    fetchevent: fetchevent.path,
+  };
+}
 
 /** Download the deploy.d.ts file from the source. */
 export async function downloadTypes(): Promise<string> {
-  const nsReq = await fetch(DEPLOY_NS_D_TS_URL);
-  const windowReq = await fetch(DEPLOY_WINDOW_D_TS_URL);
-  const fetcheventReq = await fetch(DEPLOY_FETCHEVENT_D_TS_URL);
-  const nsText = await nsReq.text();
-  const windowText = await windowReq.text();
-  const fetcheventText = await fetcheventReq.text();
+  const { ns, window, fetchevent } = await types();
+  const [nsText, windowText, fetcheventText] = await Promise.all([
+    Deno.readTextFile(ns),
+    Deno.readTextFile(window),
+    Deno.readTextFile(fetchevent),
+  ]);
   return nsText + "\n" + windowText + "\n" + fetcheventText;
 }
