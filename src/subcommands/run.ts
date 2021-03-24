@@ -1,6 +1,6 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { exists, resolve, toFileUrl, yellow } from "../../deps.ts";
+import { resolve, toFileUrl, yellow } from "../../deps.ts";
 import { error } from "../error.ts";
 import { analyzeDeps } from "../utils/info.ts";
 import { run, RunOpts } from "../utils/run.ts";
@@ -9,10 +9,10 @@ const help = `deployctl run
 Run a Deno Deploy script locally given a filename or url to the module.
 
 To run a script locally:
-  deployctl run https://dash.deno.com/examples/hello.js
+  deployctl run https://deno.land/x/deploy/examples/hello.js
 
 To run a script locally and watch for changes:
-  deployctl run --watch https://dash.deno.com/examples/hello.js
+  deployctl run --watch https://deno.land/x/deploy/examples/hello.js
 
 USAGE:
     deployctl run [OPTIONS] <ENTRYPOINT>

@@ -10,10 +10,10 @@ const help = `deployctl check
 Perform type checking of the given file or url as Deno Deploy script.
 
 To check a script:
-  deployctl check https://dash.deno.com/examples/hello.js
+  deployctl check https://deno.land/x/deploy/examples/hello.js
 
 To check a script and watch for changes:
-  deployctl check --watch https://dash.deno.com/examples/hello.js
+  deployctl check --watch https://deno.land/x/deploy/examples/hello.js
 
 USAGE:
     deployctl check [OPTIONS] <ENTRYPOINT>
