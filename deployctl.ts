@@ -37,12 +37,14 @@ const args = parseArgs(Deno.args, {
   alias: {
     "help": "h",
     "reload": "r",
+    "version": "V",
   },
   boolean: [
     "check",
     "help",
     "inspect",
     "reload",
+    "version",
     "watch",
   ],
   string: [
@@ -68,6 +70,10 @@ switch (subcommand) {
     await checkSubcommand(args);
     break;
   default:
+    if (args.version) {
+      console.log(`deployctl ${VERSION}`);
+      Deno.exit(0);
+    }
     console.error(help);
     Deno.exit(1);
 }
