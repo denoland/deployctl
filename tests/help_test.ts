@@ -34,3 +34,11 @@ test({ args: ["types", "-h"] }, async (proc) => {
   assertEquals(code, 1);
   assertEquals(stdout, "");
 });
+
+test({ args: ["check", "-h"] }, async (proc) => {
+  const [stdout, stderr, { code }] = await output(proc);
+  assertStringIncludes(stderr, "USAGE:");
+  assertStringIncludes(stderr, "deployctl check");
+  assertEquals(code, 1);
+  assertEquals(stdout, "");
+});
