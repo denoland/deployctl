@@ -19,4 +19,4 @@ export { parse as parseArgs } from "https://deno.land/std@0.91.0/flags/mod.ts";
 export { gte as semverGreaterThanOrEquals } from "https://deno.land/x/semver@v1.3.0/mod.ts";
 
 // x/cache
-export { cache } from "https://deno.land/x/cache@0.2.11/mod.ts";
+export { cache } from "https://deno.land/x/cache@0.2.12/mod.ts";
