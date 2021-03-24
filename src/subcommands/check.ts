@@ -1,6 +1,6 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { exists, green, resolve, toFileUrl, yellow } from "../../deps.ts";
+import { green, resolve, toFileUrl, yellow } from "../../deps.ts";
 import { error } from "../error.ts";
 import { analyzeDeps } from "../utils/info.ts";
 import { tsconfig } from "../utils/tsconfig.ts";
