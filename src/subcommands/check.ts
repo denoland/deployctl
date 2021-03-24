@@ -1,6 +1,6 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { exists, green, resolve, toFileUrl, yellow } from "../../deps.ts";
+import { green, resolve, toFileUrl, yellow } from "../../deps.ts";
 import { error } from "../error.ts";
 import { analyzeDeps } from "../utils/info.ts";
 import { tsconfig } from "../utils/tsconfig.ts";
@@ -10,10 +10,10 @@ const help = `deployctl check
 Perform type checking of the given file or url as Deno Deploy script.
 
 To check a script:
-  deployctl check https://dash.deno.com/examples/hello.js
+  deployctl check https://deno.land/x/deploy/examples/hello.js
 
 To check a script and watch for changes:
-  deployctl check --watch https://dash.deno.com/examples/hello.js
+  deployctl check --watch https://deno.land/x/deploy/examples/hello.js
 
 USAGE:
     deployctl check [OPTIONS] <ENTRYPOINT>

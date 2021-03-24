@@ -16,10 +16,10 @@ const help = `deployctl ${VERSION}
 Run Deno Deploy scripts locally.
 
 To run a script locally:
-  deployctl run https://dash.deno.com/examples/hello.js
+  deployctl run https://deno.land/x/deploy/examples/hello.js
 
 To run a script locally and watch changes:
-  deployctl run --watch https://dash.deno.com/examples/hello.js
+  deployctl run --watch https://deno.land/x/deploy/examples/hello.js
 
 SUBCOMMANDS:
     run       Run a script given a filename or url
