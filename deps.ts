@@ -7,7 +7,12 @@ export {
   toFileUrl,
 } from "https://deno.land/std@0.91.0/path/mod.ts";
 export { exists } from "https://deno.land/std@0.91.0/fs/exists.ts";
-export { bold, red, yellow } from "https://deno.land/std@0.91.0/fmt/colors.ts";
+export {
+  bold,
+  green,
+  red,
+  yellow,
+} from "https://deno.land/std@0.91.0/fmt/colors.ts";
 export { parse as parseArgs } from "https://deno.land/std@0.91.0/flags/mod.ts";
 
 // x/semver

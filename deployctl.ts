@@ -4,6 +4,7 @@ import { parseArgs, semverGreaterThanOrEquals } from "./deps.ts";
 import { error } from "./src/error.ts";
 import runSubcommand from "./src/subcommands/run.ts";
 import typesSubcommand from "./src/subcommands/types.ts";
+import checkSubcommand from "./src/subcommands/check.ts";
 
 const VERSION = "0.0.1";
 
@@ -22,6 +23,7 @@ To run a script locally and watch changes:
 
 SUBCOMMANDS:
     run       Run a script given a filename or url
+    check     Perform type checking of the script without actually running it
     types     Print the Deno Deploy TypeScript declarations
 `;
 
@@ -61,6 +63,9 @@ switch (subcommand) {
     break;
   case "types":
     await typesSubcommand(args);
+    break;
+  case "check":
+    await checkSubcommand(args);
     break;
   default:
     console.error(help);

@@ -7,6 +7,12 @@ import {
   DEPLOY_WINDOW_D_TS_URL,
 } from "./types.ts";
 
+interface Libs {
+  ns: boolean;
+  window: boolean;
+  fetchevent: boolean;
+}
+
 /**
  * This function generates a snippet of code that can be used to run a Deploy
  * script in regular Deno, with the correct typings. The run script requires
@@ -18,27 +24,32 @@ import {
 // use the custom typings. This is done by dynamically importing a _inline_
 // module (base64 data url). This module loads the new type definitions, and
 // statically imports the new user supplied entrypoint.
-function loaderCode(specifier: URL, addr: string, libs: {
-  ns: boolean;
-  window: boolean;
-  fetchevent: boolean;
-}) {
-  let loader = "";
-  if (libs.ns) loader += `import type {} from "${DEPLOY_NS_D_TS_URL}";`;
-  if (libs.window) loader += `import type {} from "${DEPLOY_WINDOW_D_TS_URL}";`;
-  if (libs.fetchevent) {
-    loader += `import type {} from "${DEPLOY_FETCHEVENT_D_TS_URL}";`;
-  }
-  loader += `import "${specifier}";`;
-
+function runnerCode(specifier: URL, addr: string, libs: Libs): string {
   const runtimeBundleUrl = new URL(
     "../runtime.bundle.js",
     import.meta.url,
   );
-  const loaderB64 = btoa(loader);
-  const runtime =
-    `import{serve}from "${runtimeBundleUrl.toString()}";serve("${addr}");await import("data:application/typescript;base64,${loaderB64}");`;
-  return runtime;
+  return `
+    import{serve}from "${runtimeBundleUrl.toString()}";
+    serve("${addr}");
+    await import("${loaderDataUrl(specifier, libs)}");
+  `;
+}
+/**
+ * Returns a loader script of the given Deno Deploy script as a Data URL.
+ */
+export function loaderDataUrl(
+  specifier: URL,
+  { ns, window, fetchevent }: Libs,
+): string {
+  let loader = "";
+  if (ns) loader += `import type {} from "${DEPLOY_NS_D_TS_URL}";`;
+  if (window) loader += `import type {} from "${DEPLOY_WINDOW_D_TS_URL}";`;
+  if (fetchevent) {
+    loader += `import type {} from "${DEPLOY_FETCHEVENT_D_TS_URL}";`;
+  }
+  loader += `import "${specifier}";`;
+  return `data:application/typescript;base64,${btoa(loader)}`;
 }
 
 export interface RunOpts {
@@ -72,10 +83,10 @@ export async function run(opts: RunOpts): Promise<Deno.Process> {
   if (opts.inspect) args.push("--inspect");
   if (opts.reload) args.push("--reload");
 
-  const loader = loaderCode(opts.entrypoint, opts.listenAddress, opts.libs);
+  const runner = runnerCode(opts.entrypoint, opts.listenAddress, opts.libs);
 
   const proc = Deno.run({
-    cmd: [Deno.execPath(), "eval", ...args, loader],
+    cmd: [Deno.execPath(), "eval", ...args, runner],
   });
 
   return proc;
