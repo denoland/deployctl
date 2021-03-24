@@ -82,14 +82,15 @@ export async function output(
 
 export async function waitReady(proc: Deno.Process) {
   const stderr = new BufReader(proc.stderr!);
+  const lines = [];
   while (true) {
     const line = await stderr.readString("\n");
-    console.log(line);
+    lines.push(line);
     if (line?.includes("Listening on")) {
       return;
     }
     if (line?.includes("error")) {
-      throw new Error("Subprocess failed");
+      throw new Error("deployctl failed: " + lines);
     }
   }
 }
