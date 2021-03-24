@@ -10,7 +10,7 @@ test({ args: ["run", "./examples/hello.js"] }, async (proc) => {
   const body = await req.text();
   assertEquals(body, "Hello world!");
 
-  kill(proc);
+  await kill(proc);
 
   await proc.status();
   proc.stdout?.close();
@@ -44,7 +44,7 @@ test({
   const body2 = await req2.text();
   assertEquals(body2, "Hi :-)");
 
-  kill(proc);
+  await kill(proc);
 
   await proc.status();
   proc.stdout?.close();
