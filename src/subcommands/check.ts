@@ -1,10 +1,11 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { green, resolve, toFileUrl, yellow } from "../../deps.ts";
+import { green, yellow } from "../../deps.ts";
 import { error } from "../error.ts";
 import { analyzeDeps } from "../utils/info.ts";
 import { tsconfig } from "../utils/tsconfig.ts";
 import { loaderDataUrl } from "../utils/run.ts";
+import { parseEntrypoint } from "../utils/entrypoint.ts";
 
 const help = `deployctl check
 Perform type checking of the given file or url as Deno Deploy script.
@@ -65,30 +66,8 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     error("Too many positional arguments given.");
   }
 
-  let entrypointSpecifier;
-  try {
-    entrypointSpecifier =
-      (entrypoint.startsWith("https://") || entrypoint.startsWith("http://"))
-        ? new URL(entrypoint)
-        : toFileUrl(resolve(Deno.cwd(), entrypoint));
-  } catch (err) {
-    error(
-      `Failed to parse entrypoint specifier '${entrypoint}': ${err.message}`,
-    );
-  }
-
-  if (entrypointSpecifier.protocol == "file:") {
-    try {
-      await Deno.lstat(entrypointSpecifier);
-    } catch (err) {
-      error(
-        `Failed to open entrypoint file at '${entrypointSpecifier}': ${err.message}`,
-      );
-    }
-  }
-
   const opts = {
-    entrypoint: entrypointSpecifier,
+    entrypoint: await parseEntrypoint(entrypoint),
     reload: args.reload,
     libs: args.libs,
   };
