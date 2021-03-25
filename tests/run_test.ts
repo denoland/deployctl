@@ -1,5 +1,5 @@
-import { assertEquals } from "./deps.ts";
-import { kill, test, waitReady } from "./utils.ts";
+import { assertEquals, assertStringIncludes } from "./deps.ts";
+import { kill, output, test, waitReady } from "./utils.ts";
 
 test({ args: ["run", "./examples/hello.js"] }, async (proc) => {
   await waitReady(proc);
@@ -49,4 +49,18 @@ test({
   await proc.status();
   proc.stdout?.close();
   proc.stderr?.close();
+});
+
+test({ args: ["run", "https://%"] }, async (proc) => {
+  const [stdout, stderr, { code }] = await output(proc);
+  assertEquals(code, 1);
+  assertEquals(stdout, "");
+  assertStringIncludes(stderr, "Failed to parse entrypoint specifier");
+});
+
+test({ args: ["run", "./examples/wrong_file_name.js"] }, async (proc) => {
+  const [stdout, stderr, { code }] = await output(proc);
+  assertEquals(code, 1);
+  assertEquals(stdout, "");
+  assertStringIncludes(stderr, "Failed to open entrypoint file");
 });
