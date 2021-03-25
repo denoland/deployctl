@@ -45,3 +45,9 @@ jobs:
 
       - name: Run tests
         run: deno test -A --unstable
+
+      - name: Coverage
+        if: runner.os == 'Linux'
+        run: |
+          make cov
+          bash <(curl -s https://codecov.io/bash)

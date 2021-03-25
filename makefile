@@ -10,3 +10,10 @@ lint:
 
 test:
 	deno test -A --unstable
+
+cov:
+	deno test -A --unstable --coverage=coverage/data
+	deno coverage --unstable --exclude=tests --lcov coverage/data > coverage/lcov.info
+
+cov-html:
+	genhtml -o coverage/html coverage/lcov.info
