@@ -5,12 +5,8 @@ import { error } from "./src/error.ts";
 import runSubcommand from "./src/subcommands/run.ts";
 import typesSubcommand from "./src/subcommands/types.ts";
 import checkSubcommand from "./src/subcommands/check.ts";
-
-const VERSION = "0.0.1";
-
-// The minium Deno version required. Currently 1.8 because we are making use of
-// the --unstable `deno info` output which changed in 1.8.
-const MINIMUM_DENO_VERSION = "1.8.0";
+import upgradeSubcommand from "./src/subcommands/upgrade.ts";
+import { MINIMUM_DENO_VERSION, VERSION } from "./src/version.ts";
 
 const help = `deployctl ${VERSION}
 Run Deno Deploy scripts locally.
@@ -25,6 +21,7 @@ SUBCOMMANDS:
     run       Run a script given a filename or url
     check     Perform type checking of the script without actually running it
     types     Print the Deno Deploy TypeScript declarations
+    upgrade   Upgrade deployctl to the given version (defaults to latest)
 `;
 
 if (!semverGreaterThanOrEquals(Deno.version.deno, MINIMUM_DENO_VERSION)) {
@@ -68,6 +65,9 @@ switch (subcommand) {
     break;
   case "check":
     await checkSubcommand(args);
+    break;
+  case "upgrade":
+    await upgradeSubcommand(args);
     break;
   default:
     if (args.version) {

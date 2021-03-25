@@ -56,3 +56,12 @@ test({ args: ["check", "-h"] }, async (proc) => {
   assertEquals(code, 1);
   assertEquals(stdout, "");
 });
+
+test({ args: ["upgrade", "-h"] }, async (proc) => {
+  const [stdout, stderr, { code }] = await output(proc);
+  assertStringIncludes(stdout, "deployctl upgrade");
+  assertStringIncludes(stdout, "USAGE:");
+  assertStringIncludes(stdout, "ARGS:");
+  assertEquals(code, 0);
+  assertEquals(stderr, "");
+});
