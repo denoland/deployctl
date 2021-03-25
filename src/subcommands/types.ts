@@ -26,8 +26,8 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     help: !!rawArgs.help,
   };
   if (args.help) {
-    console.error(help);
-    Deno.exit(1);
+    console.log(help);
+    Deno.exit(0);
   }
   if (rawArgs._.length > 0) {
     console.error(help);
