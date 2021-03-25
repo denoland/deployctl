@@ -7,17 +7,22 @@ import { VERSION } from "../version.ts";
 const help = `deployctl upgrade
 Upgrade deployctl to the given version (defaults to latest).
 
+To upgrade to latest version:
+deployctl upgrade
+
+To upgrade to specific version:
+deployctl upgrade 1.2.3
+
 The version is downloaded from https://deno.land/x/deploy/deployctl.ts
 
 USAGE:
     deployctl upgrade [OPTIONS] [<version>]
 
 OPTIONS:
-    -h, --help                Prints help information
+    -h, --help        Prints help information
 
 ARGS:
-    <version>
-             The version to upgrade to
+    <version>         The version to upgrade to (defaults to latest)
 `;
 
 export interface Args {
@@ -46,7 +51,9 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     error(err.message);
   });
   if (version && !versions.includes(version)) {
-    error("The provided version is not found.");
+    error(
+      "The provided version is not found.\n\nVisit https://github.com/denoland/deployctl/releases/ for available releases.",
+    );
   }
 
   if (!version && semverGreaterThanOrEquals(VERSION, latest)) {
