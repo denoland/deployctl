@@ -74,6 +74,10 @@ switch (subcommand) {
       console.log(`deployctl ${VERSION}`);
       Deno.exit(0);
     }
+    if (args.help) {
+      console.log(help);
+      Deno.exit(0);
+    }
     console.error(help);
     Deno.exit(1);
 }

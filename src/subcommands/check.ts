@@ -54,8 +54,8 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     ? rawArgs._[0]
     : null;
   if (args.help) {
-    console.error(help);
-    Deno.exit(1);
+    console.log(help);
+    Deno.exit(0);
   }
   if (entrypoint === null) {
     console.error(help);

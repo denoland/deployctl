@@ -26,35 +26,35 @@ test({ args: ["--version"] }, async (proc) => {
 
 test({ args: ["-h"] }, async (proc) => {
   const [stdout, stderr, { code }] = await output(proc);
-  assertStringIncludes(stderr, "SUBCOMMANDS:");
-  assertStringIncludes(stderr, "run ");
-  assertStringIncludes(stderr, "types ");
-  assertEquals(code, 1);
-  assertEquals(stdout, "");
+  assertStringIncludes(stdout, "SUBCOMMANDS:");
+  assertStringIncludes(stdout, "run ");
+  assertStringIncludes(stdout, "types ");
+  assertEquals(code, 0);
+  assertEquals(stderr, "");
 });
 
 test({ args: ["run", "-h"] }, async (proc) => {
   const [stdout, stderr, { code }] = await output(proc);
-  assertStringIncludes(stderr, "USAGE:");
-  assertStringIncludes(stderr, "deployctl run");
-  assertEquals(code, 1);
-  assertEquals(stdout, "");
+  assertStringIncludes(stdout, "USAGE:");
+  assertStringIncludes(stdout, "deployctl run");
+  assertEquals(code, 0);
+  assertEquals(stderr, "");
 });
 
 test({ args: ["types", "-h"] }, async (proc) => {
   const [stdout, stderr, { code }] = await output(proc);
-  assertStringIncludes(stderr, "USAGE:");
-  assertStringIncludes(stderr, "deployctl types");
-  assertEquals(code, 1);
-  assertEquals(stdout, "");
+  assertStringIncludes(stdout, "USAGE:");
+  assertStringIncludes(stdout, "deployctl types");
+  assertEquals(code, 0);
+  assertEquals(stderr, "");
 });
 
 test({ args: ["check", "-h"] }, async (proc) => {
   const [stdout, stderr, { code }] = await output(proc);
-  assertStringIncludes(stderr, "USAGE:");
-  assertStringIncludes(stderr, "deployctl check");
-  assertEquals(code, 1);
-  assertEquals(stdout, "");
+  assertStringIncludes(stdout, "USAGE:");
+  assertStringIncludes(stdout, "deployctl check");
+  assertEquals(code, 0);
+  assertEquals(stderr, "");
 });
 
 test({ args: ["upgrade", "-h"] }, async (proc) => {
