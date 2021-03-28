@@ -47,6 +47,7 @@ const args = parseArgs(Deno.args, {
   string: [
     "addr",
     "libs",
+    "env",
   ],
   default: {
     addr: ":8080",
