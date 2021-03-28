@@ -80,6 +80,23 @@ test({
   ].sort();
 
   assertEquals(await response.json(), { errors: expectedErrors });
+
+  await kill(proc);
+  await proc.status();
+  proc.stdout?.close();
+  proc.stderr?.close();
+});
+
+test({
+  name: "deployctl run ./examples/env.ts --env .env",
+  args: ["run", "./examples/env.ts", "--env", "./tests/testdata/example.env"],
+}, async (proc) => {
+  await waitReady(proc);
+  const response = await fetch("http://127.0.0.1:8080");
+  const json = await response.json();
+
+  assertEquals(json, { secret: "asecrettoken" });
+
   await kill(proc);
   await proc.status();
   proc.stdout?.close();
