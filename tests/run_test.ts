@@ -64,3 +64,24 @@ test({ args: ["run", "./examples/wrong_file_name.js"] }, async (proc) => {
   assertEquals(stdout, "");
   assertStringIncludes(stderr, "Failed to open entrypoint file");
 });
+
+test({
+  name: "deployctl errors on usage of unsupported timer methods",
+  args: ["run", "./tests/testdata/timers.js"],
+}, async (proc) => {
+  await waitReady(proc);
+
+  const response = await fetch("http://127.0.0.1:8080");
+  const expectedErrors = [
+    "setInterval is not defined",
+    "clearInterval is not defined",
+    "setTimeout is not defined",
+    "clearTimeout is not defined",
+  ].sort();
+
+  assertEquals(await response.json(), { errors: expectedErrors });
+  await kill(proc);
+  await proc.status();
+  proc.stdout?.close();
+  proc.stderr?.close();
+});
