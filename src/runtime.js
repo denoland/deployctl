@@ -7,6 +7,16 @@ import { Server } from "https://deno.land/std@0.91.0/http/server.ts";
 import { readerFromStreamReader } from "https://deno.land/std@0.91.0/io/streams.ts";
 import { green } from "https://deno.land/std@0.91.0/fmt/colors.ts";
 
+export const unsupportedMethods = [
+  "setInterval",
+  "setTimeout",
+  "clearInterval",
+  "clearTimeout",
+];
+for (const method of unsupportedMethods) {
+  delete globalThis[method];
+}
+
 class FetchEvent extends Event {
   #stdReq;
   #request;

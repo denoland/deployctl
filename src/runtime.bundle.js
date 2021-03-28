@@ -1368,6 +1368,15 @@ const ANSI_PATTERN = new RegExp([
     "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
     "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))", 
 ].join("|"), "g");
+const unsupportedMethods1 = [
+    "setInterval",
+    "setTimeout",
+    "clearInterval",
+    "clearTimeout",
+];
+for (const method of unsupportedMethods1){
+    delete globalThis[method];
+}
 class FetchEvent extends Event {
     #stdReq;
     #request;
@@ -1430,6 +1439,6 @@ function shim1(addr1) {
         originalAddEventListener(type, handler);
     };
 }
+export { unsupportedMethods1 as unsupportedMethods };
 export { serve1 as serve };
 export { shim1 as shim };
-
