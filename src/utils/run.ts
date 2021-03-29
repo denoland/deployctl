@@ -65,6 +65,8 @@ export interface RunOpts {
   inspect: boolean;
   /** If modules should be reloaded. */
   reload: boolean;
+  /** Envirnoment variables for the script. */
+  env: { [key: string]: string };
 
   libs: {
     ns: boolean;
@@ -92,6 +94,7 @@ export async function run(opts: RunOpts): Promise<Deno.Process> {
 
   const proc = Deno.run({
     cmd: [Deno.execPath(), "eval", ...args, runner],
+    env: opts.env,
   });
 
   return proc;

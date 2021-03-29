@@ -22,3 +22,6 @@ export {
 
 // x/cache
 export { cache } from "https://deno.land/x/cache@0.2.12/mod.ts";
+
+// x/dotenv
+export { config as dotEnvConfig } from "https://deno.land/x/dotenv@v2.0.0/mod.ts";

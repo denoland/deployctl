@@ -1,6 +1,6 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { yellow } from "../../deps.ts";
+import { dotEnvConfig, yellow } from "../../deps.ts";
 import { error } from "../error.ts";
 import { analyzeDeps } from "../utils/info.ts";
 import { run, RunOpts } from "../utils/run.ts";
@@ -19,13 +19,14 @@ USAGE:
     deployctl run [OPTIONS] <ENTRYPOINT>
 
 OPTIONS:
-        --addr=<addr>   The address to listen on (default ":8080")
-    -h, --help          Prints help information
-        --inspect       Activate inspector on 127.0.0.1:9229
-        --libs=<libs>   The deploy type libs that are loaded (default "ns,window,fetchevent")
-        --no-check      Skip type checking modules
-    -r, --reload        Reload source code cache (recompile TypeScript)
-        --watch         Watch for file changes and restart process automatically
+        --addr=<addr>          The address to listen on (default ":8080")
+        --env=<path/to/.env>   Load envirnoment variables from the provided .env file
+    -h, --help                 Prints help information
+        --inspect              Activate inspector on 127.0.0.1:9229
+        --libs=<libs>          The deploy type libs that are loaded (default "ns,window,fetchevent")
+        --no-check             Skip type checking modules
+    -r, --reload               Reload source code cache (recompile TypeScript)
+        --watch                Watch for file changes and restart process automatically
 `;
 
 export interface Args {
@@ -35,6 +36,7 @@ export interface Args {
   inspect: boolean;
   reload: boolean;
   watch: boolean;
+  env: string;
   libs: {
     ns: boolean;
     window: boolean;
@@ -52,6 +54,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     inspect: !!rawArgs.inspect,
     reload: !!rawArgs.reload,
     watch: !!rawArgs.watch,
+    env: String(rawArgs.env),
     libs: {
       ns: libs.includes("ns"),
       window: libs.includes("window"),
@@ -81,6 +84,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     noCheck: args.noCheck,
     reload: args.reload,
     libs: args.libs,
+    env: dotEnvConfig({ path: args.env }),
   };
   if (args.watch) {
     await watch(opts);
