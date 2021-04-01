@@ -1380,6 +1380,7 @@ for (const method of unsupportedMethods1){
 class FetchEvent extends Event {
     #stdReq;
     #request;
+    #reponded;
     get request() {
         return this.#request;
     }
@@ -1387,6 +1388,7 @@ class FetchEvent extends Event {
         super("fetch");
         const host = stdReq.headers.get("host") ?? addr;
         this.#stdReq = stdReq;
+        this.#reponded = false;
         this.#request = new Request(new URL(stdReq.url, `http://${host}`).toString(), {
             body: new ReadableStream({
                 start: async (controller)=>{
@@ -1401,6 +1403,11 @@ class FetchEvent extends Event {
         });
     }
     async respondWith(response) {
+        if (this.#reponded === true) {
+            throw new TypeError("Already responded to this FetchEvent.");
+        } else {
+            this.#reponded = true;
+        }
         const resp = await response;
         await this.#stdReq.respond({
             headers: resp.headers,
@@ -1442,3 +1449,4 @@ function shim1(addr1) {
 export { unsupportedMethods1 as unsupportedMethods };
 export { serve1 as serve };
 export { shim1 as shim };
+

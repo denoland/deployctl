@@ -20,6 +20,7 @@ for (const method of unsupportedMethods) {
 class FetchEvent extends Event {
   #stdReq;
   #request;
+  #reponded;
 
   get request() {
     return this.#request;
@@ -31,6 +32,7 @@ class FetchEvent extends Event {
     const host = stdReq.headers.get("host") ?? addr;
 
     this.#stdReq = stdReq;
+    this.#reponded = false;
     this.#request = new Request(
       new URL(stdReq.url, `http://${host}`).toString(),
       {
@@ -49,6 +51,12 @@ class FetchEvent extends Event {
   }
 
   async respondWith(response) {
+    if (this.#reponded === true) {
+      throw new TypeError("Already responded to this FetchEvent.");
+    } else {
+      this.#reponded = true;
+    }
+
     const resp = await response;
     await this.#stdReq.respond({
       headers: resp.headers,

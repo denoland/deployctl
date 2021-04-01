@@ -66,6 +66,22 @@ test({ args: ["run", "./examples/wrong_file_name.js"] }, async (proc) => {
 });
 
 test({
+  name: "deployctl run ./examples/env.ts --env .env",
+  args: ["run", "./examples/env.ts", "--env", "./tests/testdata/example.env"],
+}, async (proc) => {
+  await waitReady(proc);
+  const response = await fetch("http://127.0.0.1:8080");
+  const json = await response.json();
+
+  assertEquals(json, { secret: "asecrettoken" });
+
+  await kill(proc);
+  await proc.status();
+  proc.stdout?.close();
+  proc.stderr?.close();
+});
+
+test({
   name: "deployctl errors on usage of unsupported timer methods",
   args: ["run", "./tests/testdata/timers.js"],
 }, async (proc) => {
@@ -88,17 +104,20 @@ test({
 });
 
 test({
-  name: "deployctl run ./examples/env.ts --env .env",
-  args: ["run", "./examples/env.ts", "--env", "./tests/testdata/example.env"],
+  name: "deployctl errors on multiple event.respondWith calls",
+  args: ["run", "./tests/testdata/respond_twice.js"],
 }, async (proc) => {
   await waitReady(proc);
-  const response = await fetch("http://127.0.0.1:8080");
-  const json = await response.json();
+  try {
+    await fetch("http://127.0.0.1:8080");
+    // deno-lint-ignore no-empty
+  } catch {}
 
-  assertEquals(json, { secret: "asecrettoken" });
-
-  await kill(proc);
-  await proc.status();
-  proc.stdout?.close();
-  proc.stderr?.close();
+  const [stdout, stderr, { code }] = await output(proc);
+  assertEquals(code, 1);
+  assertEquals(stdout, "");
+  assertStringIncludes(
+    stderr,
+    "TypeError: Already responded to this FetchEvent",
+  );
 });
