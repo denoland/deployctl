@@ -6,6 +6,7 @@
 import { Server } from "https://deno.land/std@0.91.0/http/server.ts";
 import { readerFromStreamReader } from "https://deno.land/std@0.91.0/io/streams.ts";
 import { green } from "https://deno.land/std@0.91.0/fmt/colors.ts";
+import "https://deno.land/x/file_fetch@0.1.0/polyfill.ts";
 
 export const unsupportedMethods = [
   "setInterval",
@@ -65,7 +66,6 @@ class FetchEvent extends Event {
         ? readerFromStreamReader(resp.body.getReader())
         : undefined,
     });
-    return resp;
   }
 
   [Symbol.toStringTag]() {
