@@ -1,4 +1,4 @@
-export const VERSION = "0.1.0";
+export const VERSION = "0.1.1";
 
 // The minium Deno version required. Currently 1.8 because we are making use of
 // the --unstable `deno info` output which changed in 1.8.
