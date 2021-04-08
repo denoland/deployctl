@@ -121,3 +121,19 @@ test({
     "TypeError: Already responded to this FetchEvent",
   );
 });
+
+test({
+  name: "serve local files",
+  args: ["run", "./examples/serve_local.ts"],
+}, async (proc) => {
+  await waitReady(proc);
+  const response = await fetch("http://127.0.0.1:8080");
+  const json = await response.json();
+
+  assertEquals(json, { hello: "world" });
+
+  await kill(proc);
+  await proc.status();
+  proc.stdout?.close();
+  proc.stderr?.close();
+});
