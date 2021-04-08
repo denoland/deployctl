@@ -80,4 +80,66 @@ declare namespace Deno {
     /** Optional environment */
     env?: string;
   };
+
+  /** Reflects the `NO_COLOR` environment variable. This is always set to `true`
+   * on Deno Deploy, as the logs page supports ANSI colors.
+   *
+   * See: https://no-color.org/ */
+  export const noColor: boolean;
+
+  export interface InspectOptions {
+    /** Stylize output with ANSI colors. Defaults to false. */
+    colors?: boolean;
+    /** Try to fit more than one entry of a collection on the same line.
+     * Defaults to true. */
+    compact?: boolean;
+    /** Traversal depth for nested objects. Defaults to 4. */
+    depth?: number;
+    /** The maximum number of iterable entries to print. Defaults to 100. */
+    iterableLimit?: number;
+    /** Show a Proxy's target and handler. Defaults to false. */
+    showProxy?: boolean;
+    /** Sort Object, Set and Map entries by key. Defaults to false. */
+    sorted?: boolean;
+    /** Add a trailing comma for multiline collections. Defaults to false. */
+    trailingComma?: boolean;
+    /*** Evaluate the result of calling getters. Defaults to false. */
+    getters?: boolean;
+    /** Show an object's non-enumerable properties. Defaults to false. */
+    showHidden?: boolean;
+  }
+
+  /** Converts the input into a string that has the same format as printed by
+   * `console.log()`.
+   *
+   * ```ts
+   * const obj = {};
+   * obj.propA = 10;
+   * obj.propB = "hello";
+   * const objAsString = Deno.inspect(obj); // { propA: 10, propB: "hello" }
+   * console.log(obj);  // prints same value as objAsString, e.g. { propA: 10, propB: "hello" }
+   * ```
+   *
+   * You can also register custom inspect functions, via the `customInspect` Deno
+   * symbol on objects, to control and customize the output.
+   *
+   * ```ts
+   * class A {
+   *   x = 10;
+   *   y = "hello";
+   *   [Deno.customInspect](): string {
+   *     return "x=" + this.x + ", y=" + this.y;
+   *   }
+   * }
+   * ```
+   *
+   *      const inStringFormat = Deno.inspect(new A()); // "x=10, y=hello"
+   *      console.log(inStringFormat);  // prints "x=10, y=hello"
+   *
+   * Finally, you can also specify the depth to which it will format.
+   *
+   *      Deno.inspect({a: {b: {c: {d: 'hello'}}}}, {depth: 2}); // { a: { b: [Object] } }
+   *
+   */
+  export function inspect(value: unknown, options?: InspectOptions): string;
 }
