@@ -36,6 +36,13 @@ test({ args: ["run", "./examples/echo.js"] }, async (proc) => {
   proc.stderr?.close();
 });
 
+test({ args: ["run", "./examples/with_nonexistent_dep.js"] }, async (proc) => {
+  const [stdout, stderr, { code }] = await output(proc);
+  assertEquals(code, 1);
+  assertEquals(stdout, "");
+  assertStringIncludes(stderr, "Cannot resolve module");
+});
+
 const tmp = await Deno.makeTempFile({ suffix: ".js" });
 await Deno.copyFile("./examples/hello.js", tmp);
 
