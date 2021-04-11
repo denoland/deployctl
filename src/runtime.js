@@ -38,11 +38,28 @@ class FetchEvent extends Event {
       new URL(stdReq.url, `http://${host}`).toString(),
       {
         body: new ReadableStream({
-          start: async (controller) => {
-            for await (const chunk of Deno.iter(stdReq.body)) {
-              controller.enqueue(chunk);
+          async pull(controller) {
+            try {
+              const chunk = new Uint8Array(16 * 1024 + 256);
+              const read = await stdReq.body.read(chunk);
+              if (read != 0) {
+                if (chunk.length == read) {
+                  controller.enqueue(chunk);
+                } else {
+                  controller.enqueue(chunk.subarray(0, read));
+                }
+              } else {
+                controller.close();
+                stdReq.body.close();
+              }
+            } catch (e) {
+              controller.error(e);
+              controller.close();
+              stdReq.body.close();
             }
-            controller.close();
+          },
+          cancel() {
+            stdReq.body.close();
           },
         }),
         headers: stdReq.headers,
