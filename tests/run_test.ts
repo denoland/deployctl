@@ -17,6 +17,25 @@ test({ args: ["run", "./examples/hello.js"] }, async (proc) => {
   proc.stderr?.close();
 });
 
+test({ args: ["run", "./examples/echo.js"] }, async (proc) => {
+  await waitReady(proc);
+
+  const req = await fetch("http://127.0.0.1:8080", {
+    method: "POST",
+    body: "Foobar!",
+  });
+  assertEquals(req.status, 200);
+  assertEquals(req.headers.get("server"), "denosr");
+  const body = await req.text();
+  assertEquals(body, "Foobar!");
+
+  await kill(proc);
+
+  await proc.status();
+  proc.stdout?.close();
+  proc.stderr?.close();
+});
+
 const tmp = await Deno.makeTempFile({ suffix: ".js" });
 await Deno.copyFile("./examples/hello.js", tmp);
 

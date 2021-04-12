@@ -39,26 +39,26 @@ const MIN_BUF_SIZE = 16;
 const CR = "\r".charCodeAt(0);
 const LF = "\n".charCodeAt(0);
 class BufferFullError extends Error {
-    name = "BufferFullError";
     constructor(partial){
         super("Buffer full");
         this.partial = partial;
+        this.name = "BufferFullError";
     }
 }
 class PartialReadError extends Deno.errors.UnexpectedEof {
-    name = "PartialReadError";
     constructor(){
         super("Encountered UnexpectedEof, data only partially read");
+        this.name = "PartialReadError";
     }
 }
 class BufReader {
-    r = 0;
-    w = 0;
-    eof = false;
     static create(r, size = 4096) {
         return r instanceof BufReader ? r : new BufReader(r, size);
     }
     constructor(rd1, size1 = 4096){
+        this.r = 0;
+        this.w = 0;
+        this.eof = false;
         if (size1 < 16) {
             size1 = MIN_BUF_SIZE;
         }
@@ -261,8 +261,6 @@ class BufReader {
     }
 }
 class AbstractBufBase {
-    usedBufferBytes = 0;
-    err = null;
     size() {
         return this.buf.byteLength;
     }
@@ -271,6 +269,10 @@ class AbstractBufBase {
     }
     buffered() {
         return this.usedBufferBytes;
+    }
+    constructor(){
+        this.usedBufferBytes = 0;
+        this.err = null;
     }
 }
 class BufWriter extends AbstractBufBase {
@@ -801,10 +803,6 @@ function deferred() {
     return Object.assign(promise, methods);
 }
 class MuxAsyncIterator {
-    iteratorCount = 0;
-    yields = [];
-    throws = [];
-    signal = deferred();
     add(iterator) {
         ++this.iteratorCount;
         this.callIteratorNext(iterator);
@@ -845,6 +843,12 @@ class MuxAsyncIterator {
     }
     [Symbol.asyncIterator]() {
         return this.iterate();
+    }
+    constructor(){
+        this.iteratorCount = 0;
+        this.yields = [];
+        this.throws = [];
+        this.signal = deferred();
     }
 }
 const encoder = new TextEncoder();
@@ -1098,10 +1102,10 @@ async function writeResponse(w, r1) {
     await writer3.flush();
 }
 class ServerRequest {
-    #done=deferred();
-    #contentLength=undefined;
-    #body=undefined;
-    #finalized=false;
+    #done = deferred();
+    #contentLength = undefined;
+    #body = undefined;
+    #finalized = false;
     get done() {
         return this.#done.then((e)=>e
         );
@@ -1219,8 +1223,8 @@ async function readRequest(conn, bufr) {
     return req;
 }
 class Server {
-    #closing=false;
-    #connections=[];
+    #closing = false;
+    #connections = [];
     constructor(listener){
         this.listener = listener;
     }
@@ -2546,11 +2550,28 @@ class FetchEvent extends Event {
         this.#reponded = false;
         this.#request = new Request(new URL(stdReq.url, `http://${host}`).toString(), {
             body: new ReadableStream({
-                start: async (controller)=>{
-                    for await (const chunk of Deno.iter(stdReq.body)){
-                        controller.enqueue(chunk);
+                async pull (controller) {
+                    try {
+                        const chunk = new Uint8Array(16 * 1024 + 256);
+                        const read = await stdReq.body.read(chunk);
+                        if (read != 0) {
+                            if (chunk.length == read) {
+                                controller.enqueue(chunk);
+                            } else {
+                                controller.enqueue(chunk.subarray(0, read));
+                            }
+                        } else {
+                            controller.close();
+                            stdReq.body.close();
+                        }
+                    } catch (e) {
+                        controller.error(e);
+                        controller.close();
+                        stdReq.body.close();
                     }
-                    controller.close();
+                },
+                cancel () {
+                    stdReq.body.close();
                 }
             }),
             headers: stdReq.headers,
