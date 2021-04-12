@@ -1,7 +1,7 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
 import { dotEnvConfig, yellow } from "../../deps.ts";
-import { error } from "../error.ts";
+import { error, printError } from "../error.ts";
 import { analyzeDeps } from "../utils/info.ts";
 import { run, RunOpts } from "../utils/run.ts";
 import { parseEntrypoint } from "../utils/entrypoint.ts";
@@ -94,14 +94,25 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
 }
 
 async function once(opts: RunOpts) {
+  const { errors } = await analyzeDeps(opts.entrypoint);
+  for (const error of errors) {
+    printError(error);
+  }
+  if (errors.length !== 0) Deno.exit(1);
   const proc = await run(opts);
   const status = await proc.status();
   if (!status.success) error(`Process exited with code ${status.code}`);
 }
 
 async function watch(opts: RunOpts) {
-  let deps = await analyzeDeps(opts.entrypoint);
-  let proc = await run(opts);
+  let { deps, errors } = await analyzeDeps(opts.entrypoint);
+  for (const error of errors) {
+    printError(error);
+  }
+  let proc: Deno.Process | null = null;
+  if (errors.length === 0) {
+    proc = await run(opts);
+  }
   let debouncer = null;
 
   while (true) {
@@ -112,17 +123,22 @@ async function watch(opts: RunOpts) {
         console.warn(yellow(`${event.paths[0]} changed. Restarting...`));
         if (proc) {
           proc.close();
+          proc = null;
         }
-        proc = await run(opts);
-        try {
-          const newDeps = await analyzeDeps(opts.entrypoint);
-          const depsChanged = new Set([...deps, ...newDeps]).size;
-          if (depsChanged) {
-            deps = newDeps;
-            watcher.return?.();
-          }
-        } catch {
-          // ignore the error
+        const { deps: newDeps, errors: newErrors } = await analyzeDeps(
+          opts.entrypoint,
+        );
+        errors = newErrors;
+        for (const error of errors) {
+          printError(error);
+        }
+        const depsChanged = new Set([...deps, ...newDeps]).size;
+        if (depsChanged) {
+          deps = newDeps;
+          watcher.return?.();
+        }
+        if (errors.length === 0) {
+          proc = await run(opts);
         }
       }, 100);
     }

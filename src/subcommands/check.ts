@@ -1,7 +1,7 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
 import { green, yellow } from "../../deps.ts";
-import { error } from "../error.ts";
+import { error, printError } from "../error.ts";
 import { analyzeDeps } from "../utils/info.ts";
 import { tsconfig } from "../utils/tsconfig.ts";
 import { loaderDataUrl } from "../utils/run.ts";
@@ -75,7 +75,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
   if (args.watch) {
     await watch(opts);
   } else {
-    Deno.exit(await check(opts));
+    await once(opts);
   }
 }
 
@@ -87,6 +87,16 @@ interface CheckOpts {
     window: boolean;
     fetchevent: boolean;
   };
+}
+
+async function once(opts: CheckOpts): Promise<void> {
+  const { errors } = await analyzeDeps(opts.entrypoint);
+  for (const error of errors) {
+    printError(error);
+  }
+  if (errors.length !== 0) Deno.exit(1);
+  const status = await check(opts);
+  Deno.exit(status);
 }
 
 async function check({ entrypoint, reload, libs }: CheckOpts): Promise<number> {
@@ -108,9 +118,14 @@ async function check({ entrypoint, reload, libs }: CheckOpts): Promise<number> {
 }
 
 async function watch(opts: CheckOpts) {
-  let deps = await analyzeDeps(opts.entrypoint);
+  let { deps, errors } = await analyzeDeps(opts.entrypoint);
+  for (const error of errors) {
+    printError(error);
+  }
   let debouncer = null;
-  await check(opts);
+  if (errors.length === 0) {
+    await check(opts);
+  }
 
   while (true) {
     const watcher = Deno.watchFs(deps);
@@ -118,16 +133,19 @@ async function watch(opts: CheckOpts) {
       if (typeof debouncer == "number") clearTimeout(debouncer);
       debouncer = setTimeout(async () => {
         console.warn(yellow(`${event.paths[0]} changed. Restarting...`));
-        await check(opts);
-        try {
-          const newDeps = await analyzeDeps(opts.entrypoint);
-          const depsChanged = new Set([...deps, ...newDeps]).size;
-          if (depsChanged) {
-            deps = newDeps;
-            watcher.return?.();
-          }
-        } catch {
-          // ignore the error
+        const { deps: newDeps, errors: newErrors } = await analyzeDeps(
+          opts.entrypoint,
+        );
+        for (const error of newErrors) {
+          printError(error);
+        }
+        const depsChanged = new Set([...deps, ...newDeps]).size;
+        if (depsChanged) {
+          deps = newDeps;
+          watcher.return?.();
+        }
+        if (errors.length === 0) {
+          await check(opts);
         }
       }, 100);
     }

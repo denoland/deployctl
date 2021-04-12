@@ -14,3 +14,13 @@ test({ args: ["check", "examples/has_type_error.ts"] }, async (proc) => {
   assertEquals(stdout, "");
   assertEquals(code, 1);
 });
+
+test(
+  { args: ["check", "./examples/with_nonexistent_dep.js"] },
+  async (proc) => {
+    const [stdout, stderr, { code }] = await output(proc);
+    assertEquals(code, 1);
+    assertEquals(stdout, "");
+    assertStringIncludes(stderr, "Cannot resolve module");
+  },
+);
