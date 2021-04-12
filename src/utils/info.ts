@@ -1,12 +1,5 @@
 import { fromFileUrl } from "../../deps.ts";
 
-export class ModuleGraphError extends Error {
-  name = "ModuleGraphError";
-  constructor(message: string) {
-    super(message);
-  }
-}
-
 /**
  * Analyzes the given specifier and returns all code or type dependencies of
  * that module (remote and local), as fully qualified module specifiers.
