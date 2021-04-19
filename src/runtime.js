@@ -3,86 +3,29 @@
 // Be careful if you want to use this in production. This polyfill has no proper
 // error handling.
 
-import { Server } from "https://deno.land/std@0.91.0/http/server.ts";
-import { readerFromStreamReader } from "https://deno.land/std@0.91.0/io/streams.ts";
 import { green } from "https://deno.land/std@0.91.0/fmt/colors.ts";
 import "https://deno.land/x/file_fetch@0.1.0/polyfill.ts";
 
-export const unsupportedMethods = [
-  "setInterval",
-  "setTimeout",
-  "clearInterval",
-  "clearTimeout",
-];
-for (const method of unsupportedMethods) {
-  delete globalThis[method];
-}
-
 class FetchEvent extends Event {
-  #stdReq;
   #request;
-  #reponded;
+  #respondWith;
 
   get request() {
     return this.#request;
   }
 
-  constructor(stdReq, addr) {
+  /**
+   * @param {Request} request
+   * @param {Response | Promise<Response>} respondWith
+   */
+  constructor(request, respondWith) {
     super("fetch");
-
-    const host = stdReq.headers.get("host") ?? addr;
-
-    this.#stdReq = stdReq;
-    this.#reponded = false;
-    this.#request = new Request(
-      new URL(stdReq.url, `http://${host}`).toString(),
-      {
-        body: new ReadableStream({
-          async pull(controller) {
-            try {
-              const chunk = new Uint8Array(16 * 1024 + 256);
-              const read = await stdReq.body.read(chunk);
-              if (read != 0) {
-                if (chunk.length == read) {
-                  controller.enqueue(chunk);
-                } else {
-                  controller.enqueue(chunk.subarray(0, read));
-                }
-              } else {
-                controller.close();
-                stdReq.body.close();
-              }
-            } catch (e) {
-              controller.error(e);
-              controller.close();
-              stdReq.body.close();
-            }
-          },
-          cancel() {
-            stdReq.body.close();
-          },
-        }),
-        headers: stdReq.headers,
-        method: stdReq.method,
-      },
-    );
+    this.#request = request;
+    this.#respondWith = respondWith;
   }
 
-  async respondWith(response) {
-    if (this.#reponded === true) {
-      throw new TypeError("Already responded to this FetchEvent.");
-    } else {
-      this.#reponded = true;
-    }
-
-    const resp = await response;
-    await this.#stdReq.respond({
-      headers: resp.headers,
-      status: resp.status,
-      body: resp.body != null
-        ? readerFromStreamReader(resp.body.getReader())
-        : undefined,
-    });
+  respondWith(response) {
+    this.#respondWith(response).catch((err) => console.warn(err));
   }
 
   [Symbol.toStringTag]() {
@@ -100,21 +43,25 @@ export async function serve(addr) {
   const listener = Deno.listen(addr);
   const host = `${listener.addr.hostname}:${listener.addr.port}`;
   console.error(green(`Listening on http://${host}`));
-  const server = new Server(listener);
-  for await (const req of server) {
-    window.dispatchEvent(
-      new FetchEvent(
-        req,
-        host,
-      ),
-    );
+  for await (const conn of listener) {
+    handleConn(conn).catch((err) => console.warn(err));
+  }
+}
+
+/**
+ * @param {Deno.Conn} conn 
+ */
+async function handleConn(conn) {
+  const http = Deno.serveHttp(conn);
+  for await (const { request, respondWith } of http) {
+    window.dispatchEvent(new FetchEvent(request, respondWith));
   }
 }
 
 export function shim(addr) {
   const originalAddEventListener = window.addEventListener;
   window.addEventListener = (type, handler) => {
-    if (type == "fetch") {
+    if (type === "fetch") {
       serve(addr);
     }
     originalAddEventListener(type, handler);

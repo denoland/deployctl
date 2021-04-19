@@ -81,7 +81,8 @@ export interface RunOpts {
 export async function run(opts: RunOpts): Promise<Deno.Process> {
   const tsconfigPath = await tsconfig();
 
-  const args = ["--config", tsconfigPath];
+  // NOTE: unstable is required because we make use of the `Deno.startHttp` API.
+  const args = ["--config", tsconfigPath, "--unstable"];
   if (opts.noCheck) args.push("--no-check");
   if (opts.inspect) args.push("--inspect");
   if (opts.reload) args.push("--reload");
