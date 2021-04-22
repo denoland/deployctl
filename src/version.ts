@@ -1,4 +1,4 @@
-export const VERSION = "0.2.0";
+export const VERSION = "0.3.0";
 
 // The minium Deno version required. Currently 1.9.1 because we are making use of
 // the --unstable `Deno.startHttp` API, and 1.9.0 still has some bugs.
