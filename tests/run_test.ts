@@ -123,24 +123,24 @@ test({
   proc.stderr?.close();
 });
 
-// test({
-//   name: "deployctl errors on multiple event.respondWith calls",
-//   args: ["run", "./tests/testdata/respond_twice.js"],
-// }, async (proc) => {
-//   await waitReady(proc);
-//   try {
-//     await fetch("http://127.0.0.1:8080");
-//     // deno-lint-ignore no-empty
-//   } catch {}
+test({
+  name: "deployctl errors on multiple event.respondWith calls",
+  args: ["run", "./tests/testdata/respond_twice.js"],
+}, async (proc) => {
+  await waitReady(proc);
+  try {
+    await fetch("http://127.0.0.1:8080");
+    // deno-lint-ignore no-empty
+  } catch {}
 
-//   const [stdout, stderr, { code }] = await output(proc);
-//   assertEquals(code, 1);
-//   assertEquals(stdout, "");
-//   assertStringIncludes(
-//     stderr,
-//     "TypeError: Already responded to this FetchEvent",
-//   );
-// });
+  const [stdout, stderr, { code }] = await output(proc);
+  assertEquals(code, 1);
+  assertEquals(stdout, "");
+  assertStringIncludes(
+    stderr,
+    "TypeError: Already responded to this FetchEvent",
+  );
+});
 
 test({
   name: "serve local files",
