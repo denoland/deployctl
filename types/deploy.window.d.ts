@@ -1764,3 +1764,48 @@ declare interface Crypto {
     array: T,
   ): T;
 }
+
+/** Sets a timer which executes a function once after the timer expires. Returns
+ * an id which may be used to cancel the timeout.
+ *
+ *     setTimeout(() => { console.log('hello'); }, 500);
+ */
+declare function setTimeout(
+  /** callback function to execute when timer expires */
+  cb: (...args: any[]) => void,
+  /** delay in ms */
+  delay?: number,
+  /** arguments passed to callback function */
+  ...args: any[]
+): number;
+
+/** Repeatedly calls a function , with a fixed time delay between each call.
+ *
+ *     // Outputs 'hello' to the console every 500ms
+ *     setInterval(() => { console.log('hello'); }, 500);
+ */
+declare function setInterval(
+  /** callback function to execute when timer expires */
+  cb: (...args: any[]) => void,
+  /** delay in ms */
+  delay?: number,
+  /** arguments passed to callback function */
+  ...args: any[]
+): number;
+
+/** Cancels a timed, repeating action which was previously started by a call
+ * to `setInterval()`
+ *
+ *     const id = setInterval(() => {console.log('hello');}, 500);
+ *     ...
+ *     clearInterval(id);
+ */
+declare function clearInterval(id?: number): void;
+
+/** Cancels a scheduled action initiated by `setTimeout()`
+ *
+ *     const id = setTimeout(() => {console.log('hello');}, 500);
+ *     ...
+ *     clearTimeout(id);
+ */
+declare function clearTimeout(id?: number): void;

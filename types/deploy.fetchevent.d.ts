@@ -7,7 +7,7 @@
 
 declare class FetchEvent extends Event {
   request: Request;
-  respondWith(response: Response | Promise<Response>): Promise<Response>;
+  respondWith(response: Response | Promise<Response>): void;
 }
 
 declare type FetchEventListenerOrFetchEventListenerObject =

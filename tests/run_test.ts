@@ -1,4 +1,4 @@
-import { assertEquals, assertStringIncludes } from "./deps.ts";
+import { assert, assertEquals, assertStringIncludes } from "./deps.ts";
 import { kill, output, test, waitReady } from "./utils.ts";
 
 test({ args: ["run", "./examples/hello.js"] }, async (proc) => {
@@ -108,20 +108,14 @@ test({
 });
 
 test({
-  name: "deployctl errors on usage of unsupported timer methods",
+  name: "deployctl no errors on timer methods",
   args: ["run", "./tests/testdata/timers.js"],
 }, async (proc) => {
   await waitReady(proc);
 
   const response = await fetch("http://127.0.0.1:8080");
-  const expectedErrors = [
-    "setInterval is not defined",
-    "clearInterval is not defined",
-    "setTimeout is not defined",
-    "clearTimeout is not defined",
-  ].sort();
 
-  assertEquals(await response.json(), { errors: expectedErrors });
+  assertEquals(await response.json(), { errors: [] });
 
   await kill(proc);
   await proc.status();
@@ -134,13 +128,14 @@ test({
   args: ["run", "./tests/testdata/respond_twice.js"],
 }, async (proc) => {
   await waitReady(proc);
-  try {
-    await fetch("http://127.0.0.1:8080");
-    // deno-lint-ignore no-empty
-  } catch {}
+
+  const resp = await fetch("http://127.0.0.1:8080");
+  await resp.text();
+
+  await kill(proc);
 
   const [stdout, stderr, { code }] = await output(proc);
-  assertEquals(code, 1);
+  assert(code !== 0);
   assertEquals(stdout, "");
   assertStringIncludes(
     stderr,

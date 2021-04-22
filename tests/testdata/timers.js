@@ -1,7 +1,8 @@
 addEventListener("fetch", (event) => {
   const errors = [];
+  let id;
   try {
-    setInterval(() => {
+    id = setInterval(() => {
       console.log("setInterval working :(");
     }, 1);
   } catch (error) {
@@ -9,15 +10,13 @@ addEventListener("fetch", (event) => {
   }
 
   try {
-    clearInterval(() => {
-      console.log("clearInterval working :(");
-    }, 1);
+    clearInterval(id, 1);
   } catch (error) {
     errors.push(error.message);
   }
 
   try {
-    setTimeout(() => {
+    id = setTimeout(() => {
       console.log("setTimeout working :(");
     }, 1);
   } catch (error) {
@@ -25,9 +24,7 @@ addEventListener("fetch", (event) => {
   }
 
   try {
-    clearTimeout(() => {
-      console.log("clearTimeout working :(");
-    }, 1);
+    clearTimeout(id, 1);
   } catch (error) {
     errors.push(error.message);
   }
