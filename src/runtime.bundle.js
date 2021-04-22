@@ -1180,6 +1180,7 @@ window.fetch = fetch;
 class FetchEvent extends Event {
     #request;
     #respondWith;
+    #responded;
     get request() {
         return this.#request;
     }
@@ -1187,8 +1188,14 @@ class FetchEvent extends Event {
         super("fetch");
         this.#request = request;
         this.#respondWith = respondWith;
+        this.#responded = false;
     }
     respondWith(response) {
+        if (this.#responded === true) {
+            throw new TypeError("Already responded to this FetchEvent.");
+        } else {
+            this.#responded = true;
+        }
         this.#respondWith(response).catch((err)=>console.warn(err)
         );
     }

@@ -1,4 +1,4 @@
-import { assertEquals, assertStringIncludes } from "./deps.ts";
+import { assert, assertEquals, assertStringIncludes } from "./deps.ts";
 import { kill, output, test, waitReady } from "./utils.ts";
 
 test({ args: ["run", "./examples/hello.js"] }, async (proc) => {
@@ -128,13 +128,14 @@ test({
   args: ["run", "./tests/testdata/respond_twice.js"],
 }, async (proc) => {
   await waitReady(proc);
-  try {
-    await fetch("http://127.0.0.1:8080");
-    // deno-lint-ignore no-empty
-  } catch {}
+
+  const resp = await fetch("http://127.0.0.1:8080");
+  await resp.text();
+
+  await kill(proc);
 
   const [stdout, stderr, { code }] = await output(proc);
-  assertEquals(code, 1);
+  assert(code !== 0);
   assertEquals(stdout, "");
   assertStringIncludes(
     stderr,
