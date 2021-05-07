@@ -91,6 +91,17 @@ test({ args: ["run", "./examples/wrong_file_name.js"] }, async (proc) => {
   assertStringIncludes(stderr, "Failed to open entrypoint file");
 });
 
+test(
+  { args: ["run", "./tests/testdata/syntax_error_dot_js"] },
+  async (proc) => {
+    const [stdout, stderr, { code }] = await output(proc);
+    assertEquals(code, 1);
+    assertEquals(stdout, "");
+    assertStringIncludes(stderr, "Unexpected eof at");
+    assertStringIncludes(stderr, "Failed to analyze");
+  },
+);
+
 test({
   name: "deployctl run ./examples/env.ts --env .env",
   args: ["run", "./examples/env.ts", "--env", "./tests/testdata/example.env"],

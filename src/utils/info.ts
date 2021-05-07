@@ -13,13 +13,19 @@ export async function analyzeDeps(
       "info",
       "--json",
       "--unstable",
-      specifier.toString(),
+      specifier.href,
     ],
     stdout: "piped",
   });
   const raw = await proc.output();
   const status = await proc.status();
-  if (!status) throw new Error("Failed to analyze dependencies.");
+  if (!status.success) {
+    const path = fromFileUrl(specifier);
+    return {
+      deps: [path],
+      errors: [`Failed to analyze ${path}`],
+    };
+  }
   const modules: Array<{ specifier: string; error?: string }> =
     JSON.parse(new TextDecoder().decode(raw)).modules;
 
