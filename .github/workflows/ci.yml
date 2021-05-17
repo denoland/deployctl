@@ -41,7 +41,7 @@ jobs:
         run: deno lint --unstable
 
       - name: Typecheck
-        run: deno cache deployctl.ts
+        run: deno cache --unstable deployctl.ts
 
       - name: Run tests
         run: deno test -A --unstable
