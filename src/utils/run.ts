@@ -14,7 +14,7 @@ interface Libs {
  * This function generates a snippet of code that can be used to run a Deploy
  * script in regular Deno, with the correct typings. The run script requires
  * `--allow-net` for dynamically importing DEPLOY_D_TS_URL, and `--allow-read` /
- * `--allow-net` for dynamically importing the entrypoint script. 
+ * `--allow-net` for dynamically importing the entrypoint script.
  */
 // We need to load the runtime code using the regular Deno typings first (the
 // `lib.deno.d.ts` types). After this is done, we need to switch the types to
