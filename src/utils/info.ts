@@ -1,4 +1,4 @@
-import { fromFileUrl } from "../../deps.ts";
+import { fromFileUrl, join } from "../../deps.ts";
 
 /**
  * Analyzes the given specifier and returns all code or type dependencies of
@@ -37,4 +37,33 @@ export async function analyzeDeps(
     .map((module) => module.error!);
 
   return { deps, errors };
+}
+
+export function getConfigPaths() {
+  const homeDir = Deno.build.os == "windows"
+    ? Deno.env.get("USERPROFILE")!
+    : Deno.env.get("HOME")!;
+  const configDir = join(homeDir, ".deno", "deployctl");
+
+  return {
+    configDir,
+    updatePath: join(configDir, "update.json"),
+  };
+}
+
+export function fetchReleases() {
+  return new Worker(
+    new URL("./fetch_latest.ts", import.meta.url).href,
+    {
+      type: "module",
+      deno: {
+        namespace: true,
+        permissions: {
+          net: true,
+          write: true,
+          env: true,
+        },
+      },
+    },
+  );
 }
