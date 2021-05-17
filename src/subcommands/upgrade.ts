@@ -70,6 +70,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
         "--allow-net",
         "--allow-run",
         "--no-check",
+        "--unstable",
         "-f",
         `https://deno.land/x/deploy@${version ? version : latest}/deployctl.ts`,
       ],
