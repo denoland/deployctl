@@ -56,7 +56,7 @@ export async function serve(addr) {
 }
 
 /**
- * @param {Deno.Conn} conn 
+ * @param {Deno.Conn} conn
  */
 async function handleConn(conn) {
   const http = Deno.serveHttp(conn);
