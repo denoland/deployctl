@@ -4,7 +4,7 @@
 // error handling.
 
 import { green } from "https://deno.land/std@0.91.0/fmt/colors.ts";
-import "https://deno.land/x/file_fetch@0.1.0/polyfill.ts";
+import "https://deno.land/x/file_fetch@0.2.0/polyfill.ts";
 
 class FetchEvent extends Event {
   #request;
