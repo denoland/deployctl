@@ -1,5 +1,6 @@
 import { resolve, toFileUrl } from "../../deps.ts";
 import { error } from "../error.ts";
+
 /**
  * Parses the entrypoint to a URL.
  * Ensures the file exists when the entrypoint is a local file.

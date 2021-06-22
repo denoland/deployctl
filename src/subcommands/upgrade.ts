@@ -70,7 +70,6 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
         "--allow-net",
         "--allow-run",
         "--no-check",
-        "--unstable",
         "-f",
         `https://deno.land/x/deploy@${version ? version : latest}/deployctl.ts`,
       ],
@@ -82,14 +81,18 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
 export async function getVersions(): Promise<
   { latest: string; versions: string[] }
 > {
+  const aborter = new AbortController();
+  const timer = setTimeout(() => aborter.abort(), 2500);
   const response = await fetch(
     "https://cdn.deno.land/deploy/meta/versions.json",
+    { signal: aborter.signal },
   );
   if (!response.ok) {
     throw new Error(
       "couldn't fetch the latest version - try again after sometime",
     );
   }
-
-  return await response.json();
+  const data = await response.json();
+  clearTimeout(timer);
+  return data;
 }

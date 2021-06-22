@@ -3,7 +3,7 @@
 // Be careful if you want to use this in production. This polyfill has no proper
 // error handling.
 
-import { green } from "https://deno.land/std@0.91.0/fmt/colors.ts";
+import { green } from "https://deno.land/std@0.97.0/fmt/colors.ts";
 import "https://deno.land/x/file_fetch@0.2.0/polyfill.ts";
 
 class FetchEvent extends Event {

@@ -6,7 +6,7 @@ fmt:
 	deno fmt
 
 lint:
-	deno lint --unstable
+	deno lint
 
 test:
 	deno test -A --unstable
