@@ -38,10 +38,10 @@ jobs:
 
       - name: Lint
         if: runner.os == 'Linux'
-        run: deno lint --unstable
+        run: deno lint
 
       - name: Typecheck
-        run: deno cache --unstable deployctl.ts
+        run: deno cache deployctl.ts
 
       - name: Run tests
         run: deno test -A --unstable

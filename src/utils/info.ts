@@ -1,4 +1,5 @@
 import { fromFileUrl, join } from "../../deps.ts";
+import { getVersions } from "../subcommands/upgrade.ts";
 
 /**
  * Analyzes the given specifier and returns all code or type dependencies of
@@ -51,19 +52,18 @@ export function getConfigPaths() {
   };
 }
 
-export function fetchReleases() {
-  return new Worker(
-    new URL("./fetch_latest.ts", import.meta.url).href,
-    {
-      type: "module",
-      deno: {
-        namespace: true,
-        permissions: {
-          net: true,
-          write: true,
-          env: true,
-        },
-      },
-    },
-  );
+export async function fetchReleases() {
+  try {
+    const { latest } = await getVersions();
+    const updateInfo = { lastFetched: Date.now(), latest };
+    const { updatePath, configDir } = getConfigPaths();
+    await Deno.mkdir(configDir, { recursive: true });
+    await Deno.writeFile(
+      updatePath,
+      new TextEncoder().encode(JSON.stringify(updateInfo, null, 2)),
+    );
+  } catch (_) {
+    // We will try again later when the fetch isn't successful,
+    // so we shouldn't report errors.
+  }
 }
