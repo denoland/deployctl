@@ -49,7 +49,7 @@ export async function serve(addr) {
   }
   const listener = Deno.listen(addr);
   const host = `${listener.addr.hostname}:${listener.addr.port}`;
-  console.error(green(`Listening on http://${host}`));
+  console.error(green(`Listening on http://localhost:${listener.addr.port}`));
   for await (const conn of listener) {
     handleConn(conn).catch((err) => console.warn(err));
   }
