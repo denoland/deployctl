@@ -20,7 +20,7 @@ USAGE:
 
 OPTIONS:
         --addr=<addr>          The address to listen on (default ":8080")
-        --env=<path/to/.env>   Load envirnoment variables from the provided .env file
+        --env=<path/to/.env>   Load environment variables from the provided .env file
     -h, --help                 Prints help information
         --inspect              Activate inspector on 127.0.0.1:9229
         --libs=<libs>          The deploy type libs that are loaded (default "ns,window,fetchevent")

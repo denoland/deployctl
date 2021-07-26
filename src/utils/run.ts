@@ -65,7 +65,7 @@ export interface RunOpts {
   inspect: boolean;
   /** If modules should be reloaded. */
   reload: boolean;
-  /** Envirnoment variables for the script. */
+  /** Environment variables for the script. */
   env: { [key: string]: string };
 
   libs: {
