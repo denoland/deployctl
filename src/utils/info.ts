@@ -40,13 +40,13 @@ export async function analyzeDeps(
 }
 
 export function getConfigPaths() {
-  const denoCacheDir = Deno.env.get("DENO_DIR")!;
+  const deployConfigPath = Deno.env.get("DENO_DEPLOY_CONFIG_PATH")!;
   const homeDir = Deno.build.os == "windows"
     ? Deno.env.get("USERPROFILE")!
     : Deno.env.get("HOME")!;
 
-  const configDir = denoCacheDir
-    ? join(denoCacheDir, "deployctl")
+  const configDir = deployConfigPath
+    ? join(deployConfigPath, "deployctl")
     : join(homeDir, ".deno", "deployctl");
 
   return {
