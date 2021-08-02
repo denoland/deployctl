@@ -48,12 +48,14 @@ const args = parseArgs(Deno.args, {
   string: [
     "addr",
     "libs",
+    "location",
     "env",
   ],
   default: {
     addr: ":8080",
     check: true,
     libs: "ns,window,fetchevent",
+    location: "http://0.0.0.0:8080",
   },
 });
 

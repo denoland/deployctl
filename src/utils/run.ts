@@ -63,6 +63,8 @@ export interface RunOpts {
   noCheck: boolean;
   /** If the inspector should be enabled. */
   inspect: boolean;
+  /** Some third-party libraries may require this option in order to work */
+  location: string;
   /** If modules should be reloaded. */
   reload: boolean;
   /** Environment variables for the script. */
@@ -85,6 +87,7 @@ export async function run(opts: RunOpts): Promise<Deno.Process> {
   const args = ["--config", tsconfigPath, "--unstable"];
   if (opts.noCheck) args.push("--no-check");
   if (opts.inspect) args.push("--inspect");
+  if (opts.location) args.push("--location", opts.location);
   if (opts.reload) args.push("--reload");
 
   const runner = await runnerCode(
