@@ -24,6 +24,7 @@ OPTIONS:
     -h, --help                 Prints help information
         --inspect              Activate inspector on 127.0.0.1:9229
         --libs=<libs>          The deploy type libs that are loaded (default "ns,window,fetchevent")
+        --location=<href>      Value of 'globalThis.location' used by some web APIs
         --no-check             Skip type checking modules
     -r, --reload               Reload source code cache (recompile TypeScript)
         --watch                Watch for file changes and restart process automatically
@@ -34,6 +35,7 @@ export interface Args {
   help: boolean;
   noCheck: boolean;
   inspect: boolean;
+  location: string;
   reload: boolean;
   watch: boolean;
   env: string;
@@ -52,6 +54,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     help: !!rawArgs.help,
     noCheck: !rawArgs.check,
     inspect: !!rawArgs.inspect,
+    location: String(rawArgs.location),
     reload: !!rawArgs.reload,
     watch: !!rawArgs.watch,
     env: String(rawArgs.env),
@@ -81,6 +84,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     entrypoint: await parseEntrypoint(entrypoint),
     listenAddress: args.addr,
     inspect: args.inspect,
+    location: args.location,
     noCheck: args.noCheck,
     reload: args.reload,
     libs: args.libs,
