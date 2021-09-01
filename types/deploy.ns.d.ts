@@ -142,4 +142,35 @@ declare namespace Deno {
    *
    */
   export function inspect(value: unknown, options?: InspectOptions): string;
+
+  /** Returns the current working directory of your deployment. It is located
+   * at the root of your GitHub repository.
+   */
+  export function cwd(): string;
+
+  /** Reads the contents of a file in the linked GitHub repository.
+   *
+   * ```ts
+   * const decoder = new TextDecoder("utf-8");
+   * const data = await Deno.readFile("./hello.txt");
+   * console.log(decoder.decode(data));
+   * ```
+   *
+   * The path can be relative or absolute. It can also be a `file:` URL.
+   */
+  export function readFile(path: string | URL): Promise<Uint8Array>;
+
+  /** Reads the contents of a UTF-8 file decoded as a string in the linked
+   * GitHub repository.
+   *
+   * ```ts
+   * addEventListener("fetch", async (event) => {
+   *   const readme = await Deno.readTextFile("./README.md");
+   *   event.respondWith(new Response(readme));
+   * });
+   * ```
+   *
+   * The path can be relative or absolute. It can also be a `file:` URL.
+   */
+  export function readTextFile(path: string | URL): Promise<string>;
 }
