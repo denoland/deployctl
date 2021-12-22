@@ -24,8 +24,8 @@ USAGE:
 OPTIONS:
     -h, --help          Prints help information
         --no-static     Don't include the files in the CWD as static files
-    -p, --prod          Create a production deployment (default is preview deployment)
-        --project=NAME  The project to deploy to
+        --prod          Create a production deployment (default is preview deployment)
+    -p, --project=NAME  The project to deploy to
         --token=TOKEN   The API token to use (defaults to DEPLOY_TOKEN env var)
 `;
 

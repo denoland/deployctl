@@ -33,6 +33,7 @@ const args = parseArgs(Deno.args, {
   alias: {
     "help": "h",
     "version": "V",
+    "project": "p",
   },
   boolean: [
     "help",
