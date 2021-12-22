@@ -8,10 +8,14 @@ import { error } from "../error.ts";
 export async function parseEntrypoint(entrypoint: string): Promise<URL> {
   let entrypointSpecifier: URL;
   try {
-    entrypointSpecifier =
-      (entrypoint.startsWith("https://") || entrypoint.startsWith("http://"))
-        ? new URL(entrypoint)
-        : toFileUrl(resolve(Deno.cwd(), entrypoint));
+    if (
+      entrypoint.startsWith("https://") || entrypoint.startsWith("http://") ||
+      entrypoint.startsWith("file://")
+    ) {
+      entrypointSpecifier = new URL(entrypoint);
+    } else {
+      entrypointSpecifier = toFileUrl(resolve(Deno.cwd(), entrypoint));
+    }
   } catch (err) {
     error(
       `Failed to parse entrypoint specifier '${entrypoint}': ${err.message}`,

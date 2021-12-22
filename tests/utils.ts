@@ -1,5 +1,3 @@
-import { BufReader } from "./deps.ts";
-
 export interface Permissions {
   net: boolean;
   read: boolean;
@@ -78,36 +76,4 @@ export async function output(
     new TextDecoder().decode(stderr),
     status,
   ];
-}
-
-export async function waitReady(proc: Deno.Process) {
-  const stderr = new BufReader(proc.stderr!);
-  const lines = [];
-  while (true) {
-    const line = await stderr.readString("\n");
-    lines.push(line);
-    if (line?.includes("Listening on")) {
-      return;
-    }
-    if (line?.includes("error")) {
-      throw new Error("deployctl failed: " + lines);
-    }
-  }
-}
-
-export async function kill(proc: Deno.Process) {
-  if (Deno.build.os == "linux" || Deno.build.os == "darwin") {
-    const pkill = Deno.run({ cmd: ["pkill", "-2", "-P", String(proc.pid)] });
-    await pkill.status();
-    pkill.close();
-    proc.kill(2);
-  } else {
-    const pkill = Deno.run({
-      cmd: ["taskkill", "/t", "/f", "/pid", String(proc.pid)],
-      stderr: "null",
-      stdout: "null",
-    });
-    await pkill.status();
-    pkill.close();
-  }
 }
