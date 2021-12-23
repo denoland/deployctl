@@ -28,7 +28,7 @@ export interface Project {
 
 export interface ManifestEntryFile {
   kind: "file";
-  hash: string;
+  gitSha1: string;
   size: number;
 }
 

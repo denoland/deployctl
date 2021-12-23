@@ -91,7 +91,7 @@ interface DeployOpts {
 }
 
 /** Calculate git object hash, like `git hash-object` does. */
-async function calculateHash(bytes: Uint8Array) {
+async function calculateGitSha1(bytes: Uint8Array) {
   const prefix = `blob ${bytes.byteLength}\0`;
   const prefixBytes = new TextEncoder().encode(prefix);
   const fullBytes = new Uint8Array(prefixBytes.byteLength + bytes.byteLength);
@@ -116,13 +116,13 @@ async function walk(
     let entry: ManifestEntry;
     if (file.isFile) {
       const data = await Deno.readFile(path);
-      const hash = await calculateHash(data);
+      const gitSha1 = await calculateGitSha1(data);
       entry = {
         kind: "file",
-        hash,
+        gitSha1,
         size: data.byteLength,
       };
-      files.set(hash, path);
+      files.set(gitSha1, path);
     } else if (file.isDirectory) {
       if (relative === "/.git") continue;
       entry = {
@@ -200,7 +200,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
         break;
       case "success":
         console.log(`Deployment successful!`);
-        console.log("View at:")
+        console.log("View at:");
         for (const { domain } of event.domainMappings) {
           console.log(` - https://${domain}`);
         }

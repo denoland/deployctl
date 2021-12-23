@@ -116,7 +116,7 @@ export class API {
       form.append("file", new Blob([bytes]));
     }
     return this.#requestStream(
-      `/projects/${projectId}/deployments_stream_with_assets`,
+      `/projects/${projectId}/deployment_with_assets`,
       { method: "POST", body: form },
     );
   }
