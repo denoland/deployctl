@@ -1,6 +1,6 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { fromFileUrl, join } from "../../deps.ts";
+import { fromFileUrl, join, normalize } from "../../deps.ts";
 import { error } from "../error.ts";
 import { API } from "../utils/api.ts";
 import { ManifestEntry } from "../utils/api_types.ts";
@@ -22,17 +22,21 @@ USAGE:
     deployctl deploy [OPTIONS] <ENTRYPOINT>
 
 OPTIONS:
-    -h, --help          Prints help information
-        --no-static     Don't include the files in the CWD as static files
-        --prod          Create a production deployment (default is preview deployment)
-    -p, --project=NAME  The project to deploy to
-        --token=TOKEN   The API token to use (defaults to DEPLOY_TOKEN env var)
+        --exclude=<PATTERNS>  Exclude files that match this pattern
+        --include=<PATTERNS>  Only upload files that match this pattern
+    -h, --help                Prints help information
+        --no-static           Don't include the files in the CWD as static files
+        --prod                Create a production deployment (default is preview deployment)
+    -p, --project=NAME        The project to deploy to
+        --token=TOKEN         The API token to use (defaults to DEPLOY_TOKEN env var)
 `;
 
 export interface Args {
   help: boolean;
   static: boolean;
   prod: boolean;
+  exclude?: string[];
+  include?: string[];
   token: string | null;
   project: string | null;
 }
@@ -45,6 +49,8 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     prod: !!rawArgs.prod,
     token: rawArgs.token ? String(rawArgs.token) : null,
     project: rawArgs.project ? String(rawArgs.project) : null,
+    exclude: rawArgs.exclude?.split(","),
+    include: rawArgs.include?.split(","),
   };
   const entrypoint: string | null = typeof rawArgs._[0] === "string"
     ? rawArgs._[0]
@@ -77,6 +83,8 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     prod: args.prod,
     token,
     project: args.project,
+    include: args.include?.map((pattern) => normalize(pattern)),
+    exclude: args.exclude?.map((pattern) => normalize(pattern)),
   };
 
   await deploy(opts);
@@ -86,6 +94,8 @@ interface DeployOpts {
   entrypoint: URL;
   static: boolean;
   prod: boolean;
+  exclude?: string[];
+  include?: string[];
   token: string;
   project: string;
 }
@@ -104,15 +114,41 @@ async function calculateGitSha1(bytes: Uint8Array) {
   return hashHex;
 }
 
+function include(
+  path: string,
+  include?: string[],
+  exclude?: string[],
+): boolean {
+  if (
+    include && !include.some((pattern): boolean => path.startsWith(pattern))
+  ) {
+    return false;
+  }
+  if (exclude && exclude.some((pattern): boolean => path.startsWith(pattern))) {
+    return false;
+  }
+  return true;
+}
+
 async function walk(
   cwd: string,
   dir: string,
   files: Map<string, string>,
+  options: { include?: string[]; exclude?: string[] },
 ): Promise<Record<string, ManifestEntry>> {
   const entries: Record<string, ManifestEntry> = {};
   for await (const file of Deno.readDir(dir)) {
     const path = join(dir, file.name);
     const relative = path.slice(cwd.length);
+    if (
+      !include(
+        path.slice(cwd.length + 1),
+        options.include,
+        options.exclude,
+      )
+    ) {
+      continue;
+    }
     let entry: ManifestEntry;
     if (file.isFile) {
       const data = await Deno.readFile(path);
@@ -127,7 +163,7 @@ async function walk(
       if (relative === "/.git") continue;
       entry = {
         kind: "directory",
-        entries: await walk(cwd, path, files),
+        entries: await walk(cwd, path, files, options),
       };
     } else if (file.isSymlink) {
       const target = await Deno.readLink(path);
@@ -163,7 +199,11 @@ async function deploy(opts: DeployOpts): Promise<void> {
   }
 
   const assets = new Map<string, string>();
-  const entries = await walk(cwd, cwd, assets);
+  const entries = await walk(cwd, cwd, assets, {
+    include: opts.include,
+    exclude: opts.exclude,
+  });
+  console.log(entries);
 
   const neededHashes = await api.projectNegotiateAssets(project.id, {
     entries,

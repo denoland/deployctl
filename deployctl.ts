@@ -44,6 +44,8 @@ const args = parseArgs(Deno.args, {
   string: [
     "project",
     "token",
+    "include",
+    "exclude",
   ],
   default: {
     static: true,
