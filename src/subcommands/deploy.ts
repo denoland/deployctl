@@ -59,6 +59,11 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     console.log(help);
     Deno.exit(0);
   }
+  const token = args.token ?? Deno.env.get("DEPLOY_TOKEN") ?? null;
+  if (token === null) {
+    console.error(help);
+    error("Missing access token. Set via --token or DEPLOY_TOKEN.");
+  }
   if (entrypoint === null) {
     console.error(help);
     error("No entrypoint specifier given.");
@@ -70,11 +75,6 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
   if (args.project === null) {
     console.error(help);
     error("Missing project ID.");
-  }
-  const token = args.token ?? Deno.env.get("DEPLOY_TOKEN") ?? null;
-  if (token === null) {
-    console.error(help);
-    error("Missing access token. Set via --token or DEPLOY_TOKEN.");
   }
 
   const opts = {
