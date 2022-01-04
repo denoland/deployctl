@@ -11,7 +11,7 @@ deno install --allow-read --allow-write --allow-env --allow-net --allow-run --no
 ## Usage
 
 ```shell
-deployctl deploy ./examples/hello.ts
+deployctl deploy --project=hello-world ./examples/hello.ts
 ```
 
 View the help:
