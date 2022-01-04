@@ -207,7 +207,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
     exclude: opts.exclude,
   });
   assetSpinner.succeed(
-    `Found ${assets.size} asset${assets.length === 1 ? "" : "s"}.`,
+    `Found ${assets.size} asset${assets.size === 1 ? "" : "s"}.`,
   );
 
   let uploadSpinner: Spinner | null = wait("Determining assets to upload...")
