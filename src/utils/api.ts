@@ -1,6 +1,6 @@
 import { LineStream } from "https://deno.land/std@0.116.0/streams/delimiter.ts";
 import {
-  CodeUploadProgress,
+  DeploymentProgress,
   ManifestEntry,
   Project,
   PushDeploymentRequest,
@@ -109,7 +109,7 @@ export class API {
     projectId: string,
     request: PushDeploymentRequest,
     files: Uint8Array[],
-  ): AsyncIterable<CodeUploadProgress> {
+  ): AsyncIterable<DeploymentProgress> {
     const form = new FormData();
     form.append("request", JSON.stringify(request));
     for (const bytes of files) {

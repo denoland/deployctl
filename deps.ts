@@ -22,3 +22,6 @@ export {
   gte as semverGreaterThanOrEquals,
   valid as semverValid,
 } from "https://deno.land/x/semver@v1.4.0/mod.ts";
+
+// x/wait
+export { Spinner, wait } from "https://deno.land/x/wait@0.1.12/mod.ts";

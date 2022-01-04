@@ -53,29 +53,36 @@ export interface PushDeploymentRequest {
   manifest: { entries: Record<string, ManifestEntry> };
 }
 
-export type CodeUploadProgress =
-  | CodeUploadProgressError
-  | CodeUploadProgressLoad
-  | CodeUploadProgressUploadComplete
-  | CodeUploadProgressSuccess;
+export type DeploymentProgress =
+  | DeploymentProgressStaticFile
+  | DeploymentProgressLoad
+  | DeploymentProgressUploadComplete
+  | DeploymentProgressSuccess
+  | DeploymentProgressError;
 
-export interface CodeUploadProgressError {
-  type: "error";
-  code: string;
-  ctx: string;
+export interface DeploymentProgressStaticFile {
+  type: "staticFile";
+  currentBytes: number;
+  totalBytes: number;
 }
 
-export interface CodeUploadProgressLoad {
+export interface DeploymentProgressLoad {
   type: "load";
   url: string;
   seen: number;
   total: number;
 }
 
-export interface CodeUploadProgressUploadComplete {
+export interface DeploymentProgressUploadComplete {
   type: "uploadComplete";
 }
 
-export interface CodeUploadProgressSuccess extends Deployment {
+export interface DeploymentProgressSuccess extends Deployment {
   type: "success";
+}
+
+export interface DeploymentProgressError {
+  type: "error";
+  code: string;
+  ctx: string;
 }

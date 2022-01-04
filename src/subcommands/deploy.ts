@@ -1,6 +1,6 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { fromFileUrl, join, normalize } from "../../deps.ts";
+import { fromFileUrl, join, normalize, Spinner, wait } from "../../deps.ts";
 import { error } from "../error.ts";
 import { API } from "../utils/api.ts";
 import { ManifestEntry } from "../utils/api_types.ts";
@@ -180,12 +180,14 @@ async function walk(
 }
 
 async function deploy(opts: DeployOpts): Promise<void> {
+  const projectSpinner = wait("Fetching project information...").start();
   const api = new API(opts.token);
   const project = await api.getProject(opts.project);
   if (project === null) {
-    error("Project not found.");
+    projectSpinner.fail("Project not found.");
+    Deno.exit(1);
   }
-  console.log("Deploying to project", project.name);
+  projectSpinner.succeed(`Project: ${project.name}`);
 
   let url = opts.entrypoint;
   const cwd = Deno.cwd();
@@ -198,13 +200,16 @@ async function deploy(opts: DeployOpts): Promise<void> {
     url = new URL(`file:///src${entrypoint}`);
   }
 
+  const assetSpinner = wait("Finding static assets...").start();
   const assets = new Map<string, string>();
   const entries = await walk(cwd, cwd, assets, {
     include: opts.include,
     exclude: opts.exclude,
   });
-  console.log(entries);
+  assetSpinner.succeed(`Found ${assets.size} assets.`);
 
+  let uploadSpinner: Spinner | null = wait("Determining assets to upload...")
+    .start();
   const neededHashes = await api.projectNegotiateAssets(project.id, {
     entries,
   });
@@ -219,11 +224,15 @@ async function deploy(opts: DeployOpts): Promise<void> {
     files.push(data);
   }
   if (files.length === 0) {
-    console.log(`No new static assets to upload.`);
+    uploadSpinner.succeed("No new assets to upload.");
+    uploadSpinner = null;
   } else {
-    console.log(`Uploading ${files.length} files...`);
+    uploadSpinner.text = `Uploading ${files.length} asset${
+      files.length === 1 ? "" : "s"
+    }... (0%)`;
   }
 
+  let deploySpinner: Spinner | null = null;
   const req = {
     url: url.href,
     production: opts.prod,
@@ -232,21 +241,49 @@ async function deploy(opts: DeployOpts): Promise<void> {
   const progress = api.pushDeploy(project.id, req, files);
   for await (const event of progress) {
     switch (event.type) {
-      case "load":
-        console.log(`[${event.seen}/${event.total}] Downloading ${event.url}`);
+      case "staticFile": {
+        const percentage = (event.currentBytes / event.totalBytes) * 100;
+        uploadSpinner!.text = `Uploading ${files.length} asset${
+          files.length === 1 ? "" : "s"
+        }... (${percentage.toFixed(1)}%)`;
         break;
+      }
+      case "load": {
+        if (uploadSpinner) {
+          uploadSpinner.succeed(
+            `Uploaded ${files.length} new asset${
+              files.length === 1 ? "" : "s"
+            }.`,
+          );
+          uploadSpinner = null;
+        }
+        if (deploySpinner === null) {
+          deploySpinner = wait("Deploying...").start();
+        }
+        const progress = event.seen / event.total * 100;
+        deploySpinner.text = `Deploying... (${progress.toFixed(1)}%)`;
+        break;
+      }
       case "uploadComplete":
-        console.log(`Finishing deployment...`);
+        deploySpinner!.text = `Finishing deployment...`;
         break;
       case "success":
-        console.log(`Deployment successful!`);
-        console.log("View at:");
+        deploySpinner!.succeed(`Deployment complete.`);
+        console.log("\nView at:");
         for (const { domain } of event.domainMappings) {
           console.log(` - https://${domain}`);
         }
         break;
       case "error":
-        error(`Deployment failed: ${event.ctx}`);
+        if (uploadSpinner) {
+          uploadSpinner.fail(`Upload failed.`);
+          uploadSpinner = null;
+        }
+        if (deploySpinner) {
+          deploySpinner.fail(`Deployment failed.`);
+          deploySpinner = null;
+        }
+        error(event.ctx);
     }
   }
 }
