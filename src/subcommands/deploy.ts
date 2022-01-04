@@ -2,7 +2,7 @@
 
 import { fromFileUrl, join, normalize, Spinner, wait } from "../../deps.ts";
 import { error } from "../error.ts";
-import { API } from "../utils/api.ts";
+import { API, APIError } from "../utils/api.ts";
 import { ManifestEntry } from "../utils/api_types.ts";
 import { parseEntrypoint } from "../utils/entrypoint.ts";
 
@@ -206,7 +206,9 @@ async function deploy(opts: DeployOpts): Promise<void> {
     include: opts.include,
     exclude: opts.exclude,
   });
-  assetSpinner.succeed(`Found ${assets.size} assets.`);
+  assetSpinner.succeed(
+    `Found ${assets.size} asset${assets.length === 1 ? "" : "s"}.`,
+  );
 
   let uploadSpinner: Spinner | null = wait("Determining assets to upload...")
     .start();
@@ -239,51 +241,66 @@ async function deploy(opts: DeployOpts): Promise<void> {
     manifest: { entries },
   };
   const progress = api.pushDeploy(project.id, req, files);
-  for await (const event of progress) {
-    switch (event.type) {
-      case "staticFile": {
-        const percentage = (event.currentBytes / event.totalBytes) * 100;
-        uploadSpinner!.text = `Uploading ${files.length} asset${
-          files.length === 1 ? "" : "s"
-        }... (${percentage.toFixed(1)}%)`;
-        break;
+  try {
+    for await (const event of progress) {
+      switch (event.type) {
+        case "staticFile": {
+          const percentage = (event.currentBytes / event.totalBytes) * 100;
+          uploadSpinner!.text = `Uploading ${files.length} asset${
+            files.length === 1 ? "" : "s"
+          }... (${percentage.toFixed(1)}%)`;
+          break;
+        }
+        case "load": {
+          if (uploadSpinner) {
+            uploadSpinner.succeed(
+              `Uploaded ${files.length} new asset${
+                files.length === 1 ? "" : "s"
+              }.`,
+            );
+            uploadSpinner = null;
+          }
+          if (deploySpinner === null) {
+            deploySpinner = wait("Deploying...").start();
+          }
+          const progress = event.seen / event.total * 100;
+          deploySpinner.text = `Deploying... (${progress.toFixed(1)}%)`;
+          break;
+        }
+        case "uploadComplete":
+          deploySpinner!.text = `Finishing deployment...`;
+          break;
+        case "success":
+          deploySpinner!.succeed(`Deployment complete.`);
+          console.log("\nView at:");
+          for (const { domain } of event.domainMappings) {
+            console.log(` - https://${domain}`);
+          }
+          break;
+        case "error":
+          if (uploadSpinner) {
+            uploadSpinner.fail(`Upload failed.`);
+            uploadSpinner = null;
+          }
+          if (deploySpinner) {
+            deploySpinner.fail(`Deployment failed.`);
+            deploySpinner = null;
+          }
+          error(event.ctx);
       }
-      case "load": {
-        if (uploadSpinner) {
-          uploadSpinner.succeed(
-            `Uploaded ${files.length} new asset${
-              files.length === 1 ? "" : "s"
-            }.`,
-          );
-          uploadSpinner = null;
-        }
-        if (deploySpinner === null) {
-          deploySpinner = wait("Deploying...").start();
-        }
-        const progress = event.seen / event.total * 100;
-        deploySpinner.text = `Deploying... (${progress.toFixed(1)}%)`;
-        break;
-      }
-      case "uploadComplete":
-        deploySpinner!.text = `Finishing deployment...`;
-        break;
-      case "success":
-        deploySpinner!.succeed(`Deployment complete.`);
-        console.log("\nView at:");
-        for (const { domain } of event.domainMappings) {
-          console.log(` - https://${domain}`);
-        }
-        break;
-      case "error":
-        if (uploadSpinner) {
-          uploadSpinner.fail(`Upload failed.`);
-          uploadSpinner = null;
-        }
-        if (deploySpinner) {
-          deploySpinner.fail(`Deployment failed.`);
-          deploySpinner = null;
-        }
-        error(event.ctx);
     }
+  } catch (err: unknown) {
+    if (err instanceof APIError) {
+      if (uploadSpinner) {
+        uploadSpinner.fail(`Upload failed.`);
+        uploadSpinner = null;
+      }
+      if (deploySpinner) {
+        deploySpinner.fail(`Deployment failed.`);
+        deploySpinner = null;
+      }
+      error(err.message);
+    }
+    error(String(err));
   }
 }
