@@ -50,7 +50,7 @@ export type ManifestEntry =
 export interface PushDeploymentRequest {
   url: string;
   production: boolean;
-  manifest: { entries: Record<string, ManifestEntry> };
+  manifest?: { entries: Record<string, ManifestEntry> };
 }
 
 export type DeploymentProgress =

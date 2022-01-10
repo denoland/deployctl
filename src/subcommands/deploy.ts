@@ -18,6 +18,9 @@ To deploy a remote script:
 To deploy a remote script without static files:
   deployctl deploy --project=helloworld --no-static https://deno.com/examples/hello.js
 
+To ignore the node_modules directory while deploying:
+  deployctl deploy --project=helloworld --exclude=node_modules main.tsx
+
 USAGE:
     deployctl deploy [OPTIONS] <ENTRYPOINT>
 
@@ -28,7 +31,7 @@ OPTIONS:
         --no-static           Don't include the files in the CWD as static files
         --prod                Create a production deployment (default is preview deployment)
     -p, --project=NAME        The project to deploy to
-        --token=TOKEN         The API token to use (defaults to DEPLOY_TOKEN env var)
+        --token=TOKEN         The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
 `;
 
 export interface Args {
@@ -59,10 +62,10 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     console.log(help);
     Deno.exit(0);
   }
-  const token = args.token ?? Deno.env.get("DEPLOY_TOKEN") ?? null;
+  const token = args.token ?? Deno.env.get("DENO_DEPLOY_TOKEN") ?? null;
   if (token === null) {
     console.error(help);
-    error("Missing access token. Set via --token or DEPLOY_TOKEN.");
+    error("Missing access token. Set via --token or DENO_DEPLOY_TOKEN.");
   }
   if (entrypoint === null) {
     console.error(help);
@@ -200,45 +203,52 @@ async function deploy(opts: DeployOpts): Promise<void> {
     url = new URL(`file:///src${entrypoint}`);
   }
 
-  const assetSpinner = wait("Finding static assets...").start();
-  const assets = new Map<string, string>();
-  const entries = await walk(cwd, cwd, assets, {
-    include: opts.include,
-    exclude: opts.exclude,
-  });
-  assetSpinner.succeed(
-    `Found ${assets.size} asset${assets.size === 1 ? "" : "s"}.`,
-  );
-
-  let uploadSpinner: Spinner | null = wait("Determining assets to upload...")
-    .start();
-  const neededHashes = await api.projectNegotiateAssets(project.id, {
-    entries,
-  });
-
+  let uploadSpinner: Spinner | null = null;
   const files = [];
-  for (const hash of neededHashes) {
-    const path = assets.get(hash);
-    if (path === undefined) {
-      error(`Asset ${hash} not found.`);
+  let manifest: { entries: Record<string, ManifestEntry> } | undefined =
+    undefined;
+
+  if (opts.static) {
+    const assetSpinner = wait("Finding static assets...").start();
+    const assets = new Map<string, string>();
+    const entries = await walk(cwd, cwd, assets, {
+      include: opts.include,
+      exclude: opts.exclude,
+    });
+    assetSpinner.succeed(
+      `Found ${assets.size} asset${assets.size === 1 ? "" : "s"}.`,
+    );
+
+    uploadSpinner = wait("Determining assets to upload...").start();
+    const neededHashes = await api.projectNegotiateAssets(project.id, {
+      entries,
+    });
+
+    for (const hash of neededHashes) {
+      const path = assets.get(hash);
+      if (path === undefined) {
+        error(`Asset ${hash} not found.`);
+      }
+      const data = await Deno.readFile(path);
+      files.push(data);
     }
-    const data = await Deno.readFile(path);
-    files.push(data);
-  }
-  if (files.length === 0) {
-    uploadSpinner.succeed("No new assets to upload.");
-    uploadSpinner = null;
-  } else {
-    uploadSpinner.text = `Uploading ${files.length} asset${
-      files.length === 1 ? "" : "s"
-    }... (0%)`;
+    if (files.length === 0) {
+      uploadSpinner.succeed("No new assets to upload.");
+      uploadSpinner = null;
+    } else {
+      uploadSpinner.text = `Uploading ${files.length} asset${
+        files.length === 1 ? "" : "s"
+      }... (0%)`;
+    }
+
+    manifest = { entries };
   }
 
   let deploySpinner: Spinner | null = null;
   const req = {
     url: url.href,
     production: opts.prod,
-    manifest: { entries },
+    manifest,
   };
   const progress = api.pushDeploy(project.id, req, files);
   try {
