@@ -1,7 +1,3 @@
-> ⚠️ This project is archived. You can now run your Deploy scripts with `deno run`: https://deno.com/deploy/docs/running-scripts-locally/
-
----
-
 # deployctl
 
 Command line tool for Deno Deploy.
@@ -14,10 +10,13 @@ deno install --allow-read --allow-write --allow-env --allow-net --allow-run --no
 
 ## Usage
 
-Run a script:
+Before being able to deploy, you need to get a personal access token from the
+[Deno Deploy account page](https://dash.deno.com/account). Store this token in a
+`DENO_DEPLOY_TOKEN` environment variable, or pass it to `deployctl` with the
+`--token` flag.
 
 ```shell
-deployctl run ./examples/hello.js
+deployctl deploy --project=hello-world ./examples/hello.ts
 ```
 
 View the help:
