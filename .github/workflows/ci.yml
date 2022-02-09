@@ -29,7 +29,7 @@ jobs:
       - run: deno --version
 
       - name: Format
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.deno == 'stable'
         run: deno fmt --check
 
       - name: Lint
@@ -40,4 +40,4 @@ jobs:
         run: deno cache deployctl.ts
 
       - name: Run tests
-        run: deno test -A --unstable
+        run: make test

@@ -1,6 +1,7 @@
 import { LineStream } from "https://deno.land/std@0.116.0/streams/delimiter.ts";
 import {
   DeploymentProgress,
+  GitHubActionsDeploymentRequest,
   ManifestEntry,
   Project,
   PushDeploymentRequest,
@@ -24,12 +25,17 @@ export class APIError extends Error {
 
 export class API {
   #endpoint: string;
-  #token: string;
+  #authorization: string;
 
-  constructor(token: string) {
-    this.#endpoint = Deno.env.get("DEPLOY_API_ENDPOINT") ??
+  constructor(authorization: string, endpoint: string) {
+    this.#authorization = authorization;
+    this.#endpoint = endpoint;
+  }
+
+  static fromToken(token: string) {
+    const endpoint = Deno.env.get("DEPLOY_API_ENDPOINT") ??
       "https://dash.deno.com";
-    this.#token = token;
+    return new API(`Bearer ${token}`, endpoint);
   }
 
   async #request(path: string, opts: RequestOptions = {}): Promise<Response> {
@@ -40,7 +46,7 @@ export class API {
       : undefined;
     const headers = {
       "Accept": "application/json",
-      "Authorization": `Bearer ${this.#token}`,
+      "Authorization": this.#authorization,
       ...(opts.body !== undefined
         ? opts.body instanceof FormData
           ? {}
@@ -117,6 +123,22 @@ export class API {
     }
     return this.#requestStream(
       `/projects/${projectId}/deployment_with_assets`,
+      { method: "POST", body: form },
+    );
+  }
+
+  gitHubActionsDeploy(
+    projectId: string,
+    request: GitHubActionsDeploymentRequest,
+    files: Uint8Array[],
+  ): AsyncIterable<DeploymentProgress> {
+    const form = new FormData();
+    form.append("request", JSON.stringify(request));
+    for (const bytes of files) {
+      form.append("file", new Blob([bytes]));
+    }
+    return this.#requestStream(
+      `/projects/${projectId}/deployment_github_actions`,
       { method: "POST", body: form },
     );
   }

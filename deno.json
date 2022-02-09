@@ -1,0 +1,12 @@
+{
+  "fmt": {
+    "files": {
+      "exclude": ["action/node_modules/"]
+    }
+  },
+  "lint": {
+    "files": {
+      "exclude": ["action/node_modules/"]
+    }
+  }
+}
