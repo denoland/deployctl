@@ -25,7 +25,7 @@ job:
     contents: read
   steps:
     - name: Deploy to Deno Deploy
-      uses: denoland/deployctl@main
+      uses: denoland/deployctl@v1
       with:
         project: my-project # the name of the project on Deno Deploy
         entrypoint: main.ts # the entrypoint to deploy
@@ -36,7 +36,7 @@ changed by specifying the `cwd` option.
 
 ```yml
 - name: Deploy to Deno Deploy
-  uses: denoland/deployctl@main
+  uses: denoland/deployctl@v1
   with:
     project: my-project
     entrypoint: index.js
@@ -52,7 +52,7 @@ module, you can use the following configuration:
 
 ```yml
 - name: Deploy to Deno Deploy
-  uses: denoland/deployctl@main
+  uses: denoland/deployctl@v1
   with:
     project: my-project
     entrypoint: https://deno.land/std/http/file_server.ts
