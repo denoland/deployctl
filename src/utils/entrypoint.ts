@@ -6,7 +6,7 @@ import { resolve, toFileUrl } from "../../deps.ts";
  */
 export async function parseEntrypoint(
   entrypoint: string,
-  cwd?: string,
+  root?: string,
 ): Promise<URL> {
   let entrypointSpecifier: URL;
   try {
@@ -16,7 +16,7 @@ export async function parseEntrypoint(
     ) {
       entrypointSpecifier = new URL(entrypoint);
     } else {
-      entrypointSpecifier = toFileUrl(resolve(cwd ?? Deno.cwd(), entrypoint));
+      entrypointSpecifier = toFileUrl(resolve(root ?? Deno.cwd(), entrypoint));
     }
   } catch (err) {
     throw `Failed to parse entrypoint specifier '${entrypoint}': ${err.message}`;
