@@ -33,7 +33,7 @@ jobs:
         run: deno fmt --check
 
       - name: Lint
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.deno == 'stable'
         run: deno lint
 
       - name: Typecheck
