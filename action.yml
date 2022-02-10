@@ -13,7 +13,7 @@ inputs:
   entrypoint:
     description: The path or URL to the entrypoint file
     required: true
-  cwd:
+  root:
     description: The path to the directory containing the code and assets to upload
     required: false
 

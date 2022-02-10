@@ -32,7 +32,7 @@ job:
 ```
 
 By default the entire contents of the repository will be deployed. This can be
-changed by specifying the `cwd` option.
+changed by specifying the `root` option.
 
 ```yml
 - name: Deploy to Deno Deploy
@@ -40,11 +40,11 @@ changed by specifying the `cwd` option.
   with:
     project: my-project
     entrypoint: index.js
-    cwd: dist
+    root: dist
 ```
 
 The `entrypoint` can either be a relative path or file name, or a an absolute
-URL. If it is a relative path, it will be resolved relative to the `cwd`. Both
+URL. If it is a relative path, it will be resolved relative to the `root`. Both
 absolute `file:///` and `https://` URLs are supported.
 
 To deploy the `./dist` directory using the [std/http/file_server.ts][fileserver]
@@ -56,7 +56,7 @@ module, you can use the following configuration:
   with:
     project: my-project
     entrypoint: https://deno.land/std/http/file_server.ts
-    cwd: dist
+    root: dist
 ```
 
 [automatic-mode]: https://deno.com/deploy/docs/projects#git-integration
