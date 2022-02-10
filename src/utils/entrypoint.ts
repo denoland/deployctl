@@ -1,11 +1,13 @@
 import { resolve, toFileUrl } from "../../deps.ts";
-import { error } from "../error.ts";
 
 /**
  * Parses the entrypoint to a URL.
  * Ensures the file exists when the entrypoint is a local file.
  */
-export async function parseEntrypoint(entrypoint: string): Promise<URL> {
+export async function parseEntrypoint(
+  entrypoint: string,
+  cwd?: string,
+): Promise<URL> {
   let entrypointSpecifier: URL;
   try {
     if (
@@ -14,21 +16,17 @@ export async function parseEntrypoint(entrypoint: string): Promise<URL> {
     ) {
       entrypointSpecifier = new URL(entrypoint);
     } else {
-      entrypointSpecifier = toFileUrl(resolve(Deno.cwd(), entrypoint));
+      entrypointSpecifier = toFileUrl(resolve(cwd ?? Deno.cwd(), entrypoint));
     }
   } catch (err) {
-    error(
-      `Failed to parse entrypoint specifier '${entrypoint}': ${err.message}`,
-    );
+    throw `Failed to parse entrypoint specifier '${entrypoint}': ${err.message}`;
   }
 
   if (entrypointSpecifier.protocol == "file:") {
     try {
       await Deno.lstat(entrypointSpecifier);
     } catch (err) {
-      error(
-        `Failed to open entrypoint file at '${entrypointSpecifier}': ${err.message}`,
-      );
+      throw `Failed to open entrypoint file at '${entrypointSpecifier}': ${err.message}`;
     }
   }
 

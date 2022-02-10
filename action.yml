@@ -1,0 +1,28 @@
+name: Deno Deploy
+description: Deploy applications to Deno Deploy right from GitHub Actions
+author: Deno Land Inc
+
+branding:
+  color: gray-dark
+  icon: globe
+
+inputs:
+  project:
+    description: The name or ID of the project to deploy
+    required: true
+  entrypoint:
+    description: The path or URL to the entrypoint file
+    required: true
+  cwd:
+    description: The path to the directory containing the code and assets to upload
+    required: false
+
+outputs:
+  deployment-id:
+    description: The ID of the created deployment
+  url:
+    description: The URL where the deployment is reachable
+
+runs:
+  using: node16
+  main: action/index.js
