@@ -9,7 +9,7 @@ const ORIGIN = process.env.DEPLOY_API_ENDPOINT ?? "https://dash.deno.com";
 async function main() {
   const projectId = core.getInput("project", { required: true });
   const entrypoint = core.getInput("entrypoint", { required: true });
-  const cwd = resolve(process.cwd(), core.getInput("cwd", {}));
+  const cwd = resolve(process.cwd(), core.getInput("root", {}));
 
   if (github.context.eventName === "pull_request") {
     const pr = github.context.payload.pull_request;
