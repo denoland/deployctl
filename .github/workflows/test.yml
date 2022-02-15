@@ -20,5 +20,5 @@ jobs:
         uses: ./
         with:
           project: happy-rat-64
-          cwd: examples
+          root: examples
           entrypoint: hello.ts
