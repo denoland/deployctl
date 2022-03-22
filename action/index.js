@@ -41,7 +41,7 @@ async function main() {
   if (url.protocol === "file:") {
     const path = fromFileUrl(url);
     if (!path.startsWith(cwd)) {
-      throw "Entrypoint must be in the current working directory.";
+      throw "Entrypoint must be in the working directory (cwd, or specified root directory).";
     }
     const entrypoint = path.slice(cwd.length);
     url = new URL(`file:///src${entrypoint}`);
@@ -54,7 +54,7 @@ async function main() {
     if (importMapUrl.protocol === "file:") {
       const path = fromFileUrl(importMapUrl);
       if (!path.startsWith(cwd)) {
-        throw "Import map must be in the current working directory.";
+        throw "Import map must be in the working directory (cwd, or specified root directory).";
       }
       const importMap = path.slice(cwd.length);
       importMapUrl = new URL(`file:///src${importMap}`);
