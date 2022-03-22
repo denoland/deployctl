@@ -9,6 +9,7 @@ const ORIGIN = process.env.DEPLOY_API_ENDPOINT ?? "https://dash.deno.com";
 async function main() {
   const projectId = core.getInput("project", { required: true });
   const entrypoint = core.getInput("entrypoint", { required: true });
+  const importMap = core.getInput("import-map", {});
   const cwd = resolve(process.cwd(), core.getInput("root", {}));
 
   if (github.context.eventName === "pull_request") {
@@ -47,6 +48,20 @@ async function main() {
   }
   core.info(`Entrypoint: ${url.href}`);
 
+  let importMapUrl = null;
+  if (importMap) {
+    importMapUrl = await parseEntrypoint(importMap, cwd, "import map");
+    if (importMapUrl.protocol === "file:") {
+      const path = fromFileUrl(importMapUrl);
+      if (!path.startsWith(cwd)) {
+        throw "Import map must be in the current working directory.";
+      }
+      const importMap = path.slice(cwd.length);
+      importMapUrl = new URL(`file:///src${importMap}`);
+    }
+    core.info(`Import map: ${importMapUrl.href}`);
+  }
+
   core.debug(`Discovering assets in "${cwd}"`);
   const assets = new Map();
   const entries = await walk(cwd, cwd, assets, {
@@ -81,6 +96,7 @@ async function main() {
 
   const req = {
     url: url.href,
+    importMapUrl: importMapUrl?.href ?? null,
     manifest,
     event: github.context.payload,
   };

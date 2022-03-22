@@ -7,6 +7,7 @@ import { resolve, toFileUrl } from "../../deps.ts";
 export async function parseEntrypoint(
   entrypoint: string,
   root?: string,
+  diagnosticName = "entrypoint",
 ): Promise<URL> {
   let entrypointSpecifier: URL;
   try {
@@ -19,14 +20,14 @@ export async function parseEntrypoint(
       entrypointSpecifier = toFileUrl(resolve(root ?? Deno.cwd(), entrypoint));
     }
   } catch (err) {
-    throw `Failed to parse entrypoint specifier '${entrypoint}': ${err.message}`;
+    throw `Failed to parse ${diagnosticName} specifier '${entrypoint}': ${err.message}`;
   }
 
   if (entrypointSpecifier.protocol == "file:") {
     try {
       await Deno.lstat(entrypointSpecifier);
     } catch (err) {
-      throw `Failed to open entrypoint file at '${entrypointSpecifier}': ${err.message}`;
+      throw `Failed to open ${diagnosticName} file at '${entrypointSpecifier}': ${err.message}`;
     }
   }
 

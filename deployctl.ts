@@ -46,6 +46,7 @@ const args = parseArgs(Deno.args, {
     "token",
     "include",
     "exclude",
+    "import-map",
   ],
   default: {
     static: true,

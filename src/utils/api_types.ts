@@ -49,12 +49,14 @@ export type ManifestEntry =
 
 export interface PushDeploymentRequest {
   url: string;
+  importMapUrl: string | null;
   production: boolean;
   manifest?: { entries: Record<string, ManifestEntry> };
 }
 
 export interface GitHubActionsDeploymentRequest {
   url: string;
+  importMapUrl: string | null;
   manifest: { entries: Record<string, ManifestEntry> };
   event?: unknown;
 }
