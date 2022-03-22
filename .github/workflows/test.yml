@@ -22,3 +22,4 @@ jobs:
           project: happy-rat-64
           root: examples
           entrypoint: hello.ts
+          import-map: ./import_map.json

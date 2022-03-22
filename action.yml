@@ -13,6 +13,9 @@ inputs:
   entrypoint:
     description: The path or URL to the entrypoint file
     required: true
+  import-map:
+    description: The path or URL to an import map file
+    required: false
   root:
     description: The path to the directory containing the code and assets to upload
     required: false

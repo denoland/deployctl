@@ -2439,22 +2439,22 @@ new TextEncoder();
     white: mod2.white,
     gray: mod2.gray
 });
-async function parseEntrypoint(entrypoint, cwd) {
+async function parseEntrypoint(entrypoint, root, diagnosticName = "entrypoint") {
     let entrypointSpecifier;
     try {
         if (entrypoint.startsWith("https://") || entrypoint.startsWith("http://") || entrypoint.startsWith("file://")) {
             entrypointSpecifier = new URL(entrypoint);
         } else {
-            entrypointSpecifier = toFileUrl2(resolve2(cwd ?? Deno.cwd(), entrypoint));
+            entrypointSpecifier = toFileUrl2(resolve2(root ?? Deno.cwd(), entrypoint));
         }
     } catch (err) {
-        throw `Failed to parse entrypoint specifier '${entrypoint}': ${err.message}`;
+        throw `Failed to parse ${diagnosticName} specifier '${entrypoint}': ${err.message}`;
     }
     if (entrypointSpecifier.protocol == "file:") {
         try {
             await Deno.lstat(entrypointSpecifier);
         } catch (err) {
-            throw `Failed to open entrypoint file at '${entrypointSpecifier}': ${err.message}`;
+            throw `Failed to open ${diagnosticName} file at '${entrypointSpecifier}': ${err.message}`;
         }
     }
     return entrypointSpecifier;

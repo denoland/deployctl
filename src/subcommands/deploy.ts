@@ -28,6 +28,7 @@ USAGE:
 OPTIONS:
         --exclude=<PATTERNS>  Exclude files that match this pattern
         --include=<PATTERNS>  Only upload files that match this pattern
+        --import-map=<FILE>   Use import map file
     -h, --help                Prints help information
         --no-static           Don't include the files in the CWD as static files
         --prod                Create a production deployment (default is preview deployment)
@@ -43,6 +44,7 @@ export interface Args {
   include?: string[];
   token: string | null;
   project: string | null;
+  importMap: string | null;
 }
 
 // deno-lint-ignore no-explicit-any
@@ -53,6 +55,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     prod: !!rawArgs.prod,
     token: rawArgs.token ? String(rawArgs.token) : null,
     project: rawArgs.project ? String(rawArgs.project) : null,
+    importMap: rawArgs["import-map"] ? String(rawArgs["import-map"]) : null,
     exclude: rawArgs.exclude?.split(","),
     include: rawArgs.include?.split(","),
   };
@@ -83,6 +86,10 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
 
   const opts = {
     entrypoint: await parseEntrypoint(entrypoint).catch((e) => error(e)),
+    importMapUrl: args.importMap === null
+      ? null
+      : await parseEntrypoint(args.importMap, undefined, "import map")
+        .catch((e) => error(e)),
     static: args.static,
     prod: args.prod,
     token,
@@ -96,6 +103,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
 
 interface DeployOpts {
   entrypoint: URL;
+  importMapUrl: URL | null;
   static: boolean;
   prod: boolean;
   exclude?: string[];
@@ -123,6 +131,15 @@ async function deploy(opts: DeployOpts): Promise<void> {
     }
     const entrypoint = path.slice(cwd.length);
     url = new URL(`file:///src${entrypoint}`);
+  }
+  let importMapUrl = opts.importMapUrl;
+  if (importMapUrl && importMapUrl.protocol === "file:") {
+    const path = fromFileUrl(importMapUrl);
+    if (!path.startsWith(cwd)) {
+      error("Import map must be in the current working directory.");
+    }
+    const entrypoint = path.slice(cwd.length);
+    importMapUrl = new URL(`file:///src${entrypoint}`);
   }
 
   let uploadSpinner: Spinner | null = null;
@@ -169,6 +186,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
   let deploySpinner: Spinner | null = null;
   const req = {
     url: url.href,
+    importMapUrl: importMapUrl ? importMapUrl.href : null,
     production: opts.prod,
     manifest,
   };
