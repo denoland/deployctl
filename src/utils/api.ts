@@ -14,12 +14,26 @@ export interface RequestOptions {
 
 export class APIError extends Error {
   code: string;
+  xDenoRay: string | null;
 
   name = "APIError";
 
-  constructor(code: string, message: string) {
+  constructor(code: string, message: string, xDenoRay: string | null) {
     super(message);
     this.code = code;
+    this.xDenoRay = xDenoRay;
+  }
+
+  toString() {
+    let error = `${this.name}: ${this.message}`;
+    const showDenoRay = this.code == "internalServerError" &&
+      this.xDenoRay !== null;
+    if (showDenoRay) {
+      error += `\nx-deno-ray: ${this.xDenoRay}`;
+      error += "If you encounter this error frequently," +
+        " contact us at deploy@deno.com with the above x-deno-ray.";
+    }
+    return error;
   }
 }
 
@@ -64,7 +78,8 @@ export class API {
     }
     const json = await res.json();
     if (res.status !== 200) {
-      throw new APIError(json.code, json.message);
+      const xDenoRay = res.headers.get("x-deno-ray");
+      throw new APIError(json.code, json.message, xDenoRay);
     }
     return json;
   }
@@ -76,7 +91,8 @@ export class API {
     const res = await this.#request(path, opts);
     if (res.status !== 200) {
       const json = await res.json();
-      throw new APIError(json.code, json.message);
+      const xDenoRay = res.headers.get("x-deno-ray");
+      throw new APIError(json.code, json.message, xDenoRay);
     }
     if (res.body === null) {
       throw new Error("Stream ended unexpectedly");
