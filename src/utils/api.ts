@@ -30,7 +30,7 @@ export class APIError extends Error {
       this.xDenoRay !== null;
     if (showDenoRay) {
       error += `\nx-deno-ray: ${this.xDenoRay}`;
-      error += "If you encounter this error frequently," +
+      error += "\nIf you encounter this error frequently," +
         " contact us at deploy@deno.com with the above x-deno-ray.";
     }
     return error;
