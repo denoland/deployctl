@@ -7,6 +7,8 @@ deploying to Deno Deploy.
 > ⚠ If your project does not require a build step, we recommend you use the
 > ["Automatic" deployment mode][automatic-mode] of our GitHub integration. It is
 > faster and requires no setup.
+>
+> Or, if you want to use [Import Maps](https://github.com/WICG/import-maps), this Action, is temporarily the only way to make them work.
 
 ## Usage
 
