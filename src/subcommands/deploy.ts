@@ -249,7 +249,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
         deploySpinner.fail(`Deployment failed.`);
         deploySpinner = null;
       }
-      error(err.message);
+      error(err.toString());
     }
     error(String(err));
   }
