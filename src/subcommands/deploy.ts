@@ -148,7 +148,11 @@ async function deploy(opts: DeployOpts): Promise<void> {
     undefined;
 
   if (opts.static) {
-    console.log(` %cℹ %cUploading all files from the current dir (${cwd})`, "color: yellow", "color: inherit");
+    console.log(
+      ` %cℹ %cUploading all files from the current dir (${cwd})`,
+      "color: yellow",
+      "color: inherit",
+    );
     const assetSpinner = wait("Finding static assets...").start();
     const assets = new Map<string, string>();
     const entries = await walk(cwd, cwd, assets, {
