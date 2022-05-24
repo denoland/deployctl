@@ -19,11 +19,18 @@ Actions" deployment mode. You can do this in your project settings on
 https://dash.deno.com.
 
 ```yml
+name: Deploy
+
+on: push
+
 jobs:
   deploy:
+    runs-on: ubuntu-latest
+
     permissions:
       id-token: write # This is required to allow the GitHub Action to authenticate with Deno Deploy.
       contents: read
+
     steps:
       - name: Clone repository
         uses: actions/checkout@v3
