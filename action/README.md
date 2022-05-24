@@ -19,16 +19,20 @@ Actions" deployment mode. You can do this in your project settings on
 https://dash.deno.com.
 
 ```yml
-job:
-  permissions:
-    id-token: write # This is required to allow the GitHub Action to authenticate with Deno Deploy.
-    contents: read
-  steps:
-    - name: Deploy to Deno Deploy
-      uses: denoland/deployctl@v1
-      with:
-        project: my-project # the name of the project on Deno Deploy
-        entrypoint: main.ts # the entrypoint to deploy
+jobs:
+  deploy:
+    permissions:
+      id-token: write # This is required to allow the GitHub Action to authenticate with Deno Deploy.
+      contents: read
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+
+      - name: Deploy to Deno Deploy
+        uses: denoland/deployctl@v1
+        with:
+          project: my-project # the name of the project on Deno Deploy
+          entrypoint: main.ts # the entrypoint to deploy
 ```
 
 By default the entire contents of the repository will be deployed. This can be
