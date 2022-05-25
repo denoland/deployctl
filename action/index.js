@@ -1,7 +1,14 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
 import "./shim.js";
-import { API, fromFileUrl, parseEntrypoint, resolve, walk } from "./deps.js";
+import {
+  API,
+  APIError,
+  fromFileUrl,
+  parseEntrypoint,
+  resolve,
+  walk,
+} from "./deps.js";
 
 // The origin of the server to make Deploy requests to.
 const ORIGIN = process.env.DEPLOY_API_ENDPOINT ?? "https://dash.deno.com";
@@ -140,5 +147,9 @@ async function main() {
 try {
   await main();
 } catch (error) {
-  core.setFailed(error);
+  if (error instanceof APIError) {
+    core.setFailed(error.toString());
+  } else {
+    core.setFailed(error);
+  }
 }
