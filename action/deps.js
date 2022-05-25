@@ -2267,9 +2267,9 @@ function rgb24(str, color) {
         return run(str, code([
             38,
             2,
-            color >> 16 & 255,
-            color >> 8 & 255,
-            color & 255
+            color >> 16 & 0xff,
+            color >> 8 & 0xff,
+            color & 0xff
         ], 39));
     }
     return run(str, code([
@@ -2285,9 +2285,9 @@ function bgRgb24(str, color) {
         return run(str, code([
             48,
             2,
-            color >> 16 & 255,
-            color >> 8 & 255,
-            color & 255
+            color >> 16 & 0xff,
+            color >> 8 & 0xff,
+            color & 0xff
         ], 49));
     }
     return run(str, code([
@@ -2461,10 +2461,21 @@ async function parseEntrypoint(entrypoint, root, diagnosticName = "entrypoint") 
 }
 class APIError extends Error {
     code;
+    xDenoRay;
     name = "APIError";
-    constructor(code16, message){
+    constructor(code16, message, xDenoRay){
         super(message);
         this.code = code16;
+        this.xDenoRay = xDenoRay;
+    }
+    toString() {
+        let error = `${this.name}: ${this.message}`;
+        const showDenoRay = this.code == "internalServerError" && this.xDenoRay !== null;
+        if (showDenoRay) {
+            error += `\nx-deno-ray: ${this.xDenoRay}`;
+            error += "\nIf you encounter this error frequently," + " contact us at deploy@deno.com with the above x-deno-ray.";
+        }
+        return error;
     }
 }
 class API {
@@ -2503,7 +2514,8 @@ class API {
         }
         const json = await res.json();
         if (res.status !== 200) {
-            throw new APIError(json.code, json.message);
+            const xDenoRay = res.headers.get("x-deno-ray");
+            throw new APIError(json.code, json.message, xDenoRay);
         }
         return json;
     }
@@ -2511,7 +2523,8 @@ class API {
         const res = await this.#request(path2, opts2);
         if (res.status !== 200) {
             const json = await res.json();
-            throw new APIError(json.code, json.message);
+            const xDenoRay = res.headers.get("x-deno-ray");
+            throw new APIError(json.code, json.message, xDenoRay);
         }
         if (res.body === null) {
             throw new Error("Stream ended unexpectedly");
