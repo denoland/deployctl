@@ -14,8 +14,8 @@ deno install --allow-read --allow-write --allow-env --allow-net --allow-run --no
 ## Usage
 
 Before being able to deploy, you need to get a personal access token from the
-[Deno Deploy access token page](https://dash.deno.com/user/access-tokens). Store
-this token in a `DENO_DEPLOY_TOKEN` environment variable, or pass it to
+[Deno Deploy access token page](https://dash.deno.com/account#access-tokens).
+Store this token in a `DENO_DEPLOY_TOKEN` environment variable, or pass it to
 `deployctl` with the `--token` flag.
 
 ```shell
