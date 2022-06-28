@@ -26,9 +26,7 @@ export class APIError extends Error {
 
   toString() {
     let error = `${this.name}: ${this.message}`;
-    const showDenoRay = this.code == "internalServerError" &&
-      this.xDenoRay !== null;
-    if (showDenoRay) {
+    if (this.xDenoRay !== null) {
       error += `\nx-deno-ray: ${this.xDenoRay}`;
       error += "\nIf you encounter this error frequently," +
         " contact us at deploy@deno.com with the above x-deno-ray.";
