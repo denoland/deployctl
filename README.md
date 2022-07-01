@@ -8,7 +8,7 @@ contains the `denoland/deployctl` GitHub Action.
 ## Install
 
 ```shell
-deno install --allow-read --allow-write --allow-env --allow-net --allow-run --no-check -r -f https://deno.land/x/deploy/deployctl.ts
+deno install --allow-read --allow-write --allow-env --allow-net --allow-run -r -f https://deno.land/x/deploy/deployctl.ts
 ```
 
 ## Usage
