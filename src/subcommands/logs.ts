@@ -135,7 +135,7 @@ async function logs(opts: DeployOpts): Promise<void> {
       }
       if (log.message.startsWith("isolate start time")) {
         console.log(
-          `%c${log.time} - %c${log.region}%c ${log.message.trim()}`,
+          `%c${log.time}   %c${log.region}%c ${log.message.trim()}`,
           "color: aquamarine",
           "background-color: grey",
           `color: ${color}`,
