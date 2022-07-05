@@ -1,7 +1,10 @@
 import { LineStream } from "https://deno.land/std@0.116.0/streams/delimiter.ts";
 import {
+  Deployment,
   DeploymentProgress,
+  DeploymentsSummary,
   GitHubActionsDeploymentRequest,
+  Logs,
   ManifestEntry,
   Project,
   PushDeploymentRequest,
@@ -113,6 +116,25 @@ export class API {
       }
       throw err;
     }
+  }
+
+  async getDeployments(
+    id: string,
+  ): Promise<[Deployment[], DeploymentsSummary] | null> {
+    try {
+      return await this.#requestJson(`/projects/${id}/deployments/`);
+    } catch (err) {
+      if (err instanceof APIError && err.code === "projectNotFound") {
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  getLogs(idProject: string, idDeployment: string): AsyncIterable<Logs> {
+    return this.#requestStream(
+      `/projects/${idProject}/deployments/${idDeployment}/logs/`,
+    );
   }
 
   async projectNegotiateAssets(
