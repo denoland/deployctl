@@ -8,7 +8,7 @@ const osType = (()=>{
         return Deno1.build.os;
     }
     const { navigator  } = globalThis;
-    if (navigator?.appVersion?.includes?.("Win") ?? false) {
+    if (navigator?.appVersion?.includes?.("Win")) {
         return "windows";
     }
     return "linux";
@@ -1088,178 +1088,12 @@ const { basename: basename2 , delimiter: delimiter2 , dirname: dirname2 , extnam
 const { Deno: Deno1  } = globalThis;
 typeof Deno1?.noColor === "boolean" ? Deno1.noColor : true;
 new RegExp([
-    "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
-    "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))", 
+    "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
+    "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))", 
 ].join("|"), "g");
 const { hasOwn  } = Object;
-class BytesList {
-    len = 0;
-    chunks = [];
-    constructor(){}
-    size() {
-        return this.len;
-    }
-    add(value, start = 0, end = value.byteLength) {
-        if (value.byteLength === 0 || end - start === 0) {
-            return;
-        }
-        checkRange(start, end, value.byteLength);
-        this.chunks.push({
-            value,
-            end,
-            start,
-            offset: this.len
-        });
-        this.len += end - start;
-    }
-    shift(n) {
-        if (n === 0) {
-            return;
-        }
-        if (this.len <= n) {
-            this.chunks = [];
-            this.len = 0;
-            return;
-        }
-        const idx = this.getChunkIndex(n);
-        this.chunks.splice(0, idx);
-        const [chunk] = this.chunks;
-        if (chunk) {
-            const diff = n - chunk.offset;
-            chunk.start += diff;
-        }
-        let offset = 0;
-        for (const chunk1 of this.chunks){
-            chunk1.offset = offset;
-            offset += chunk1.end - chunk1.start;
-        }
-        this.len = offset;
-    }
-    getChunkIndex(pos) {
-        let max = this.chunks.length;
-        let min = 0;
-        while(true){
-            const i = min + Math.floor((max - min) / 2);
-            if (i < 0 || this.chunks.length <= i) {
-                return -1;
-            }
-            const { offset , start , end  } = this.chunks[i];
-            const len = end - start;
-            if (offset <= pos && pos < offset + len) {
-                return i;
-            } else if (offset + len <= pos) {
-                min = i + 1;
-            } else {
-                max = i - 1;
-            }
-        }
-    }
-    get(i) {
-        if (i < 0 || this.len <= i) {
-            throw new Error("out of range");
-        }
-        const idx = this.getChunkIndex(i);
-        const { value , offset , start  } = this.chunks[idx];
-        return value[start + i - offset];
-    }
-    *iterator(start = 0) {
-        const startIdx = this.getChunkIndex(start);
-        if (startIdx < 0) return;
-        const first = this.chunks[startIdx];
-        let firstOffset = start - first.offset;
-        for(let i = startIdx; i < this.chunks.length; i++){
-            const chunk = this.chunks[i];
-            for(let j = chunk.start + firstOffset; j < chunk.end; j++){
-                yield chunk.value[j];
-            }
-            firstOffset = 0;
-        }
-    }
-    slice(start, end = this.len) {
-        if (end === start) {
-            return new Uint8Array();
-        }
-        checkRange(start, end, this.len);
-        const result = new Uint8Array(end - start);
-        const startIdx = this.getChunkIndex(start);
-        const endIdx = this.getChunkIndex(end - 1);
-        let written = 0;
-        for(let i = startIdx; i < endIdx; i++){
-            const chunk = this.chunks[i];
-            const len = chunk.end - chunk.start;
-            result.set(chunk.value.subarray(chunk.start, chunk.end), written);
-            written += len;
-        }
-        const last = this.chunks[endIdx];
-        const rest = end - start - written;
-        result.set(last.value.subarray(last.start, last.start + rest), written);
-        return result;
-    }
-    concat() {
-        const result = new Uint8Array(this.len);
-        let sum = 0;
-        for (const { value , start , end  } of this.chunks){
-            result.set(value.subarray(start, end), sum);
-            sum += end - start;
-        }
-        return result;
-    }
-}
-function checkRange(start, end, len) {
-    if (start < 0 || len < start || end < 0 || len < end || end < start) {
-        throw new Error("invalid range");
-    }
-}
-const CR = "\r".charCodeAt(0);
-const LF = "\n".charCodeAt(0);
-class LineStream extends TransformStream {
-    #bufs = new BytesList();
-    #prevHadCR = false;
-    constructor(){
-        super({
-            transform: (chunk, controller)=>{
-                this.#handle(chunk, controller);
-            },
-            flush: (controller)=>{
-                controller.enqueue(this.#mergeBufs(false));
-            }
-        });
-    }
-     #handle(chunk, controller) {
-        const lfIndex = chunk.indexOf(LF);
-        if (this.#prevHadCR) {
-            this.#prevHadCR = false;
-            if (lfIndex === 0) {
-                controller.enqueue(this.#mergeBufs(true));
-                this.#handle(chunk.subarray(1), controller);
-                return;
-            }
-        }
-        if (lfIndex === -1) {
-            if (chunk.at(-1) === CR) {
-                this.#prevHadCR = true;
-            }
-            this.#bufs.add(chunk);
-        } else {
-            let crOrLfIndex = lfIndex;
-            if (chunk[lfIndex - 1] === CR) {
-                crOrLfIndex--;
-            }
-            this.#bufs.add(chunk.subarray(0, crOrLfIndex));
-            controller.enqueue(this.#mergeBufs(false));
-            this.#handle(chunk.subarray(lfIndex + 1), controller);
-        }
-    }
-     #mergeBufs(prevHadCR) {
-        const mergeBuf = this.#bufs.concat();
-        this.#bufs = new BytesList();
-        if (prevHadCR) {
-            return mergeBuf.subarray(0, -1);
-        } else {
-            return mergeBuf;
-        }
-    }
-}
+"\r".charCodeAt(0);
+"\n".charCodeAt(0);
 const MAX_SAFE_COMPONENT_LENGTH = 16;
 const re = [];
 const src = [];
@@ -2451,6 +2285,174 @@ async function parseEntrypoint(entrypoint, root, diagnosticName = "entrypoint") 
         }
     }
     return entrypointSpecifier;
+}
+class BytesList {
+    len = 0;
+    chunks = [];
+    constructor(){}
+    size() {
+        return this.len;
+    }
+    add(value, start = 0, end = value.byteLength) {
+        if (value.byteLength === 0 || end - start === 0) {
+            return;
+        }
+        checkRange(start, end, value.byteLength);
+        this.chunks.push({
+            value,
+            end,
+            start,
+            offset: this.len
+        });
+        this.len += end - start;
+    }
+    shift(n) {
+        if (n === 0) {
+            return;
+        }
+        if (this.len <= n) {
+            this.chunks = [];
+            this.len = 0;
+            return;
+        }
+        const idx = this.getChunkIndex(n);
+        this.chunks.splice(0, idx);
+        const [chunk] = this.chunks;
+        if (chunk) {
+            const diff = n - chunk.offset;
+            chunk.start += diff;
+        }
+        let offset = 0;
+        for (const chunk1 of this.chunks){
+            chunk1.offset = offset;
+            offset += chunk1.end - chunk1.start;
+        }
+        this.len = offset;
+    }
+    getChunkIndex(pos) {
+        let max = this.chunks.length;
+        let min = 0;
+        while(true){
+            const i = min + Math.floor((max - min) / 2);
+            if (i < 0 || this.chunks.length <= i) {
+                return -1;
+            }
+            const { offset , start , end  } = this.chunks[i];
+            const len = end - start;
+            if (offset <= pos && pos < offset + len) {
+                return i;
+            } else if (offset + len <= pos) {
+                min = i + 1;
+            } else {
+                max = i - 1;
+            }
+        }
+    }
+    get(i) {
+        if (i < 0 || this.len <= i) {
+            throw new Error("out of range");
+        }
+        const idx = this.getChunkIndex(i);
+        const { value , offset , start  } = this.chunks[idx];
+        return value[start + i - offset];
+    }
+    *iterator(start = 0) {
+        const startIdx = this.getChunkIndex(start);
+        if (startIdx < 0) return;
+        const first = this.chunks[startIdx];
+        let firstOffset = start - first.offset;
+        for(let i = startIdx; i < this.chunks.length; i++){
+            const chunk = this.chunks[i];
+            for(let j = chunk.start + firstOffset; j < chunk.end; j++){
+                yield chunk.value[j];
+            }
+            firstOffset = 0;
+        }
+    }
+    slice(start, end = this.len) {
+        if (end === start) {
+            return new Uint8Array();
+        }
+        checkRange(start, end, this.len);
+        const result = new Uint8Array(end - start);
+        const startIdx = this.getChunkIndex(start);
+        const endIdx = this.getChunkIndex(end - 1);
+        let written = 0;
+        for(let i = startIdx; i < endIdx; i++){
+            const chunk = this.chunks[i];
+            const len = chunk.end - chunk.start;
+            result.set(chunk.value.subarray(chunk.start, chunk.end), written);
+            written += len;
+        }
+        const last = this.chunks[endIdx];
+        const rest = end - start - written;
+        result.set(last.value.subarray(last.start, last.start + rest), written);
+        return result;
+    }
+    concat() {
+        const result = new Uint8Array(this.len);
+        let sum = 0;
+        for (const { value , start , end  } of this.chunks){
+            result.set(value.subarray(start, end), sum);
+            sum += end - start;
+        }
+        return result;
+    }
+}
+function checkRange(start, end, len) {
+    if (start < 0 || len < start || end < 0 || len < end || end < start) {
+        throw new Error("invalid range");
+    }
+}
+const CR = "\r".charCodeAt(0);
+const LF = "\n".charCodeAt(0);
+class LineStream extends TransformStream {
+    #bufs = new BytesList();
+    #prevHadCR = false;
+    constructor(){
+        super({
+            transform: (chunk, controller)=>{
+                this.#handle(chunk, controller);
+            },
+            flush: (controller)=>{
+                controller.enqueue(this.#mergeBufs(false));
+            }
+        });
+    }
+     #handle(chunk, controller) {
+        const lfIndex = chunk.indexOf(LF);
+        if (this.#prevHadCR) {
+            this.#prevHadCR = false;
+            if (lfIndex === 0) {
+                controller.enqueue(this.#mergeBufs(true));
+                this.#handle(chunk.subarray(1), controller);
+                return;
+            }
+        }
+        if (lfIndex === -1) {
+            if (chunk.at(-1) === CR) {
+                this.#prevHadCR = true;
+            }
+            this.#bufs.add(chunk);
+        } else {
+            let crOrLfIndex = lfIndex;
+            if (chunk[lfIndex - 1] === CR) {
+                crOrLfIndex--;
+            }
+            this.#bufs.add(chunk.subarray(0, crOrLfIndex));
+            controller.enqueue(this.#mergeBufs(false));
+            this.#handle(chunk.subarray(lfIndex + 1), controller);
+        }
+    }
+     #mergeBufs(prevHadCR) {
+        const mergeBuf = this.#bufs.concat();
+        this.#bufs = new BytesList();
+        if (prevHadCR) {
+            return mergeBuf.subarray(0, -1);
+        } else {
+            return mergeBuf;
+        }
+    }
 }
 class APIError extends Error {
     code;
