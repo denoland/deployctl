@@ -7,15 +7,15 @@ export {
   normalize,
   resolve,
   toFileUrl,
-} from "https://deno.land/std@0.116.0/path/mod.ts";
+} from "https://deno.land/std@0.148.0/path/mod.ts";
 export {
   bold,
   green,
   red,
   yellow,
-} from "https://deno.land/std@0.116.0/fmt/colors.ts";
-export { parse as parseArgs } from "https://deno.land/std@0.116.0/flags/mod.ts";
-export { LineStream } from "https://deno.land/std@0.116.0/streams/delimiter.ts";
+} from "https://deno.land/std@0.148.0/fmt/colors.ts";
+export { parse as parseArgs } from "https://deno.land/std@0.148.0/flags/mod.ts";
+export { LineStream } from "https://deno.land/std@0.148.0/streams/delimiter.ts";
 
 // x/semver
 export {
