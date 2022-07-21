@@ -26,7 +26,7 @@ View the help:
 deployctl -h
 ```
 
-# Action Example
+## Action Example
 
 ```yml
 name: Deploy
@@ -52,4 +52,4 @@ jobs:
           entrypoint: main.ts # the entrypoint to deploy
 ```
 
-> ⚠ [For more on the GitHub Action, go here](./action/README.md)
+To learn more about the action, checkout [action readme]((./action/README.md)).
