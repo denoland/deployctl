@@ -34,6 +34,7 @@ OPTIONS:
         --prod                Create a production deployment (default is preview deployment)
     -p, --project=NAME        The project to deploy to
         --token=TOKEN         The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
+        --dry-run             Dry run the deployment process.
 `;
 
 export interface Args {
@@ -45,6 +46,7 @@ export interface Args {
   token: string | null;
   project: string | null;
   importMap: string | null;
+  dryRun: boolean;
 }
 
 // deno-lint-ignore no-explicit-any
@@ -58,6 +60,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     importMap: rawArgs["import-map"] ? String(rawArgs["import-map"]) : null,
     exclude: rawArgs.exclude?.split(","),
     include: rawArgs.include?.split(","),
+    dryRun: !!rawArgs["dry-run"],
   };
   const entrypoint: string | null = typeof rawArgs._[0] === "string"
     ? rawArgs._[0]
@@ -96,6 +99,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     project: args.project,
     include: args.include?.map((pattern) => normalize(pattern)),
     exclude: args.exclude?.map((pattern) => normalize(pattern)),
+    dryRun: args.dryRun,
   };
 
   await deploy(opts);
@@ -110,9 +114,13 @@ interface DeployOpts {
   include?: string[];
   token: string;
   project: string;
+  dryRun: boolean;
 }
 
 async function deploy(opts: DeployOpts): Promise<void> {
+  if (opts.dryRun) {
+    wait("").start().info("Performing dry run of deployment");
+  }
   const projectSpinner = wait("Fetching project information...").start();
   const api = API.fromToken(opts.token);
   const project = await api.getProject(opts.project);
@@ -148,11 +156,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
     undefined;
 
   if (opts.static) {
-    console.log(
-      ` %cℹ %cUploading all files from the current dir (${cwd})`,
-      "color: yellow",
-      "color: inherit",
-    );
+    wait("").start().info(`Uploading all files from the current dir (${cwd})`);
     const assetSpinner = wait("Finding static assets...").start();
     const assets = new Map<string, string>();
     const entries = await walk(cwd, cwd, assets, {
@@ -180,12 +184,17 @@ async function deploy(opts: DeployOpts): Promise<void> {
       uploadSpinner.succeed("No new assets to upload.");
       uploadSpinner = null;
     } else {
-      uploadSpinner.text = `Uploading ${files.length} asset${
+      uploadSpinner.text = `${files.length} new asset${
         files.length === 1 ? "" : "s"
-      }... (0%)`;
+      } to upload.`;
     }
 
     manifest = { entries };
+  }
+
+  if (opts.dryRun) {
+    uploadSpinner?.succeed(uploadSpinner?.text);
+    return;
   }
 
   let deploySpinner: Spinner | null = null;
