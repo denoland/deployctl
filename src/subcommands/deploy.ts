@@ -184,7 +184,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
       uploadSpinner.succeed("No new assets to upload.");
       uploadSpinner = null;
     } else {
-      uploadSpinner.text = `${files.length} asset${
+      uploadSpinner.text = `${files.length} new asset${
         files.length === 1 ? "" : "s"
       } to upload.`;
     }
