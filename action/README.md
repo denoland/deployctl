@@ -7,8 +7,6 @@ deploying to Deno Deploy.
 > ⚠ If your project does not require a build step, we recommend you use the
 > ["Automatic" deployment mode][automatic-mode] of our GitHub integration. It is
 > faster and requires no setup.
->
-> Or, if you want to use [Import Maps](https://github.com/WICG/import-maps), this Action, is temporarily the only way to make them work.
 
 ## Usage
 
@@ -59,6 +57,18 @@ module, you can use the following configuration:
     project: my-project
     entrypoint: https://deno.land/std/http/file_server.ts
     root: dist
+```
+
+If you want to use [import maps](https://github.com/WICG/import-maps):
+
+```yml
+- name: Deploy to Deno Deploy
+  uses: denoland/deployctl@v1
+  with:
+    project: my-project
+    entrypoint: https://deno.land/std/http/file_server.ts
+    root: dist
+    import-map: import-map.json
 ```
 
 [automatic-mode]: https://deno.com/deploy/docs/projects#git-integration
