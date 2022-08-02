@@ -52,4 +52,4 @@ jobs:
           entrypoint: main.ts # the entrypoint to deploy
 ```
 
-To learn more about the action, checkout [action readme]((./action/README.md)).
+To learn more about the action, checkout [action readme](./action/README.md).
