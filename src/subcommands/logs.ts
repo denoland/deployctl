@@ -22,7 +22,7 @@ USAGE:
 OPTIONS:
         --deployment=<DEPLOY_ID>  The id of the deployment you want to get the logs (defaults to latest deployment)
         --prod                    Select the production deployment
-        -p, --project=NAME        The project you want to get the logs
+    -p, --project=NAME        The project you want to get the logs
         --token=TOKEN             The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
 `;
 
