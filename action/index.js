@@ -8,6 +8,7 @@ import {
   parseEntrypoint,
   resolve,
   walk,
+  normalize,
 } from "./deps.js";
 
 // The origin of the server to make Deploy requests to.
@@ -17,6 +18,8 @@ async function main() {
   const projectId = core.getInput("project", { required: true });
   const entrypoint = core.getInput("entrypoint", { required: true });
   const importMap = core.getInput("import-map", {});
+  const include = core.getInput("include", {})?.split(",").map(v => normalize(v));
+  const exclude = core.getInput("exclude", {})?.split(",").map(v => normalize(v));
   const cwd = resolve(process.cwd(), core.getInput("root", {}));
 
   if (github.context.eventName === "pull_request") {
@@ -72,8 +75,8 @@ async function main() {
   core.debug(`Discovering assets in "${cwd}"`);
   const assets = new Map();
   const entries = await walk(cwd, cwd, assets, {
-    include: undefined,
-    exclude: undefined,
+    include,
+    exclude,
   });
   core.debug(`Discovered ${assets.size} assets`);
 
