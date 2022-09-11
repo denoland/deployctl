@@ -20,6 +20,7 @@ async function main() {
   const importMap = core.getInput("import-map", {});
   const include = core.getInput("include", {})?.split(",").map(v => normalize(v));
   const exclude = core.getInput("exclude", {})?.split(",").map(v => normalize(v));
+  console.log({include, exclude})
   const cwd = resolve(process.cwd(), core.getInput("root", {}));
 
   if (github.context.eventName === "pull_request") {
