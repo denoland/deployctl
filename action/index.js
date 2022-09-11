@@ -20,7 +20,6 @@ async function main() {
   const importMap = core.getInput("import-map", {});
   const include = core.getInput("include", {});
   const exclude = core.getInput("exclude", {});
-  console.log({include, exclude, inclueParsed: include?.split(",").map(v => normalize(v)), excludeParsed: exclude?.split(",").map(v => normalize(v))})
   const cwd = resolve(process.cwd(), core.getInput("root", {}));
 
   if (github.context.eventName === "pull_request") {
@@ -76,8 +75,8 @@ async function main() {
   core.debug(`Discovering assets in "${cwd}"`);
   const assets = new Map();
   const entries = await walk(cwd, cwd, assets, {
-    include,
-    exclude,
+    include: include ? include.split(",").map(pattern => normalize(pattern)): undefined,
+    exclude: exclude ? exclude.split(",").map(pattern => normalize(pattern)): undefined,
   });
   core.debug(`Discovered ${assets.size} assets`);
 
