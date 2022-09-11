@@ -2632,5 +2632,5 @@ async function walk(cwd, dir, files, options) {
 export { parseEntrypoint as parseEntrypoint };
 export { API as API, APIError as APIError };
 export { walk as walk };
-export { fromFileUrl2 as fromFileUrl, resolve2 as resolve };
+export { fromFileUrl2 as fromFileUrl, resolve2 as resolve, normalize3 as normalize };
 
