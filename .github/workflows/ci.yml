@@ -37,6 +37,7 @@ jobs:
         run: deno lint
 
       - name: Typecheck
+        if: runner.os == 'Linux' && matrix.deno == 'stable'
         run: deno check deployctl.ts
 
       - name: Run tests
