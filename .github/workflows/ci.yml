@@ -37,7 +37,7 @@ jobs:
         run: deno lint
 
       - name: Typecheck
-        run: deno cache deployctl.ts
+        run: deno check deployctl.ts
 
       - name: Run tests
         run: deno task test
