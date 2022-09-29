@@ -16,6 +16,7 @@ export {
 } from "https://deno.land/std@0.148.0/fmt/colors.ts";
 export { parse as parseArgs } from "https://deno.land/std@0.148.0/flags/mod.ts";
 export { LineStream } from "https://deno.land/std@0.148.0/streams/delimiter.ts";
+export { config } from "https://deno.land/std@0.148.0/dotenv/mod.ts";
 
 // x/semver
 export {

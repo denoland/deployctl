@@ -1,6 +1,6 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { wait } from "../../deps.ts";
+import { config, wait } from "../../deps.ts";
 import { error } from "../error.ts";
 import { API } from "../utils/api.ts";
 
@@ -64,19 +64,9 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
   projectSpinner.succeed(`Project: ${project!.name}`);
 
   const fileSpinner = wait("Reading env file...").start();
-  const envObj: Record<string, string> = {};
+  let envObj: Record<string, string> = {};
   try {
-    const varsText = await Deno.readTextFile(envFile);
-    if (!varsText) {
-      fileSpinner.info("File is empty.");
-      Deno.exit(1);
-    }
-    varsText.replace(
-      /(\w+)=(.+)/g,
-      function (_$0: string, $1: string, $2: string) {
-        envObj[$1] = $2;
-      },
-    );
+    envObj = await config({ path: envFile });
     if (Object.keys(envObj).length === 0) {
       fileSpinner.info("File did not contain any variables.");
       Deno.exit(1);
@@ -87,6 +77,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
   }
   fileSpinner.succeed(`File Loaded: ${envFile}`);
 
+  console.log(envObj);
   const sendSpinner = wait("Sending env variables...").start();
   try {
     await api.sendEnv(project!.id, envObj);
