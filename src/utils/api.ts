@@ -156,4 +156,14 @@ export class API {
       { method: "POST", body: form },
     );
   }
+
+  async sendEnv(
+    projectId: string,
+    body: Record<string, string>,
+  ): Promise<Response> {
+    return await this.#requestJson(
+      `/projects/${projectId}/env`,
+      { method: "POST", body },
+    );
+  }
 }
