@@ -77,7 +77,6 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
   }
   fileSpinner.succeed(`File Loaded: ${envFile}`);
 
-  console.log(envObj);
   const sendSpinner = wait("Sending env variables...").start();
   try {
     await api.sendEnv(project!.id, envObj);
