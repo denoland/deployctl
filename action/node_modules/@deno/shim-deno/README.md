@@ -12,3 +12,20 @@ starting this project and for their contributions—specifically
 [@wojpawlik](https://github.com/wojpawlik),
 [@MKRhere](https://github.com/MKRhere), and
 [@trgwii](https://github.com/trgwii).
+
+## Contributing
+
+### Updating Deno
+
+1. Update local version.
+1. In `/.github/workflows/ci.yml`, increase the deno version in the setup-deno
+   action
+1. Update version in `./tools/denolib.ts`
+1. Go into `./third_party/deno` and update the submodule (there's probably
+   better instructions):
+   - `git fetch`
+   - `git pull --recurse-submodules`
+   - `git checkout v1.x.x` -- replace with version
+1. In this package ensure the following work and if not, fix any issues:
+   - `npm run build`
+   - `npm run test`

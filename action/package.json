@@ -1,10 +1,10 @@
 {
   "type": "module",
   "dependencies": {
-    "@actions/core": "^1.6.0",
-    "@actions/github": "^5.0.0",
-    "@deno/shim-deno": "^0.3.0",
+    "@actions/core": "^1.10.0",
+    "@actions/github": "^5.1.1",
+    "@deno/shim-deno": "^0.10.0",
     "formdata-polyfill": "^4.0.10",
-    "undici": "^4.13.0"
+    "undici": "^5.11.0"
   }
 }
