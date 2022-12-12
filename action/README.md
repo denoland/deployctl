@@ -82,5 +82,20 @@ If you want to use [import maps](https://github.com/WICG/import-maps):
     import-map: import-map.json
 ```
 
+Whether the triggered action will deploy the project to production or preview is determined by the branch name. If the name of the branch that triggers the action matches the production branch configured in the Deno Deploy dashboard, the action will deploy it to the production, and otherwise, to the preview.
+
+This default behavior can be overriden by passing `force-production-deploy: true` in the yaml:
+
+```yml
+- name: Deploy to Deno Deploy
+  uses: denoland/deployctl@v1
+  with:
+    project: my-project
+    entrypoint: https://deno.land/std/http/file_server.ts
+    # Enabling this option will lead to the project always getting deployed to production
+    # whenever this step is executed.
+    force-production-deploy: true
+```
+
 [automatic-mode]: https://deno.com/deploy/docs/projects#git-integration
 [fileserver]: https://deno.land/std/http/file_server.ts

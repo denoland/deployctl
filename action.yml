@@ -19,6 +19,10 @@ inputs:
   root:
     description: The path to the directory containing the code and assets to upload
     required: false
+  force-production-deploy:
+    description: If true, the project will always get deployed to the production
+    required: false
+    default: 'false'
 
 outputs:
   deployment-id:
