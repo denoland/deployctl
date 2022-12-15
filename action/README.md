@@ -88,7 +88,7 @@ action matches the production branch configured in the Deno Deploy dashboard,
 the action will deploy it to the production, and otherwise, to the preview.
 
 This default behavior can be overriden by passing
-`force-production-deploy: true` in the yaml:
+`force-production-deployment: true` in the yaml:
 
 ```yml
 - name: Deploy to Deno Deploy
@@ -98,7 +98,7 @@ This default behavior can be overriden by passing
     entrypoint: https://deno.land/std/http/file_server.ts
     # Enabling this option will lead to the project always getting deployed to production
     # whenever this step is executed.
-    force-production-deploy: true
+    force-production-deployment: true
 ```
 
 [automatic-mode]: https://deno.com/deploy/docs/projects#git-integration

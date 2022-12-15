@@ -17,7 +17,9 @@ async function main() {
   const projectId = core.getInput("project", { required: true });
   const entrypoint = core.getInput("entrypoint", { required: true });
   const importMap = core.getInput("import-map", {});
-  const forceDeployToProduction = core.getBooleanInput("force-production-deploy");
+  const forceProductionDeployment = core.getBooleanInput(
+    "force-production-deployment",
+  );
   const cwd = resolve(process.cwd(), core.getInput("root", {}));
 
   if (github.context.eventName === "pull_request") {
@@ -107,7 +109,7 @@ async function main() {
     importMapUrl: importMapUrl?.href ?? null,
     manifest,
     event: github.context.payload,
-    forceDeployToProduction,
+    forceProductionDeployment,
   };
   const progress = api.gitHubActionsDeploy(projectId, req, files);
   let deployment;
