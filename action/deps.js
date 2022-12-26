@@ -1084,272 +1084,64 @@ const mod1 = {
 const path = isWindows ? mod : mod1;
 const { join: join2 , normalize: normalize2  } = path;
 const path1 = isWindows ? mod : mod1;
-const { basename: basename2 , delimiter: delimiter2 , dirname: dirname2 , extname: extname2 , format: format2 , fromFileUrl: fromFileUrl2 , isAbsolute: isAbsolute2 , join: join3 , normalize: normalize3 , parse: parse2 , relative: relative2 , resolve: resolve2 , sep: sep2 , toFileUrl: toFileUrl2 , toNamespacedPath: toNamespacedPath2 ,  } = path1;
+const { basename: basename2 , delimiter: delimiter2 , dirname: dirname2 , extname: extname2 , format: format2 , fromFileUrl: fromFileUrl2 , isAbsolute: isAbsolute2 , join: join3 , normalize: normalize3 , parse: parse2 , relative: relative2 , resolve: resolve2 , sep: sep2 , toFileUrl: toFileUrl2 , toNamespacedPath: toNamespacedPath2  } = path1;
 const { Deno: Deno1  } = globalThis;
 typeof Deno1?.noColor === "boolean" ? Deno1.noColor : true;
 new RegExp([
     "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
-    "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))", 
+    "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))"
 ].join("|"), "g");
 const { hasOwn  } = Object;
-class BytesList {
-    #len = 0;
-    #chunks = [];
-    constructor(){}
-    size() {
-        return this.#len;
-    }
-    add(value, start = 0, end = value.byteLength) {
-        if (value.byteLength === 0 || end - start === 0) {
-            return;
-        }
-        checkRange(start, end, value.byteLength);
-        this.#chunks.push({
-            value,
-            end,
-            start,
-            offset: this.#len
-        });
-        this.#len += end - start;
-    }
-    shift(n) {
-        if (n === 0) {
-            return;
-        }
-        if (this.#len <= n) {
-            this.#chunks = [];
-            this.#len = 0;
-            return;
-        }
-        const idx = this.getChunkIndex(n);
-        this.#chunks.splice(0, idx);
-        const [chunk] = this.#chunks;
-        if (chunk) {
-            const diff = n - chunk.offset;
-            chunk.start += diff;
-        }
-        let offset = 0;
-        for (const chunk1 of this.#chunks){
-            chunk1.offset = offset;
-            offset += chunk1.end - chunk1.start;
-        }
-        this.#len = offset;
-    }
-    getChunkIndex(pos) {
-        let max = this.#chunks.length;
-        let min = 0;
-        while(true){
-            const i = min + Math.floor((max - min) / 2);
-            if (i < 0 || this.#chunks.length <= i) {
-                return -1;
-            }
-            const { offset , start , end  } = this.#chunks[i];
-            const len = end - start;
-            if (offset <= pos && pos < offset + len) {
-                return i;
-            } else if (offset + len <= pos) {
-                min = i + 1;
-            } else {
-                max = i - 1;
-            }
-        }
-    }
-    get(i) {
-        if (i < 0 || this.#len <= i) {
-            throw new Error("out of range");
-        }
-        const idx = this.getChunkIndex(i);
-        const { value , offset , start  } = this.#chunks[idx];
-        return value[start + i - offset];
-    }
-    *iterator(start = 0) {
-        const startIdx = this.getChunkIndex(start);
-        if (startIdx < 0) return;
-        const first = this.#chunks[startIdx];
-        let firstOffset = start - first.offset;
-        for(let i = startIdx; i < this.#chunks.length; i++){
-            const chunk = this.#chunks[i];
-            for(let j = chunk.start + firstOffset; j < chunk.end; j++){
-                yield chunk.value[j];
-            }
-            firstOffset = 0;
-        }
-    }
-    slice(start, end = this.#len) {
-        if (end === start) {
-            return new Uint8Array();
-        }
-        checkRange(start, end, this.#len);
-        const result = new Uint8Array(end - start);
-        const startIdx = this.getChunkIndex(start);
-        const endIdx = this.getChunkIndex(end - 1);
-        let written = 0;
-        for(let i = startIdx; i < endIdx; i++){
-            const chunk = this.#chunks[i];
-            const len = chunk.end - chunk.start;
-            result.set(chunk.value.subarray(chunk.start, chunk.end), written);
-            written += len;
-        }
-        const last = this.#chunks[endIdx];
-        const rest = end - start - written;
-        result.set(last.value.subarray(last.start, last.start + rest), written);
-        return result;
-    }
-    concat() {
-        const result = new Uint8Array(this.#len);
-        let sum = 0;
-        for (const { value , start , end  } of this.#chunks){
-            result.set(value.subarray(start, end), sum);
-            sum += end - start;
-        }
-        return result;
-    }
-}
-function checkRange(start, end, len) {
-    if (start < 0 || len < start || end < 0 || len < end || end < start) {
-        throw new Error("invalid range");
-    }
-}
-const CR = "\r".charCodeAt(0);
-const LF = "\n".charCodeAt(0);
-class LineStream extends TransformStream {
-    #bufs = new BytesList();
-    #prevHadCR = false;
-    constructor(){
+class TextLineStream extends TransformStream {
+    #allowCR;
+    #buf = "";
+    constructor(options){
         super({
-            transform: (chunk, controller)=>{
-                this.#handle(chunk, controller);
-            },
-            flush: (controller)=>{
-                controller.enqueue(this.#mergeBufs(false));
-            }
+            transform: (chunk, controller)=>this.#handle(chunk, controller),
+            flush: (controller)=>this.#handle("\r\n", controller)
         });
+        this.#allowCR = options?.allowCR ?? false;
     }
     #handle(chunk, controller) {
-        const lfIndex = chunk.indexOf(LF);
-        if (this.#prevHadCR) {
-            this.#prevHadCR = false;
-            if (lfIndex === 0) {
-                controller.enqueue(this.#mergeBufs(true));
-                this.#handle(chunk.subarray(1), controller);
-                return;
-            }
-        }
-        if (lfIndex === -1) {
-            if (chunk.at(-1) === CR) {
-                this.#prevHadCR = true;
-            }
-            this.#bufs.add(chunk);
-        } else {
-            let crOrLfIndex = lfIndex;
-            if (chunk[lfIndex - 1] === CR) {
-                crOrLfIndex--;
-            }
-            this.#bufs.add(chunk.subarray(0, crOrLfIndex));
-            controller.enqueue(this.#mergeBufs(false));
-            this.#handle(chunk.subarray(lfIndex + 1), controller);
-        }
-    }
-    #mergeBufs(prevHadCR) {
-        const mergeBuf = this.#bufs.concat();
-        this.#bufs = new BytesList();
-        if (prevHadCR) {
-            return mergeBuf.subarray(0, -1);
-        } else {
-            return mergeBuf;
-        }
-    }
-}
-class DelimiterStream extends TransformStream {
-    #bufs = new BytesList();
-    #delimiter;
-    #inspectIndex = 0;
-    #matchIndex = 0;
-    #delimLen;
-    #delimLPS;
-    constructor(delimiter){
-        super({
-            transform: (chunk, controller)=>{
-                this.#handle(chunk, controller);
-            },
-            flush: (controller)=>{
-                controller.enqueue(this.#bufs.concat());
-            }
-        });
-        this.#delimiter = delimiter;
-        this.#delimLen = delimiter.length;
-        this.#delimLPS = createLPS(delimiter);
-    }
-    #handle(chunk2, controller2) {
-        this.#bufs.add(chunk2);
-        let localIndex = 0;
-        while(this.#inspectIndex < this.#bufs.size()){
-            if (chunk2[localIndex] === this.#delimiter[this.#matchIndex]) {
-                this.#inspectIndex++;
-                localIndex++;
-                this.#matchIndex++;
-                if (this.#matchIndex === this.#delimLen) {
-                    const matchEnd = this.#inspectIndex - this.#delimLen;
-                    const readyBytes = this.#bufs.slice(0, matchEnd);
-                    controller2.enqueue(readyBytes);
-                    this.#bufs.shift(this.#inspectIndex);
-                    this.#inspectIndex = 0;
-                    this.#matchIndex = 0;
-                }
-            } else {
-                if (this.#matchIndex === 0) {
-                    this.#inspectIndex++;
-                    localIndex++;
-                } else {
-                    this.#matchIndex = this.#delimLPS[this.#matchIndex - 1];
+        chunk = this.#buf + chunk;
+        for(;;){
+            const lfIndex = chunk.indexOf("\n");
+            if (this.#allowCR) {
+                const crIndex = chunk.indexOf("\r");
+                if (crIndex !== -1 && crIndex !== chunk.length - 1 && (lfIndex === -1 || lfIndex - 1 > crIndex)) {
+                    controller.enqueue(chunk.slice(0, crIndex));
+                    chunk = chunk.slice(crIndex + 1);
+                    continue;
                 }
             }
+            if (lfIndex !== -1) {
+                let crOrLfIndex = lfIndex;
+                if (chunk[lfIndex - 1] === "\r") {
+                    crOrLfIndex--;
+                }
+                controller.enqueue(chunk.slice(0, crOrLfIndex));
+                chunk = chunk.slice(lfIndex + 1);
+                continue;
+            }
+            break;
         }
+        this.#buf = chunk;
     }
 }
-function createLPS(pat) {
-    const lps = new Uint8Array(pat.length);
-    lps[0] = 0;
-    let prefixEnd = 0;
-    let i = 1;
-    while(i < lps.length){
-        if (pat[i] == pat[prefixEnd]) {
-            prefixEnd++;
-            lps[i] = prefixEnd;
-            i++;
-        } else if (prefixEnd === 0) {
-            lps[i] = 0;
-            i++;
-        } else {
-            prefixEnd = lps[prefixEnd - 1];
-        }
-    }
-    return lps;
-}
-const MAX_SAFE_COMPONENT_LENGTH = 16;
 const re = [];
 const src = [];
 let R = 0;
 const NUMERICIDENTIFIER = R++;
 src[NUMERICIDENTIFIER] = "0|[1-9]\\d*";
-const NUMERICIDENTIFIERLOOSE = R++;
-src[NUMERICIDENTIFIERLOOSE] = "[0-9]+";
 const NONNUMERICIDENTIFIER = R++;
 src[NONNUMERICIDENTIFIER] = "\\d*[a-zA-Z-][a-zA-Z0-9-]*";
 const MAINVERSION = R++;
 const nid = src[NUMERICIDENTIFIER];
 src[MAINVERSION] = `(${nid})\\.(${nid})\\.(${nid})`;
-const MAINVERSIONLOOSE = R++;
-const nidl = src[NUMERICIDENTIFIERLOOSE];
-src[MAINVERSIONLOOSE] = `(${nidl})\\.(${nidl})\\.(${nidl})`;
 const PRERELEASEIDENTIFIER = R++;
 src[PRERELEASEIDENTIFIER] = "(?:" + src[NUMERICIDENTIFIER] + "|" + src[NONNUMERICIDENTIFIER] + ")";
-const PRERELEASEIDENTIFIERLOOSE = R++;
-src[PRERELEASEIDENTIFIERLOOSE] = "(?:" + src[NUMERICIDENTIFIERLOOSE] + "|" + src[NONNUMERICIDENTIFIER] + ")";
 const PRERELEASE = R++;
 src[PRERELEASE] = "(?:-(" + src[PRERELEASEIDENTIFIER] + "(?:\\." + src[PRERELEASEIDENTIFIER] + ")*))";
-const PRERELEASELOOSE = R++;
-src[PRERELEASELOOSE] = "(?:-?(" + src[PRERELEASEIDENTIFIERLOOSE] + "(?:\\." + src[PRERELEASEIDENTIFIERLOOSE] + ")*))";
 const BUILDIDENTIFIER = R++;
 src[BUILDIDENTIFIER] = "[0-9A-Za-z-]+";
 const BUILD = R++;
@@ -1357,54 +1149,26 @@ src[BUILD] = "(?:\\+(" + src[BUILDIDENTIFIER] + "(?:\\." + src[BUILDIDENTIFIER] 
 const FULL = R++;
 const FULLPLAIN = "v?" + src[MAINVERSION] + src[PRERELEASE] + "?" + src[BUILD] + "?";
 src[FULL] = "^" + FULLPLAIN + "$";
-const LOOSEPLAIN = "[v=\\s]*" + src[MAINVERSIONLOOSE] + src[PRERELEASELOOSE] + "?" + src[BUILD] + "?";
-const LOOSE = R++;
-src[LOOSE] = "^" + LOOSEPLAIN + "$";
 const GTLT = R++;
 src[GTLT] = "((?:<|>)?=?)";
-const XRANGEIDENTIFIERLOOSE = R++;
-src[XRANGEIDENTIFIERLOOSE] = src[NUMERICIDENTIFIERLOOSE] + "|x|X|\\*";
 const XRANGEIDENTIFIER = R++;
 src[XRANGEIDENTIFIER] = src[NUMERICIDENTIFIER] + "|x|X|\\*";
 const XRANGEPLAIN = R++;
 src[XRANGEPLAIN] = "[v=\\s]*(" + src[XRANGEIDENTIFIER] + ")" + "(?:\\.(" + src[XRANGEIDENTIFIER] + ")" + "(?:\\.(" + src[XRANGEIDENTIFIER] + ")" + "(?:" + src[PRERELEASE] + ")?" + src[BUILD] + "?" + ")?)?";
-const XRANGEPLAINLOOSE = R++;
-src[XRANGEPLAINLOOSE] = "[v=\\s]*(" + src[XRANGEIDENTIFIERLOOSE] + ")" + "(?:\\.(" + src[XRANGEIDENTIFIERLOOSE] + ")" + "(?:\\.(" + src[XRANGEIDENTIFIERLOOSE] + ")" + "(?:" + src[PRERELEASELOOSE] + ")?" + src[BUILD] + "?" + ")?)?";
 const XRANGE = R++;
 src[XRANGE] = "^" + src[GTLT] + "\\s*" + src[XRANGEPLAIN] + "$";
-const XRANGELOOSE = R++;
-src[XRANGELOOSE] = "^" + src[GTLT] + "\\s*" + src[XRANGEPLAINLOOSE] + "$";
-const COERCE = R++;
-src[COERCE] = "(?:^|[^\\d])" + "(\\d{1," + MAX_SAFE_COMPONENT_LENGTH + "})" + "(?:\\.(\\d{1," + MAX_SAFE_COMPONENT_LENGTH + "}))?" + "(?:\\.(\\d{1," + MAX_SAFE_COMPONENT_LENGTH + "}))?" + "(?:$|[^\\d])";
 const LONETILDE = R++;
 src[LONETILDE] = "(?:~>?)";
-const TILDETRIM = R++;
-src[TILDETRIM] = "(\\s*)" + src[LONETILDE] + "\\s+";
-re[TILDETRIM] = new RegExp(src[TILDETRIM], "g");
 const TILDE = R++;
 src[TILDE] = "^" + src[LONETILDE] + src[XRANGEPLAIN] + "$";
-const TILDELOOSE = R++;
-src[TILDELOOSE] = "^" + src[LONETILDE] + src[XRANGEPLAINLOOSE] + "$";
 const LONECARET = R++;
 src[LONECARET] = "(?:\\^)";
-const CARETTRIM = R++;
-src[CARETTRIM] = "(\\s*)" + src[LONECARET] + "\\s+";
-re[CARETTRIM] = new RegExp(src[CARETTRIM], "g");
 const CARET = R++;
 src[CARET] = "^" + src[LONECARET] + src[XRANGEPLAIN] + "$";
-const CARETLOOSE = R++;
-src[CARETLOOSE] = "^" + src[LONECARET] + src[XRANGEPLAINLOOSE] + "$";
-const COMPARATORLOOSE = R++;
-src[COMPARATORLOOSE] = "^" + src[GTLT] + "\\s*(" + LOOSEPLAIN + ")$|^$";
 const COMPARATOR = R++;
 src[COMPARATOR] = "^" + src[GTLT] + "\\s*(" + FULLPLAIN + ")$|^$";
-const COMPARATORTRIM = R++;
-src[COMPARATORTRIM] = "(\\s*)" + src[GTLT] + "\\s*(" + LOOSEPLAIN + "|" + src[XRANGEPLAIN] + ")";
-re[COMPARATORTRIM] = new RegExp(src[COMPARATORTRIM], "g");
 const HYPHENRANGE = R++;
 src[HYPHENRANGE] = "^\\s*(" + src[XRANGEPLAIN] + ")" + "\\s+-\\s+" + "(" + src[XRANGEPLAIN] + ")" + "\\s*$";
-const HYPHENRANGELOOSE = R++;
-src[HYPHENRANGELOOSE] = "^\\s*(" + src[XRANGEPLAINLOOSE] + ")" + "\\s+-\\s+" + "(" + src[XRANGEPLAINLOOSE] + ")" + "\\s*$";
 const STAR = R++;
 src[STAR] = "(<|>)?=?\\s*\\*";
 for(let i = 0; i < R; i++){
@@ -1668,7 +1432,7 @@ function rgb24(str, color) {
         2,
         clampAndTruncate(color.r),
         clampAndTruncate(color.g),
-        clampAndTruncate(color.b), 
+        clampAndTruncate(color.b)
     ], 39));
 }
 function bgRgb24(str, color) {
@@ -1686,12 +1450,12 @@ function bgRgb24(str, color) {
         2,
         clampAndTruncate(color.r),
         clampAndTruncate(color.g),
-        clampAndTruncate(color.b), 
+        clampAndTruncate(color.b)
     ], 49));
 }
 const ANSI_PATTERN = new RegExp([
     "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
-    "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))", 
+    "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))"
 ].join("|"), "g");
 function stripColor(string) {
     return string.replace(ANSI_PATTERN, "");
@@ -2318,7 +2082,7 @@ const __default = [
     [
         0xe0100,
         0xe01ef
-    ], 
+    ]
 ];
 function wcswidth(str, { nul =0 , control =0  } = {}) {
     const opts = {
@@ -2356,7 +2120,7 @@ function bisearch(ucs) {
 function ansiRegex({ onlyFirst =false  } = {}) {
     const pattern = [
         "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
-        "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))", 
+        "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))"
     ].join("|");
     return new RegExp(pattern, onlyFirst ? undefined : "g");
 }
@@ -2668,7 +2432,7 @@ const __default1 = {
             "⠙",
             "⠋",
             "⠇",
-            "⠆", 
+            "⠆"
         ]
     },
     dots5: {
@@ -2690,7 +2454,7 @@ const __default1 = {
             "⠐",
             "⠒",
             "⠓",
-            "⠋", 
+            "⠋"
         ]
     },
     dots6: {
@@ -2719,7 +2483,7 @@ const __default1 = {
             "⠚",
             "⠙",
             "⠉",
-            "⠁", 
+            "⠁"
         ]
     },
     dots7: {
@@ -2748,7 +2512,7 @@ const __default1 = {
             "⠓",
             "⠋",
             "⠉",
-            "⠈", 
+            "⠈"
         ]
     },
     dots8: {
@@ -2782,7 +2546,7 @@ const __default1 = {
             "⠋",
             "⠉",
             "⠈",
-            "⠈", 
+            "⠈"
         ]
     },
     dots9: {
@@ -2881,7 +2645,7 @@ const __default1 = {
             "⠀⡐",
             "⠀⠠",
             "⠀⢀",
-            "⠀⡀", 
+            "⠀⡀"
         ]
     },
     dots8Bit: {
@@ -3142,7 +2906,7 @@ const __default1 = {
             "⣼",
             "⣽",
             "⣾",
-            "⣿", 
+            "⣿"
         ]
     },
     line: {
@@ -3544,7 +3308,7 @@ const __default1 = {
             "[====]",
             "[=== ]",
             "[==  ]",
-            "[=   ]", 
+            "[=   ]"
         ]
     },
     bouncingBall: {
@@ -3559,7 +3323,7 @@ const __default1 = {
             "(   ●  )",
             "(  ●   )",
             "( ●    )",
-            "(●     )", 
+            "(●     )"
         ]
     },
     smiley: {
@@ -3602,7 +3366,7 @@ const __default1 = {
             "🕗 ",
             "🕘 ",
             "🕙 ",
-            "🕚 ", 
+            "🕚 "
         ]
     },
     earth: {
@@ -3707,7 +3471,7 @@ const __default1 = {
             "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
             "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
             "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
-            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁", 
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁"
         ]
     },
     moon: {
@@ -3762,7 +3526,7 @@ const __default1 = {
             "▐  ⠂     ▌",
             "▐ ⠠      ▌",
             "▐ ⡀      ▌",
-            "▐⠠       ▌", 
+            "▐⠠       ▌"
         ]
     },
     shark: {
@@ -3793,7 +3557,7 @@ const __default1 = {
             "▐___/|_________▌",
             "▐__/|__________▌",
             "▐_/|___________▌",
-            "▐/|____________▌", 
+            "▐/|____________▌"
         ]
     },
     dqpb: {
@@ -3830,7 +3594,7 @@ const __default1 = {
             "⛅️ ",
             "🌤 ",
             "☀️ ",
-            "☀️ ", 
+            "☀️ "
         ]
     },
     christmas: {
@@ -3856,7 +3620,7 @@ const __default1 = {
             "  ⁓",
             "   ",
             "   ",
-            "   ", 
+            "   "
         ]
     },
     point: {
@@ -3886,7 +3650,7 @@ const __default1 = {
             "βββρβββ",
             "ββββρββ",
             "βββββρβ",
-            "ββββββρ", 
+            "ββββββρ"
         ]
     }
 };
@@ -4100,222 +3864,123 @@ async function parseEntrypoint(entrypoint, root, diagnosticName = "entrypoint") 
     }
     return entrypointSpecifier;
 }
-class BytesList1 {
-    len = 0;
-    chunks = [];
-    constructor(){}
-    size() {
-        return this.len;
+function copy(src, dst, off = 0) {
+    off = Math.max(0, Math.min(off, dst.byteLength));
+    const dstBytesAvailable = dst.byteLength - off;
+    if (src.byteLength > dstBytesAvailable) {
+        src = src.subarray(0, dstBytesAvailable);
     }
-    add(value, start = 0, end = value.byteLength) {
-        if (value.byteLength === 0 || end - start === 0) {
-            return;
-        }
-        checkRange1(start, end, value.byteLength);
-        this.chunks.push({
-            value,
-            end,
-            start,
-            offset: this.len
-        });
-        this.len += end - start;
-    }
-    shift(n) {
-        if (n === 0) {
-            return;
-        }
-        if (this.len <= n) {
-            this.chunks = [];
-            this.len = 0;
-            return;
-        }
-        const idx = this.getChunkIndex(n);
-        this.chunks.splice(0, idx);
-        const [chunk] = this.chunks;
-        if (chunk) {
-            const diff = n - chunk.offset;
-            chunk.start += diff;
-        }
-        let offset = 0;
-        for (const chunk1 of this.chunks){
-            chunk1.offset = offset;
-            offset += chunk1.end - chunk1.start;
-        }
-        this.len = offset;
-    }
-    getChunkIndex(pos) {
-        let max = this.chunks.length;
-        let min = 0;
-        while(true){
-            const i = min + Math.floor((max - min) / 2);
-            if (i < 0 || this.chunks.length <= i) {
-                return -1;
-            }
-            const { offset , start , end  } = this.chunks[i];
-            const len = end - start;
-            if (offset <= pos && pos < offset + len) {
-                return i;
-            } else if (offset + len <= pos) {
-                min = i + 1;
-            } else {
-                max = i - 1;
-            }
-        }
-    }
-    get(i) {
-        if (i < 0 || this.len <= i) {
-            throw new Error("out of range");
-        }
-        const idx = this.getChunkIndex(i);
-        const { value , offset , start  } = this.chunks[idx];
-        return value[start + i - offset];
-    }
-    *iterator(start = 0) {
-        const startIdx = this.getChunkIndex(start);
-        if (startIdx < 0) return;
-        const first = this.chunks[startIdx];
-        let firstOffset = start - first.offset;
-        for(let i = startIdx; i < this.chunks.length; i++){
-            const chunk = this.chunks[i];
-            for(let j = chunk.start + firstOffset; j < chunk.end; j++){
-                yield chunk.value[j];
-            }
-            firstOffset = 0;
-        }
-    }
-    slice(start, end = this.len) {
-        if (end === start) {
-            return new Uint8Array();
-        }
-        checkRange1(start, end, this.len);
-        const result = new Uint8Array(end - start);
-        const startIdx = this.getChunkIndex(start);
-        const endIdx = this.getChunkIndex(end - 1);
-        let written = 0;
-        for(let i = startIdx; i < endIdx; i++){
-            const chunk = this.chunks[i];
-            const len = chunk.end - chunk.start;
-            result.set(chunk.value.subarray(chunk.start, chunk.end), written);
-            written += len;
-        }
-        const last = this.chunks[endIdx];
-        const rest = end - start - written;
-        result.set(last.value.subarray(last.start, last.start + rest), written);
-        return result;
-    }
-    concat() {
-        const result = new Uint8Array(this.len);
-        let sum = 0;
-        for (const { value , start , end  } of this.chunks){
-            result.set(value.subarray(start, end), sum);
-            sum += end - start;
-        }
-        return result;
-    }
+    dst.set(src, off);
+    return src.byteLength;
 }
-function checkRange1(start, end, len) {
-    if (start < 0 || len < start || end < 0 || len < end || end < start) {
-        throw new Error("invalid range");
-    }
-}
-const CR1 = "\r".charCodeAt(0);
-const LF1 = "\n".charCodeAt(0);
-class LineStream1 extends TransformStream {
-    #bufs = new BytesList1();
-    #prevHadCR = false;
-    constructor(){
-        super({
-            transform: (chunk, controller)=>{
-                this.#handle(chunk, controller);
-            },
-            flush: (controller)=>{
-                controller.enqueue(this.#mergeBufs(false));
-            }
-        });
-    }
-    #handle(chunk1, controller1) {
-        const lfIndex1 = chunk1.indexOf(LF1);
-        if (this.#prevHadCR) {
-            this.#prevHadCR = false;
-            if (lfIndex1 === 0) {
-                controller1.enqueue(this.#mergeBufs(true));
-                this.#handle(chunk1.subarray(1), controller1);
+const MAX_SIZE = 2 ** 32 - 2;
+class Buffer {
+    #buf;
+    #off = 0;
+    #readable = new ReadableStream({
+        type: "bytes",
+        pull: (controller)=>{
+            const view = new Uint8Array(controller.byobRequest.view.buffer);
+            if (this.empty()) {
+                this.reset();
+                controller.close();
+                controller.byobRequest.respond(0);
                 return;
             }
-        }
-        if (lfIndex1 === -1) {
-            if (chunk1.at(-1) === CR1) {
-                this.#prevHadCR = true;
-            }
-            this.#bufs.add(chunk1);
-        } else {
-            let crOrLfIndex1 = lfIndex1;
-            if (chunk1[lfIndex1 - 1] === CR1) {
-                crOrLfIndex1--;
-            }
-            this.#bufs.add(chunk1.subarray(0, crOrLfIndex1));
-            controller1.enqueue(this.#mergeBufs(false));
-            this.#handle(chunk1.subarray(lfIndex1 + 1), controller1);
-        }
+            const nread = copy(this.#buf.subarray(this.#off), view);
+            this.#off += nread;
+            controller.byobRequest.respond(nread);
+        },
+        autoAllocateChunkSize: 16_640
+    });
+    get readable() {
+        return this.#readable;
     }
-    #mergeBufs(prevHadCR1) {
-        const mergeBuf1 = this.#bufs.concat();
-        this.#bufs = new BytesList1();
-        if (prevHadCR1) {
-            return mergeBuf1.subarray(0, -1);
-        } else {
-            return mergeBuf1;
+    #writable = new WritableStream({
+        write: (chunk)=>{
+            const m = this.#grow(chunk.byteLength);
+            copy(chunk, this.#buf, m);
         }
+    });
+    get writable() {
+        return this.#writable;
+    }
+    constructor(ab){
+        this.#buf = ab === undefined ? new Uint8Array(0) : new Uint8Array(ab);
+    }
+    bytes(options = {
+        copy: true
+    }) {
+        if (options.copy === false) return this.#buf.subarray(this.#off);
+        return this.#buf.slice(this.#off);
+    }
+    empty() {
+        return this.#buf.byteLength <= this.#off;
+    }
+    get length() {
+        return this.#buf.byteLength - this.#off;
+    }
+    get capacity() {
+        return this.#buf.buffer.byteLength;
+    }
+    truncate(n) {
+        if (n === 0) {
+            this.reset();
+            return;
+        }
+        if (n < 0 || n > this.length) {
+            throw Error("bytes.Buffer: truncation out of range");
+        }
+        this.#reslice(this.#off + n);
+    }
+    reset() {
+        this.#reslice(0);
+        this.#off = 0;
+    }
+    #tryGrowByReslice(n) {
+        const l = this.#buf.byteLength;
+        if (n <= this.capacity - l) {
+            this.#reslice(l + n);
+            return l;
+        }
+        return -1;
+    }
+    #reslice(len) {
+        assert(len <= this.#buf.buffer.byteLength);
+        this.#buf = new Uint8Array(this.#buf.buffer, 0, len);
+    }
+    #grow(n1) {
+        const m = this.length;
+        if (m === 0 && this.#off !== 0) {
+            this.reset();
+        }
+        const i1 = this.#tryGrowByReslice(n1);
+        if (i1 >= 0) {
+            return i1;
+        }
+        const c = this.capacity;
+        if (n1 <= Math.floor(c / 2) - m) {
+            copy(this.#buf.subarray(this.#off), this.#buf);
+        } else if (c + n1 > MAX_SIZE) {
+            throw new Error("The buffer cannot be grown beyond the maximum size.");
+        } else {
+            const buf = new Uint8Array(Math.min(2 * c + n1, MAX_SIZE));
+            copy(this.#buf.subarray(this.#off), buf);
+            this.#buf = buf;
+        }
+        this.#off = 0;
+        this.#reslice(Math.min(m + n1, MAX_SIZE));
+        return m;
+    }
+    grow(n) {
+        if (n < 0) {
+            throw Error("Buffer.grow: negative count");
+        }
+        const m = this.#grow(n);
+        this.#reslice(m);
     }
 }
-class DelimiterStream1 extends TransformStream {
-    #bufs = new BytesList1();
-    #delimiter;
-    #inspectIndex = 0;
-    #matchIndex = 0;
-    #delimLen;
-    #delimLPS;
-    constructor(delimiter){
-        super({
-            transform: (chunk, controller)=>{
-                this.#handle(chunk, controller);
-            },
-            flush: (controller)=>{
-                controller.enqueue(this.#bufs.concat());
-            }
-        });
-        this.#delimiter = delimiter;
-        this.#delimLen = delimiter.length;
-        this.#delimLPS = createLPS1(delimiter);
-    }
-    #handle(chunk11, controller11) {
-        this.#bufs.add(chunk11);
-        let localIndex1 = 0;
-        while(this.#inspectIndex < this.#bufs.size()){
-            if (chunk11[localIndex1] === this.#delimiter[this.#matchIndex]) {
-                this.#inspectIndex++;
-                localIndex1++;
-                this.#matchIndex++;
-                if (this.#matchIndex === this.#delimLen) {
-                    const matchEnd1 = this.#inspectIndex - this.#delimLen;
-                    const readyBytes1 = this.#bufs.slice(0, matchEnd1);
-                    controller11.enqueue(readyBytes1);
-                    this.#bufs.shift(this.#inspectIndex);
-                    this.#inspectIndex = 0;
-                    this.#matchIndex = 0;
-                }
-            } else {
-                if (this.#matchIndex === 0) {
-                    this.#inspectIndex++;
-                    localIndex1++;
-                } else {
-                    this.#matchIndex = this.#delimLPS[this.#matchIndex - 1];
-                }
-            }
-        }
-    }
-}
-function createLPS1(pat) {
+function createLPS(pat) {
     const lps = new Uint8Array(pat.length);
     lps[0] = 0;
     let prefixEnd = 0;
@@ -4333,6 +3998,171 @@ function createLPS1(pat) {
         }
     }
     return lps;
+}
+class BytesList {
+    #len = 0;
+    #chunks = [];
+    constructor(){}
+    size() {
+        return this.#len;
+    }
+    add(value, start = 0, end = value.byteLength) {
+        if (value.byteLength === 0 || end - start === 0) {
+            return;
+        }
+        checkRange(start, end, value.byteLength);
+        this.#chunks.push({
+            value,
+            end,
+            start,
+            offset: this.#len
+        });
+        this.#len += end - start;
+    }
+    shift(n) {
+        if (n === 0) {
+            return;
+        }
+        if (this.#len <= n) {
+            this.#chunks = [];
+            this.#len = 0;
+            return;
+        }
+        const idx = this.getChunkIndex(n);
+        this.#chunks.splice(0, idx);
+        const [chunk] = this.#chunks;
+        if (chunk) {
+            const diff = n - chunk.offset;
+            chunk.start += diff;
+        }
+        let offset = 0;
+        for (const chunk1 of this.#chunks){
+            chunk1.offset = offset;
+            offset += chunk1.end - chunk1.start;
+        }
+        this.#len = offset;
+    }
+    getChunkIndex(pos) {
+        let max = this.#chunks.length;
+        let min = 0;
+        while(true){
+            const i = min + Math.floor((max - min) / 2);
+            if (i < 0 || this.#chunks.length <= i) {
+                return -1;
+            }
+            const { offset , start , end  } = this.#chunks[i];
+            const len = end - start;
+            if (offset <= pos && pos < offset + len) {
+                return i;
+            } else if (offset + len <= pos) {
+                min = i + 1;
+            } else {
+                max = i - 1;
+            }
+        }
+    }
+    get(i) {
+        if (i < 0 || this.#len <= i) {
+            throw new Error("out of range");
+        }
+        const idx = this.getChunkIndex(i);
+        const { value , offset , start  } = this.#chunks[idx];
+        return value[start + i - offset];
+    }
+    *iterator(start = 0) {
+        const startIdx = this.getChunkIndex(start);
+        if (startIdx < 0) return;
+        const first = this.#chunks[startIdx];
+        let firstOffset = start - first.offset;
+        for(let i = startIdx; i < this.#chunks.length; i++){
+            const chunk = this.#chunks[i];
+            for(let j = chunk.start + firstOffset; j < chunk.end; j++){
+                yield chunk.value[j];
+            }
+            firstOffset = 0;
+        }
+    }
+    slice(start, end = this.#len) {
+        if (end === start) {
+            return new Uint8Array();
+        }
+        checkRange(start, end, this.#len);
+        const result = new Uint8Array(end - start);
+        const startIdx = this.getChunkIndex(start);
+        const endIdx = this.getChunkIndex(end - 1);
+        let written = 0;
+        for(let i = startIdx; i < endIdx; i++){
+            const chunk = this.#chunks[i];
+            const len = chunk.end - chunk.start;
+            result.set(chunk.value.subarray(chunk.start, chunk.end), written);
+            written += len;
+        }
+        const last = this.#chunks[endIdx];
+        const rest = end - start - written;
+        result.set(last.value.subarray(last.start, last.start + rest), written);
+        return result;
+    }
+    concat() {
+        const result = new Uint8Array(this.#len);
+        let sum = 0;
+        for (const { value , start , end  } of this.#chunks){
+            result.set(value.subarray(start, end), sum);
+            sum += end - start;
+        }
+        return result;
+    }
+}
+function checkRange(start, end, len) {
+    if (start < 0 || len < start || end < 0 || len < end || end < start) {
+        throw new Error("invalid range");
+    }
+}
+class DelimiterStream extends TransformStream {
+    #bufs = new BytesList();
+    #delimiter;
+    #inspectIndex = 0;
+    #matchIndex = 0;
+    #delimLen;
+    #delimLPS;
+    constructor(delimiter){
+        super({
+            transform: (chunk, controller)=>{
+                this.#handle(chunk, controller);
+            },
+            flush: (controller)=>{
+                controller.enqueue(this.#bufs.concat());
+            }
+        });
+        this.#delimiter = delimiter;
+        this.#delimLen = delimiter.length;
+        this.#delimLPS = createLPS(delimiter);
+    }
+    #handle(chunk1, controller1) {
+        this.#bufs.add(chunk1);
+        let localIndex = 0;
+        while(this.#inspectIndex < this.#bufs.size()){
+            if (chunk1[localIndex] === this.#delimiter[this.#matchIndex]) {
+                this.#inspectIndex++;
+                localIndex++;
+                this.#matchIndex++;
+                if (this.#matchIndex === this.#delimLen) {
+                    const matchEnd = this.#inspectIndex - this.#delimLen;
+                    const readyBytes = this.#bufs.slice(0, matchEnd);
+                    controller1.enqueue(readyBytes);
+                    this.#bufs.shift(this.#inspectIndex);
+                    this.#inspectIndex = 0;
+                    this.#matchIndex = 0;
+                }
+            } else {
+                if (this.#matchIndex === 0) {
+                    this.#inspectIndex++;
+                    localIndex++;
+                } else {
+                    this.#matchIndex = this.#delimLPS[this.#matchIndex - 1];
+                }
+            }
+        }
+    }
 }
 class APIError extends Error {
     code;
@@ -4403,9 +4233,8 @@ class API {
         if (res1.body === null) {
             throw new Error("Stream ended unexpectedly");
         }
-        const lines = res1.body.pipeThrough(new LineStream1());
-        for await (const chunk3 of lines){
-            const line = new TextDecoder().decode(chunk3);
+        const lines = res1.body.pipeThrough(new TextDecoderStream()).pipeThrough(new TextLineStream());
+        for await (const line of lines){
             if (line === "") return;
             yield JSON.parse(line);
         }
