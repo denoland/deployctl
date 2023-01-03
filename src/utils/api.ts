@@ -1,4 +1,4 @@
-import { TextLineStream } from "https://deno.land/std@0.170.0/streams/mod.ts";
+import { TextLineStream } from "../../deps.ts";
 
 import {
   DeploymentProgress,
