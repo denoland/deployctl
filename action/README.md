@@ -19,11 +19,18 @@ Actions" deployment mode. You can do this in your project settings on
 https://dash.deno.com.
 
 ```yml
+name: Deploy
+
+on: push
+
 jobs:
   deploy:
+    runs-on: ubuntu-latest
+
     permissions:
       id-token: write # This is required to allow the GitHub Action to authenticate with Deno Deploy.
       contents: read
+
     steps:
       - name: Clone repository
         uses: actions/checkout@v3
@@ -61,6 +68,18 @@ module, you can use the following configuration:
     project: my-project
     entrypoint: https://deno.land/std/http/file_server.ts
     root: dist
+```
+
+If you want to use [import maps](https://github.com/WICG/import-maps):
+
+```yml
+- name: Deploy to Deno Deploy
+  uses: denoland/deployctl@v1
+  with:
+    project: my-project
+    entrypoint: https://deno.land/std/http/file_server.ts
+    root: dist
+    import-map: import-map.json
 ```
 
 [automatic-mode]: https://deno.com/deploy/docs/projects#git-integration

@@ -8,5 +8,9 @@
     "files": {
       "exclude": ["action/node_modules/"]
     }
+  },
+  "tasks": {
+    "test": "deno test -A --unstable tests/ src/",
+    "build-action": "deno bundle ./src/utils/mod.ts > ./action/deps.js"
   }
 }

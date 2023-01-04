@@ -42,6 +42,7 @@ const args = parseArgs(Deno.args, {
     "prod",
     "static",
     "version",
+    "dry-run",
   ],
   string: [
     "project",

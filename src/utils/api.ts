@@ -1,4 +1,5 @@
-import { LineStream } from "https://deno.land/std@0.116.0/streams/delimiter.ts";
+import { TextLineStream } from "../../deps.ts";
+
 import {
   Deployment,
   DeploymentProgress,
@@ -99,9 +100,10 @@ export class API {
       throw new Error("Stream ended unexpectedly");
     }
 
-    const lines = res.body.pipeThrough(new LineStream());
-    for await (const chunk of lines) {
-      const line = new TextDecoder().decode(chunk);
+    const lines = res.body
+      .pipeThrough(new TextDecoderStream())
+      .pipeThrough(new TextLineStream());
+    for await (const line of lines) {
       if (line === "") return;
       yield JSON.parse(line);
     }

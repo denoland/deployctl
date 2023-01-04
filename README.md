@@ -3,8 +3,6 @@
 `deployctl` is the command line tool for Deno Deploy. This repository also
 contains the `denoland/deployctl` GitHub Action.
 
-> ⚠ [For more on the GitHub Action, go here](./action/README.md)
-
 ## Install
 
 ```shell
@@ -27,3 +25,31 @@ View the help:
 ```shell
 deployctl -h
 ```
+
+## Action Example
+
+```yml
+name: Deploy
+
+on: push
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write # This is required to allow the GitHub Action to authenticate with Deno Deploy.
+      contents: read
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+
+      - name: Deploy to Deno Deploy
+        uses: denoland/deployctl@v1
+        with:
+          project: my-project # the name of the project on Deno Deploy
+          entrypoint: main.ts # the entrypoint to deploy
+```
+
+To learn more about the action, checkout [action readme](./action/README.md).

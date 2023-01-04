@@ -24,7 +24,7 @@ jobs:
       - name: Setup Deno
         uses: denoland/setup-deno@v1
         with:
-          deno-version: ${{ matrix.deno == 'old' && '1.16.0' || (matrix.deno == 'stable' && '1.x' || matrix.deno) }}
+          deno-version: ${{ matrix.deno == 'old' && '1.20.1' || (matrix.deno == 'stable' && '1.x' || matrix.deno) }}
 
       - run: deno --version
 
@@ -37,7 +37,8 @@ jobs:
         run: deno lint
 
       - name: Typecheck
-        run: deno cache deployctl.ts
+        if: runner.os == 'Linux' && matrix.deno == 'stable'
+        run: deno check deployctl.ts
 
       - name: Run tests
-        run: make test
+        run: deno task test
