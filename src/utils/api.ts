@@ -121,10 +121,10 @@ export class API {
   }
 
   async getDeployments(
-    id: string,
+    projectId: string,
   ): Promise<[Deployment[], DeploymentsSummary] | null> {
     try {
-      return await this.#requestJson(`/projects/${id}/deployments/`);
+      return await this.#requestJson(`/projects/${projectId}/deployments/`);
     } catch (err) {
       if (err instanceof APIError && err.code === "projectNotFound") {
         return null;
@@ -133,9 +133,9 @@ export class API {
     }
   }
 
-  getLogs(idProject: string, idDeployment: string): AsyncIterable<Logs> {
+  getLogs(projectId: string, deploymentId: string): AsyncIterable<Logs> {
     return this.#requestStream(
-      `/projects/${idProject}/deployments/${idDeployment}/logs/`,
+      `/projects/${projectId}/deployments/${deploymentId}/logs/`,
     );
   }
 

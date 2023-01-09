@@ -5,7 +5,7 @@ import { error } from "../error.ts";
 import { API, APIError } from "../utils/api.ts";
 
 const help = `deployctl logs
-Shows the logs of the given project.
+Stream logs for the given project.
 
 To show the latest logs of a project:
   deployctl logs --project=helloworld
@@ -20,10 +20,10 @@ USAGE:
     deployctl logs [OPTIONS] [<PROJECT>]
 
 OPTIONS:
-        --deployment=<DEPLOY_ID>  The id of the deployment you want to get the logs (defaults to latest deployment)
-        --prod                    Select the production deployment
-    -p, --project=NAME        The project you want to get the logs
-        --token=TOKEN             The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
+        --deployment=<DEPLOYMENT_ID>  The id of the deployment you want to get the logs (defaults to latest deployment)
+        --prod                        Select the production deployment
+    -p, --project=NAME                The project you want to get the logs
+        --token=TOKEN                 The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
 `;
 
 export interface Args {
@@ -63,51 +63,51 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
   }
 
   const opts = {
-    project: args.project,
+    projectId: args.project,
+    deploymentId: args.deployment,
     prod: args.prod,
     token,
-    deployment: args.deployment,
   };
 
   await logs(opts);
 }
 
 interface DeployOpts {
-  project: string;
-  deployment: string | null;
+  projectId: string;
+  deploymentId: string | null;
   prod: boolean;
   token: string;
 }
 
 async function logs(opts: DeployOpts): Promise<void> {
-  if (opts.prod && opts.deployment) {
+  if (opts.prod && opts.deploymentId) {
     error(
-      `You can't select a deployment and choose production flag at the same time`,
+      "You can't select a deployment and choose production flag at the same time",
     );
   }
   const projectSpinner = wait("Fetching project information...").start();
   const api = API.fromToken(opts.token);
-  const project = await api.getProject(opts.project);
-  const projectDeployments = await api.getDeployments(opts.project);
+  const project = await api.getProject(opts.projectId);
+  const projectDeployments = await api.getDeployments(opts.projectId);
   if (project === null) {
     projectSpinner.fail("Project not found.");
     Deno.exit(1);
   }
   if (opts.prod) {
     if (!project.hasProductionDeployment) {
-      projectSpinner.fail(`This project doesn't have a production deployment`);
+      projectSpinner.fail("This project doesn't have a production deployment");
       Deno.exit(1);
     }
-    opts.deployment = project.productionDeployment?.id || null;
+    opts.deploymentId = project.productionDeployment?.id || null;
   }
   if (projectDeployments === null) {
     projectSpinner.fail("Project not found.");
     Deno.exit(1);
   }
-  projectSpinner.succeed(`Project: ${project?.name}`);
-  const logs = opts.deployment
-    ? api.getLogs(opts.project, opts.deployment)
-    : api.getLogs(opts.project, "latest");
+  projectSpinner.succeed(`Project: ${project.name}`);
+  const logs = opts.deploymentId
+    ? api.getLogs(opts.projectId, opts.deploymentId)
+    : api.getLogs(opts.projectId, "latest");
   if (logs === null) {
     projectSpinner.fail("Project not found.");
     Deno.exit(1);
@@ -118,21 +118,7 @@ async function logs(opts: DeployOpts): Promise<void> {
         console.log(log);
         continue;
       }
-      let color;
-      switch (log.level) {
-        case "debug": {
-          color = "grey";
-          break;
-        }
-        case "error": {
-          color = "red";
-          break;
-        }
-        case "info": {
-          color = "blue";
-          break;
-        }
-      }
+      const color = getLogColor(log.level);
       if (log.message.startsWith("isolate start time")) {
         console.log(
           `%c${log.time}   %c${log.region}%c ${log.message.trim()}`,
@@ -156,5 +142,19 @@ async function logs(opts: DeployOpts): Promise<void> {
     }
   } finally {
     console.log("%cconnection closed", "color: red");
+  }
+}
+
+function getLogColor(logLevel: string) {
+  switch (logLevel) {
+    case "debug": {
+      return "grey";
+    }
+    case "error": {
+      return "red";
+    }
+    case "info": {
+      return "blue";
+    }
   }
 }
