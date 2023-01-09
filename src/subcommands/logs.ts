@@ -119,20 +119,12 @@ async function logs(opts: DeployOpts): Promise<void> {
         continue;
       }
       const color = getLogColor(log.level);
-      if (log.message.startsWith("isolate start time")) {
-        console.log(
-          `%c${log.time}   %c${log.region}%c ${log.message.trim()}`,
-          "color: aquamarine",
-          "background-color: grey",
-          `color: ${color}`,
-        );
-      } else {
-        console.log(
-          `%c${log.time}   %c${log.message.trim()}`,
-          "color: aquamarine",
-          `color: ${color}`,
-        );
-      }
+      console.log(
+        `%c${log.time}   %c${log.region}%c ${log.message.trim()}`,
+        "color: aquamarine",
+        "background-color: grey",
+        `color: ${color}`,
+      );
     }
   } catch (err: unknown) {
     if (
@@ -155,6 +147,9 @@ function getLogColor(logLevel: string) {
     }
     case "info": {
       return "blue";
+    }
+    default: {
+      return "initial";
     }
   }
 }
