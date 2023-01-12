@@ -1,8 +1,11 @@
 import { TextLineStream } from "../../deps.ts";
 
 import {
+  Deployment,
   DeploymentProgress,
+  DeploymentsSummary,
   GitHubActionsDeploymentRequest,
+  Logs,
   ManifestEntry,
   Project,
   PushDeploymentRequest,
@@ -115,6 +118,25 @@ export class API {
       }
       throw err;
     }
+  }
+
+  async getDeployments(
+    projectId: string,
+  ): Promise<[Deployment[], DeploymentsSummary] | null> {
+    try {
+      return await this.#requestJson(`/projects/${projectId}/deployments/`);
+    } catch (err) {
+      if (err instanceof APIError && err.code === "projectNotFound") {
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  getLogs(projectId: string, deploymentId: string): AsyncIterable<Logs> {
+    return this.#requestStream(
+      `/projects/${projectId}/deployments/${deploymentId}/logs/`,
+    );
   }
 
   async projectNegotiateAssets(

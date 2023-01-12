@@ -6,6 +6,7 @@ import { parseArgs, semverGreaterThanOrEquals } from "./deps.ts";
 import { error } from "./src/error.ts";
 import deploySubcommand from "./src/subcommands/deploy.ts";
 import upgradeSubcommand from "./src/subcommands/upgrade.ts";
+import logsSubcommand from "./src/subcommands/logs.ts";
 import { MINIMUM_DENO_VERSION, VERSION } from "./src/version.ts";
 import { fetchReleases, getConfigPaths } from "./src/utils/info.ts";
 
@@ -21,6 +22,7 @@ To deploy a remote script:
 SUBCOMMANDS:
     deploy    Deploy a script with static files to Deno Deploy
     upgrade   Upgrade deployctl to the given version (defaults to latest)
+    logs      Stream logs for the given project
 `;
 
 if (!semverGreaterThanOrEquals(Deno.version.deno, MINIMUM_DENO_VERSION)) {
@@ -48,6 +50,7 @@ const args = parseArgs(Deno.args, {
     "include",
     "exclude",
     "import-map",
+    "deployment",
   ],
   default: {
     static: true,
@@ -103,6 +106,9 @@ switch (subcommand) {
     break;
   case "upgrade":
     await upgradeSubcommand(args);
+    break;
+  case "logs":
+    await logsSubcommand(args);
     break;
   default:
     if (args.version) {

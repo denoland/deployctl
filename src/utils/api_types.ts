@@ -26,6 +26,14 @@ export interface Project {
   envVars: string[];
 }
 
+export interface DeploymentsSummary {
+  page: number;
+  count: number;
+  limit: number;
+  totalCount: number;
+  totalPages: number;
+}
+
 export interface ManifestEntryFile {
   kind: "file";
   gitSha1: string;
@@ -93,4 +101,12 @@ export interface DeploymentProgressError {
   type: "error";
   code: string;
   ctx: string;
+}
+
+export interface Logs {
+  time: string;
+  message: string;
+  level: "info" | "debug" | "error";
+  isolateId: string;
+  region: string;
 }
