@@ -3949,6 +3949,19 @@ class API {
             throw err;
         }
     }
+    async getDeployments(projectId) {
+        try {
+            return await this.#requestJson(`/projects/${projectId}/deployments/`);
+        } catch (err) {
+            if (err instanceof APIError && err.code === "projectNotFound") {
+                return null;
+            }
+            throw err;
+        }
+    }
+    getLogs(projectId, deploymentId) {
+        return this.#requestStream(`/projects/${projectId}/deployments/${deploymentId}/logs/`);
+    }
     async projectNegotiateAssets(id, manifest) {
         return await this.#requestJson(`/projects/${id}/assets/negotiate`, {
             method: "POST",
