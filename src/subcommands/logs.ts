@@ -114,8 +114,7 @@ async function logs(opts: DeployOpts): Promise<void> {
   }
   try {
     for await (const log of logs) {
-      if (typeof log == "string") {
-        console.log(log);
+      if (log.type === "ready" || log.type === "ping") {
         continue;
       }
       const color = getLogColor(log.level);
