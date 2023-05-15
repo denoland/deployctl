@@ -103,10 +103,23 @@ export interface DeploymentProgressError {
   ctx: string;
 }
 
-export interface Logs {
+export interface LogReady {
+  type: "ready";
+}
+
+export interface LogPing {
+  type: "ping";
+}
+
+export interface LogMessage {
+  type: "message";
   time: string;
   message: string;
-  level: "info" | "debug" | "error";
-  isolateId: string;
+  level: "debug" | "info" | "warning" | "error";
   region: string;
 }
+
+export type Logs =
+  | LogReady
+  | LogPing
+  | LogMessage;

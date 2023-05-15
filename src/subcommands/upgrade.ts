@@ -60,6 +60,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     console.log("You're using the latest version.");
     Deno.exit();
   } else {
+    // deno-lint-ignore no-deprecated-deno-api
     const process = Deno.run({
       cmd: [
         Deno.execPath(),
