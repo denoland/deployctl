@@ -60,10 +60,8 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     console.log("You're using the latest version.");
     Deno.exit();
   } else {
-    // deno-lint-ignore no-deprecated-deno-api
-    const process = Deno.run({
-      cmd: [
-        Deno.execPath(),
+    const process = new Deno.Command(Deno.execPath(), {
+      args: [
         "install",
         "--allow-read",
         "--allow-write",
@@ -74,8 +72,8 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
         "-f",
         `https://deno.land/x/deploy@${version ? version : latest}/deployctl.ts`,
       ],
-    });
-    await process.status();
+    }).spawn();
+    await process.status;
   }
 }
 
