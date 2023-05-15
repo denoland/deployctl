@@ -15,7 +15,7 @@ export function deployctl(
     env: true,
     run: true,
   },
-): Deno.Process {
+): Deno.ChildProcess {
   const deno = [
     Deno.execPath(),
     "run",
@@ -34,13 +34,12 @@ export function deployctl(
     ? ["bash", "-c", [...deno, ...args].join(" ")]
     : [...deno, ...args];
 
-  // deno-lint-ignore no-deprecated-deno-api
-  return Deno.run({
-    cmd,
+  return new Deno.Command(cmd[0], {
+    args: cmd.slice(1),
     stdin: "null",
     stdout: "piped",
     stderr: "piped",
-  });
+  }).spawn();
 }
 
 export interface TestOptions {
@@ -51,26 +50,21 @@ export interface TestOptions {
 
 export function test(
   opts: TestOptions,
-  fn: (proc: Deno.Process) => void | Promise<void>,
+  fn: (proc: Deno.ChildProcess) => void | Promise<void>,
 ) {
   const name = opts.name ?? ["deployctl", ...opts.args].join(" ");
   Deno.test(name, async () => {
     const proc = deployctl(opts.args, opts.permissions);
-    try {
-      await fn(proc);
-    } finally {
-      proc.close();
-    }
+    await fn(proc);
   });
 }
 
 export async function output(
-  proc: Deno.Process,
-): Promise<[string, string, Deno.ProcessStatus]> {
-  const [status, stdout, stderr] = await Promise.all([
-    proc.status(),
+  proc: Deno.ChildProcess,
+): Promise<[string, string, Deno.CommandStatus]> {
+  const [status, { stdout, stderr }] = await Promise.all([
+    proc.status,
     proc.output(),
-    proc.stderrOutput(),
   ]);
   return [
     new TextDecoder().decode(stdout),
