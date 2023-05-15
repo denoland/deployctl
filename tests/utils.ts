@@ -34,6 +34,7 @@ export function deployctl(
     ? ["bash", "-c", [...deno, ...args].join(" ")]
     : [...deno, ...args];
 
+  // deno-lint-ignore no-deprecated-deno-api
   return Deno.run({
     cmd,
     stdin: "null",
