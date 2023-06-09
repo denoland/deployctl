@@ -130,6 +130,13 @@ async function deploy(opts: DeployOpts): Promise<void> {
   }
   projectSpinner.succeed(`Project: ${project.name}`);
 
+  if (!project!.hasProductionDeployment) {
+    wait("").start().info(
+      "Empty project detected, automatically pushing initial deployment to production (use --prod for further updates).",
+    );
+    opts.prod = true;
+  }
+
   let url = opts.entrypoint;
   const cwd = Deno.cwd();
   if (url.protocol === "file:") {
@@ -234,13 +241,15 @@ async function deploy(opts: DeployOpts): Promise<void> {
         case "uploadComplete":
           deploySpinner!.text = `Finishing deployment...`;
           break;
-        case "success":
-          deploySpinner!.succeed(`Deployment complete.`);
+        case "success": {
+          const deploymentKind = opts.prod ? "Production" : "Preview";
+          deploySpinner!.succeed(`${deploymentKind} deployment complete.`);
           console.log("\nView at:");
           for (const { domain } of event.domainMappings) {
             console.log(` - https://${domain}`);
           }
           break;
+        }
         case "error":
           if (uploadSpinner) {
             uploadSpinner.fail(`Upload failed.`);
