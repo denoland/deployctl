@@ -128,9 +128,16 @@ async function deploy(opts: DeployOpts): Promise<void> {
     projectSpinner.fail("Project not found.");
     Deno.exit(1);
   }
-  projectSpinner.succeed(`Project: ${project.name}`);
 
-  if (!project!.hasProductionDeployment) {
+  const deploymentsListing = await api.getDeployments(project!.id);
+  if (deploymentsListing === null) {
+    projectSpinner.fail("Project deployments details not found.");
+    Deno.exit(1);
+  }
+  const [projectDeployments, _pagination] = deploymentsListing!;
+  projectSpinner.succeed(`Project: ${project!.name}`);
+
+  if (projectDeployments.length === 0) {
     wait("").start().info(
       "Empty project detected, automatically pushing initial deployment to production (use --prod for further updates).",
     );
