@@ -19,7 +19,6 @@ export function deployctl(
   const deno = [
     Deno.execPath(),
     "run",
-    "--no-check",
   ];
 
   if (permissions?.net) deno.push("--allow-net");
