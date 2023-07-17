@@ -273,6 +273,19 @@ async function liveLogs(opts: LiveLogOpts): Promise<void> {
       if (log.type === "ready" || log.type === "ping") {
         continue;
       }
+
+      if (opts.grep !== null && !log.message.includes(opts.grep)) {
+        continue;
+      }
+
+      if (opts.level !== null && log.level !== opts.level) {
+        continue;
+      }
+
+      if (opts.region !== null && log.region !== opts.region) {
+        continue;
+      }
+
       const color = getLogColor(log.level);
       console.log(
         `%c${log.time}   %c${log.region}%c ${log.message.trim()}`,
