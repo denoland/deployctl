@@ -15,8 +15,8 @@ To show the live logs of a project's latest deployment:
 To show the live logs of a particular deployment:
   deployctl logs --project=helloworld --deployment=1234567890ab
 
-To show the live, error-level logs of the production deployment:
-  deployctl logs --project=helloworld --prod --level=error
+To show the live, error-level logs of the production deployment generated in a particular region:
+  deployctl logs --project=helloworld --prod --level=error --region=some-region
 
 To show the logs generated within the past 3 hours and containing the word "foo":
   deployctl logs --project=helloworld --timerange=3h,now --grep=foo
