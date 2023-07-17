@@ -103,15 +103,15 @@ export interface DeploymentProgressError {
   ctx: string;
 }
 
-export interface LogReady {
+export interface LiveLogReady {
   type: "ready";
 }
 
-export interface LogPing {
+export interface LiveLogPing {
   type: "ping";
 }
 
-export interface LogMessage {
+export interface LiveLogMessage {
   type: "message";
   time: string;
   message: string;
@@ -119,7 +119,28 @@ export interface LogMessage {
   region: string;
 }
 
-export type Logs =
-  | LogReady
-  | LogPing
-  | LogMessage;
+export type LiveLog =
+  | LiveLogReady
+  | LiveLogPing
+  | LiveLogMessage;
+
+export interface LogQueryRequestParams {
+  regions?: string[];
+  levels?: string[];
+  // RFC3339
+  since?: string;
+  // RFC3339
+  until?: string;
+  q?: string[];
+  limit?: number;
+}
+
+export interface PersistedLog {
+  deploymentId: string;
+  isolateId: string;
+  region: string;
+  level: "debug" | "info" | "warning" | "error";
+  // RFC3339
+  timestamp: string;
+  message: string;
+}

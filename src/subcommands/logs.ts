@@ -286,13 +286,7 @@ async function liveLogs(opts: LiveLogOpts): Promise<void> {
         continue;
       }
 
-      const color = getLogColor(log.level);
-      console.log(
-        `%c${log.time}   %c${log.region}%c ${log.message.trim()}`,
-        "color: aquamarine",
-        "background-color: grey",
-        `color: ${color}`,
-      );
+      printLog(log.level, log.time, log.region, log.message);
     }
   } catch (err: unknown) {
     if (
@@ -306,7 +300,65 @@ async function liveLogs(opts: LiveLogOpts): Promise<void> {
 }
 
 async function queryLogs(opts: QueryLogOpts): Promise<void> {
-  // TODO(magurotuna)
+  const projectSpinner = wait("Fetching project information...").start();
+  const api = API.fromToken(opts.token);
+  const project = await fetchProjectInfo(api, opts.projectId, (msg) => {
+    projectSpinner.fail(msg);
+    Deno.exit(1);
+  });
+  if (opts.prod) {
+    if (!project.hasProductionDeployment) {
+      projectSpinner.fail("This project doesn't have a production deployment");
+      Deno.exit(1);
+    }
+    opts.deploymentId = project.productionDeployment?.id ?? null;
+  }
+  projectSpinner.succeed(`Project: ${project.name}`);
+
+  try {
+    const { logs } = await api.queryLogs(
+      opts.projectId,
+      opts.deploymentId ?? "latest",
+      {
+        regions: opts.region ? [opts.region] : undefined,
+        levels: opts.level ? [opts.level] : undefined,
+        since: opts.timerange.start.toISOString(),
+        until: opts.timerange.end.toISOString(),
+        q: opts.grep ? [opts.grep] : undefined,
+        limit: opts.limit,
+      },
+    );
+
+    if (logs.length === 0) {
+      console.log("%cNo logs found", "color: red");
+      return;
+    }
+
+    for (const log of logs) {
+      printLog(log.level, log.timestamp, log.region, log.message);
+    }
+  } catch (err: unknown) {
+    if (err instanceof APIError) {
+      error(err.toString());
+    } else {
+      throw err;
+    }
+  }
+}
+
+function printLog(
+  logLevel: string,
+  timestamp: string,
+  region: string,
+  message: string,
+) {
+  const color = getLogColor(logLevel);
+  console.log(
+    `%c${timestamp}   %c${region}%c ${message.trim()}`,
+    "color: aquamarine",
+    "background-color: grey",
+    `color: ${color}`,
+  );
 }
 
 function getLogColor(logLevel: string) {
