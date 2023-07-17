@@ -4,6 +4,7 @@ import type { Args } from "../args.ts";
 import { wait } from "../../deps.ts";
 import { error } from "../error.ts";
 import { API, APIError } from "../utils/api.ts";
+import type { Project } from "../utils/api_types.ts";
 
 const help = `deployctl logs
 View logs for the given project.
@@ -56,6 +57,24 @@ export interface LogSubcommandArgs {
   limit: number;
 }
 
+type LogOptsBase = {
+  prod: boolean;
+  token: string;
+  deploymentId: string | null;
+  projectId: string;
+  grep: string | null;
+  level: string | null;
+  region: string | null;
+};
+type LiveLogOpts = LogOptsBase;
+type QueryLogOpts = LogOptsBase & {
+  timerange: {
+    start: Date;
+    end: Date;
+  };
+  limit: number;
+};
+
 export default async function (args: Args): Promise<void> {
   const logSubcommandArgs = parseArgsForLogSubcommand(args);
 
@@ -78,17 +97,34 @@ export default async function (args: Args): Promise<void> {
     error("Too many positional arguments given.");
   }
 
-  const opts = {
-    projectId: logSubcommandArgs.project,
-    deploymentId: logSubcommandArgs.deployment,
-    prod: logSubcommandArgs.prod,
-    token,
-  };
+  if (logSubcommandArgs.prod && logSubcommandArgs.deployment) {
+    error(
+      "You can't select a deployment and choose production flag at the same time",
+    );
+  }
 
   if (logSubcommandArgs.timerange === null) {
-    await liveLogs(opts);
+    await liveLogs({
+      prod: logSubcommandArgs.prod,
+      token,
+      deploymentId: logSubcommandArgs.deployment,
+      projectId: logSubcommandArgs.project,
+      grep: logSubcommandArgs.grep,
+      level: logSubcommandArgs.level,
+      region: logSubcommandArgs.region,
+    });
   } else {
-    await queryLogs(opts);
+    await queryLogs({
+      prod: logSubcommandArgs.prod,
+      token,
+      deploymentId: logSubcommandArgs.deployment,
+      projectId: logSubcommandArgs.project,
+      grep: logSubcommandArgs.grep,
+      level: logSubcommandArgs.level,
+      region: logSubcommandArgs.region,
+      timerange: logSubcommandArgs.timerange,
+      limit: logSubcommandArgs.limit,
+    });
   }
 }
 
@@ -192,37 +228,37 @@ export function parseArgsForLogSubcommand(args: Args): LogSubcommandArgs {
   };
 }
 
-interface DeployOpts {
-  projectId: string;
-  deploymentId: string | null;
-  prod: boolean;
-  token: string;
+async function fetchProjectInfo(
+  api: API,
+  projectId: string,
+  onFailure: (msg: string) => never,
+): Promise<Project> {
+  const project = await api.getProject(projectId);
+  if (project === null) {
+    onFailure("Project not found.");
+  }
+
+  const projectDeployments = await api.getDeployments(projectId);
+  if (projectDeployments === null) {
+    onFailure("Project not found.");
+  }
+
+  return project;
 }
 
-async function liveLogs(opts: DeployOpts): Promise<void> {
-  if (opts.prod && opts.deploymentId) {
-    error(
-      "You can't select a deployment and choose production flag at the same time",
-    );
-  }
+async function liveLogs(opts: LiveLogOpts): Promise<void> {
   const projectSpinner = wait("Fetching project information...").start();
   const api = API.fromToken(opts.token);
-  const project = await api.getProject(opts.projectId);
-  const projectDeployments = await api.getDeployments(opts.projectId);
-  if (project === null) {
-    projectSpinner.fail("Project not found.");
+  const project = await fetchProjectInfo(api, opts.projectId, (msg) => {
+    projectSpinner.fail(msg);
     Deno.exit(1);
-  }
+  });
   if (opts.prod) {
     if (!project.hasProductionDeployment) {
       projectSpinner.fail("This project doesn't have a production deployment");
       Deno.exit(1);
     }
-    opts.deploymentId = project.productionDeployment?.id || null;
-  }
-  if (projectDeployments === null) {
-    projectSpinner.fail("Project not found.");
-    Deno.exit(1);
+    opts.deploymentId = project.productionDeployment?.id ?? null;
   }
   projectSpinner.succeed(`Project: ${project.name}`);
   const logs = opts.deploymentId
@@ -256,7 +292,7 @@ async function liveLogs(opts: DeployOpts): Promise<void> {
   }
 }
 
-async function queryLogs(opts: DeployOpts): Promise<void> {
+async function queryLogs(opts: QueryLogOpts): Promise<void> {
   // TODO(magurotuna)
 }
 
