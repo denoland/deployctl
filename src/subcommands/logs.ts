@@ -85,7 +85,11 @@ export default async function (args: Args): Promise<void> {
     token,
   };
 
-  await logs(opts);
+  if (logSubcommandArgs.timerange === null) {
+    await liveLogs(opts);
+  } else {
+    await queryLogs(opts);
+  }
 }
 
 export function parseTimerange(
@@ -195,7 +199,7 @@ interface DeployOpts {
   token: string;
 }
 
-async function logs(opts: DeployOpts): Promise<void> {
+async function liveLogs(opts: DeployOpts): Promise<void> {
   if (opts.prod && opts.deploymentId) {
     error(
       "You can't select a deployment and choose production flag at the same time",
@@ -250,6 +254,10 @@ async function logs(opts: DeployOpts): Promise<void> {
   } finally {
     console.log("%cconnection closed", "color: red");
   }
+}
+
+async function queryLogs(opts: DeployOpts): Promise<void> {
+  // TODO(magurotuna)
 }
 
 function getLogColor(logLevel: string) {
