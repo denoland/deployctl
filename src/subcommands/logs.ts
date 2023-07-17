@@ -315,6 +315,7 @@ async function queryLogs(opts: QueryLogOpts): Promise<void> {
   }
   projectSpinner.succeed(`Project: ${project.name}`);
 
+  const logSpinner = wait("Fetching logs...").start();
   try {
     const { logs } = await api.queryLogs(
       opts.projectId,
@@ -330,14 +331,16 @@ async function queryLogs(opts: QueryLogOpts): Promise<void> {
     );
 
     if (logs.length === 0) {
-      console.log("%cNo logs found", "color: red");
+      logSpinner.fail("No logs found matching the provided condition");
       return;
     }
 
+    logSpinner.succeed(`Found ${logs.length} logs`);
     for (const log of logs) {
       printLog(log.level, log.timestamp, log.region, log.message);
     }
   } catch (err: unknown) {
+    logSpinner.fail("Failed to fetch logs");
     if (err instanceof APIError) {
       error(err.toString());
     } else {
