@@ -6,16 +6,19 @@ import { error } from "../error.ts";
 import { API, APIError } from "../utils/api.ts";
 
 const help = `deployctl logs
-Stream logs for the given project.
+View logs for the given project.
 
-To show the latest logs of a project:
+To show the live logs of a project's latest deployment:
   deployctl logs --project=helloworld
 
-To show the logs of a particular deployment:
+To show the live logs of a particular deployment:
   deployctl logs --project=helloworld --deployment=1234567890ab
 
-To show the logs of the production deployment:
-  deployctl logs --project=helloworld --prod
+To show the live, error-level logs of the production deployment:
+  deployctl logs --project=helloworld --prod --level=error
+
+To show the logs generated within the past 3 hours and containing the word "foo":
+  deployctl logs --project=helloworld --timerange=3h,now --grep=foo
 
 USAGE:
     deployctl logs [OPTIONS] [<PROJECT>]

@@ -23,7 +23,7 @@ To deploy a remote script:
 SUBCOMMANDS:
     deploy    Deploy a script with static files to Deno Deploy
     upgrade   Upgrade deployctl to the given version (defaults to latest)
-    logs      Stream logs for the given project
+    logs      View logs for the given project
 `;
 
 if (!semverGreaterThanOrEquals(Deno.version.deno, MINIMUM_DENO_VERSION)) {
