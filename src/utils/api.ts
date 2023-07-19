@@ -50,7 +50,7 @@ export class API {
 
   static fromToken(token: string) {
     const endpoint = Deno.env.get("DEPLOY_API_ENDPOINT") ??
-      "https://dash.deno.com";
+      "https://dash.deno.com/api";
     return new API(`Bearer ${token}`, endpoint);
   }
 
