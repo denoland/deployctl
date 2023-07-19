@@ -3894,7 +3894,7 @@ class API {
         return new API(`Bearer ${token}`, endpoint);
     }
     async #request(path2, opts = {}) {
-        const url = `${this.#endpoint}/${path2}`;
+        const url = `${this.#endpoint}${path2}`;
         const method = opts.method ?? "GET";
         const body = opts.body !== undefined ? opts.body instanceof FormData ? opts.body : JSON.stringify(opts.body) : undefined;
         const headers = {

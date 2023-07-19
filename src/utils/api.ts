@@ -55,7 +55,7 @@ export class API {
   }
 
   async #request(path: string, opts: RequestOptions = {}): Promise<Response> {
-    const url = `${this.#endpoint}/${path}`;
+    const url = `${this.#endpoint}${path}`;
     const method = opts.method ?? "GET";
     const body = opts.body !== undefined
       ? opts.body instanceof FormData ? opts.body : JSON.stringify(opts.body)
