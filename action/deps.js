@@ -3890,11 +3890,11 @@ class API {
         this.#endpoint = endpoint;
     }
     static fromToken(token) {
-        const endpoint = Deno.env.get("DEPLOY_API_ENDPOINT") ?? "https://dash.deno.com/api";
+        const endpoint = Deno.env.get("DEPLOY_API_ENDPOINT") ?? "https://dash.deno.com";
         return new API(`Bearer ${token}`, endpoint);
     }
     async #request(path2, opts = {}) {
-        const url = `${this.#endpoint}${path2}`;
+        const url = `${this.#endpoint}/api${path2}`;
         const method = opts.method ?? "GET";
         const body = opts.body !== undefined ? opts.body instanceof FormData ? opts.body : JSON.stringify(opts.body) : undefined;
         const headers = {

@@ -50,12 +50,12 @@ export class API {
 
   static fromToken(token: string) {
     const endpoint = Deno.env.get("DEPLOY_API_ENDPOINT") ??
-      "https://dash.deno.com/api";
+      "https://dash.deno.com";
     return new API(`Bearer ${token}`, endpoint);
   }
 
   async #request(path: string, opts: RequestOptions = {}): Promise<Response> {
-    const url = `${this.#endpoint}${path}`;
+    const url = `${this.#endpoint}/api${path}`;
     const method = opts.method ?? "GET";
     const body = opts.body !== undefined
       ? opts.body instanceof FormData ? opts.body : JSON.stringify(opts.body)
