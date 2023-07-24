@@ -102,6 +102,13 @@ export default async function (args: Args): Promise<void> {
     );
   }
 
+  if (
+    logSubcommandArgs.since !== null && logSubcommandArgs.until !== null &&
+    logSubcommandArgs.since > logSubcommandArgs.until
+  ) {
+    error("--since must be earlier than --until");
+  }
+
   const api = API.fromToken(token);
   const { regionCodes } = await api.getMetadata();
   if (logSubcommandArgs.regions !== null) {
