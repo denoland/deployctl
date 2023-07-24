@@ -25,8 +25,8 @@ export function parseArgs(args: string[]) {
       "deployment",
       "timerange",
       "grep",
-      "level",
-      "region",
+      "levels",
+      "regions",
       "limit",
     ],
     default: {

@@ -15,8 +15,8 @@ To show the live logs of a project's latest deployment:
 To show the live logs of a particular deployment:
   deployctl logs --project=helloworld --deployment=1234567890ab
 
-To show the live, error-level logs of the production deployment generated in a particular region:
-  deployctl logs --project=helloworld --prod --level=error --region=some-region
+To show the live, error & info level logs of the production deployment generated in particular regions:
+  deployctl logs --project=helloworld --prod --levels=error,info --regions=region1,region2
 
 To show the logs generated within the past 3 hours and containing the word "foo":
   deployctl logs --project=helloworld --timerange=3h,now --grep=foo
@@ -35,8 +35,10 @@ OPTIONS:
                                       <end> defaults to now, <start> defaults to 1h before <end>
                                       NOTE: Logs generated over 2 days ago are not available
         --grep=<WORD>                 Filter logs by a word
-        --level=<LEVEL>               Filter logs by a log level (defaults to all log levels)
-        --region=<REGION>             Filter logs by a region (defaults to all regions)
+        --levels=<LEVELS>             Filter logs by log levels (defaults to all log levels)
+                                      Mutliple levels can be specified, e.g. --levels=info,error
+        --regions=<REGIONS>           Filter logs by regions (defaults to all regions)
+                                      Multiple regions can be specified, e.g. --regions=region1,region2
         --limit=<LIMIT>               Limit the number of logs to return (defualts to 100)
                                       This flag is effective only when '--timerange' is provided
 `;
@@ -52,8 +54,8 @@ export interface LogSubcommandArgs {
     end: Date;
   } | null;
   grep: string | null;
-  level: string | null;
-  region: string | null;
+  levels: string[] | null;
+  regions: string[] | null;
   limit: number;
 }
 
@@ -63,8 +65,8 @@ type LogOptsBase = {
   deploymentId: string | null;
   projectId: string;
   grep: string | null;
-  level: string | null;
-  region: string | null;
+  levels: string[] | null;
+  regions: string[] | null;
 };
 type LiveLogOpts = LogOptsBase;
 type QueryLogOpts = LogOptsBase & {
@@ -110,8 +112,8 @@ export default async function (args: Args): Promise<void> {
       deploymentId: logSubcommandArgs.deployment,
       projectId: logSubcommandArgs.project,
       grep: logSubcommandArgs.grep,
-      level: logSubcommandArgs.level,
-      region: logSubcommandArgs.region,
+      levels: logSubcommandArgs.levels,
+      regions: logSubcommandArgs.regions,
     });
   } else {
     await queryLogs({
@@ -120,8 +122,8 @@ export default async function (args: Args): Promise<void> {
       deploymentId: logSubcommandArgs.deployment,
       projectId: logSubcommandArgs.project,
       grep: logSubcommandArgs.grep,
-      level: logSubcommandArgs.level,
-      region: logSubcommandArgs.region,
+      levels: logSubcommandArgs.levels,
+      regions: logSubcommandArgs.regions,
       timerange: logSubcommandArgs.timerange,
       limit: logSubcommandArgs.limit,
     });
@@ -214,6 +216,16 @@ export function parseArgsForLogSubcommand(args: Args): LogSubcommandArgs {
     }
   }
 
+  let logLevels: string[] | null = null;
+  if (args.levels !== undefined) {
+    logLevels = args.levels.split(",");
+  }
+
+  let regions: string[] | null = null;
+  if (args.regions !== undefined) {
+    regions = args.regions.split(",");
+  }
+
   return {
     help: !!args.help,
     prod: !!args.prod,
@@ -222,8 +234,8 @@ export function parseArgsForLogSubcommand(args: Args): LogSubcommandArgs {
     project: args.project ? String(args.project) : null,
     timerange,
     grep: args.grep ?? null,
-    level: args.level ?? null,
-    region: args.region ?? null,
+    levels: logLevels,
+    regions,
     limit: Number.isNaN(limit) ? DEFAULT_LIMIT : limit,
   };
 }
@@ -278,11 +290,11 @@ async function liveLogs(opts: LiveLogOpts): Promise<void> {
         continue;
       }
 
-      if (opts.level !== null && log.level !== opts.level) {
+      if (opts.levels !== null && !opts.levels.includes(log.level)) {
         continue;
       }
 
-      if (opts.region !== null && log.region !== opts.region) {
+      if (opts.regions !== null && !opts.regions.includes(log.region)) {
         continue;
       }
 
@@ -321,8 +333,8 @@ async function queryLogs(opts: QueryLogOpts): Promise<void> {
       opts.projectId,
       opts.deploymentId ?? "latest",
       {
-        regions: opts.region ? [opts.region] : undefined,
-        levels: opts.level ? [opts.level] : undefined,
+        regions: opts.regions ?? undefined,
+        levels: opts.levels ?? undefined,
         since: opts.timerange.start.toISOString(),
         until: opts.timerange.end.toISOString(),
         q: opts.grep ? [opts.grep] : undefined,

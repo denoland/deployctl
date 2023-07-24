@@ -87,8 +87,8 @@ Deno.test("parseArgsForLogSubcommand", async (t) => {
       project: null,
       timerange: null,
       grep: null,
-      level: null,
-      region: null,
+      levels: null,
+      regions: null,
       limit: 100,
     });
   });
@@ -104,8 +104,8 @@ Deno.test("parseArgsForLogSubcommand", async (t) => {
       deployment: null,
       project: null,
       grep: null,
-      level: null,
-      region: null,
+      levels: null,
+      regions: null,
       limit: 100,
     });
   });
@@ -121,8 +121,8 @@ Deno.test("parseArgsForLogSubcommand", async (t) => {
       deployment: null,
       project: null,
       grep: null,
-      level: null,
-      region: null,
+      levels: null,
+      regions: null,
       limit: 100,
     });
   });
@@ -134,8 +134,8 @@ Deno.test("parseArgsForLogSubcommand", async (t) => {
       "--project=helloworld",
       "--timerange=2d,30s",
       "--grep=こんにちは",
-      "--level=info",
-      "--region=dummy-region",
+      "--levels=info,error",
+      "--regions=region1,region2",
       "--limit=42",
     ]);
     assert(isDateAgo(timerange!.start, { unit: "day", amount: 2 }));
@@ -147,8 +147,8 @@ Deno.test("parseArgsForLogSubcommand", async (t) => {
       deployment: null,
       project: "helloworld",
       grep: "こんにちは",
-      level: "info",
-      region: "dummy-region",
+      levels: ["info", "error"],
+      regions: ["region1", "region2"],
       limit: 42,
     });
   });
