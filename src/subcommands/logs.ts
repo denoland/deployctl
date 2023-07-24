@@ -105,6 +105,17 @@ export default async function (args: Args): Promise<void> {
   }
 
   const api = API.fromToken(token);
+  const { regionCodes } = await api.getMetadata();
+  if (
+    logSubcommandArgs.regions !== null &&
+    logSubcommandArgs.regions.some((r) => !regionCodes.includes(r))
+  ) {
+    error(
+      `Invalid region is specified. Available regions are:\n\n${
+        regionCodes.join("\n")
+      }`,
+    );
+  }
 
   if (logSubcommandArgs.timerange === null) {
     await liveLogs(api, {
