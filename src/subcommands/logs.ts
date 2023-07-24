@@ -7,7 +7,8 @@ import { API, APIError } from "../utils/api.ts";
 import type { Project } from "../utils/api_types.ts";
 
 const help = `deployctl logs
-View logs for the given project.
+View logs for the given project. It supports both live logs where the logs are streamed to the console as they are
+generated, and query persisted logs where the logs generated in the past are fetched.
 
 To show the live logs of a project's latest deployment:
   deployctl logs --project=helloworld
@@ -18,8 +19,11 @@ To show the live logs of a particular deployment:
 To show the live, error & info level logs of the production deployment generated in particular regions:
   deployctl logs --project=helloworld --prod --levels=error,info --regions=region1,region2
 
-To show the logs generated within the past 3 hours and containing the word "foo":
-  deployctl logs --project=helloworld --timerange=3h,now --grep=foo
+To show the logs generated within [2h ago, 30m ago] and containing the word "foo":
+  [Linux]
+  deployctl logs --project=helloworld --since=$(date -Iseconds --date='2 hours ago') --until=$(date -Iseconds --date='30 minutes ago') --grep=foo
+  [macOS]
+  deployctl logs --project=helloworld --since=$(date -Iseconds -v-2H) --until=$(date -Iseconds -v-30M) --grep=foo
 
 USAGE:
     deployctl logs [OPTIONS] [<PROJECT>]
@@ -29,11 +33,9 @@ OPTIONS:
         --prod                        Select the production deployment
     -p, --project=NAME                The project you want to get the logs
         --token=TOKEN                 The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
-        --timerange[=<TIMERANGE>]     The time range of the logs you want to get
-                                      Format: <start>,<end> 
-                                      where <start> and <end> are either RFC3339 timestamps (e.g. 2023-07-17T06:10:38+00:00) or relative durations (e.g. 1d, 3h, 10m, 180s, now)
-                                      <end> defaults to now, <start> defaults to 1h before <end>
+        --since=<DATETIME>            The start time of the logs you want to get. RFC3339 format (e.g. 2023-07-17T06:10:38+09:00) is supported.
                                       NOTE: Logs generated over 2 days ago are not available
+        --until=<DATETIME>            The end time of the logs you want to get. RFC3339 format (e.g. 2023-07-17T06:10:38+09:00) is supported.
         --grep=<WORD>                 Filter logs by a word
         --levels=<LEVELS>             Filter logs by log levels (defaults to all log levels)
                                       Mutliple levels can be specified, e.g. --levels=info,error
@@ -49,10 +51,8 @@ export interface LogSubcommandArgs {
   token: string | null;
   deployment: string | null;
   project: string | null;
-  timerange: {
-    start: Date;
-    end: Date;
-  } | null;
+  since: Date | null;
+  until: Date | null;
   grep: string | null;
   levels: string[] | null;
   regions: string[] | null;
@@ -69,10 +69,8 @@ type LogOptsBase = {
 };
 type LiveLogOpts = LogOptsBase;
 type QueryLogOpts = LogOptsBase & {
-  timerange: {
-    start: Date;
-    end: Date;
-  };
+  since: Date | null;
+  until: Date | null;
   limit: number;
 };
 
@@ -116,7 +114,9 @@ export default async function (args: Args): Promise<void> {
     }
   }
 
-  if (logSubcommandArgs.timerange === null) {
+  const liveLogMode = logSubcommandArgs.since === null &&
+    logSubcommandArgs.until === null;
+  if (liveLogMode) {
     await liveLogs(api, {
       prod: logSubcommandArgs.prod,
       deploymentId: logSubcommandArgs.deployment,
@@ -133,7 +133,8 @@ export default async function (args: Args): Promise<void> {
       grep: logSubcommandArgs.grep,
       levels: logSubcommandArgs.levels,
       regions: logSubcommandArgs.regions,
-      timerange: logSubcommandArgs.timerange,
+      since: logSubcommandArgs.since,
+      until: logSubcommandArgs.until,
       limit: logSubcommandArgs.limit,
     });
   }
@@ -165,89 +166,25 @@ function invalidRegionError(
   error(`${invalid}\n${available}`);
 }
 
-export function parseTimerange(
-  rawTimerange: string,
-): LogSubcommandArgs["timerange"] | null {
-  const [start, end] = rawTimerange.split(",");
-  if (start === undefined || end === undefined) {
-    return null;
-  }
-
-  const parse = (s: string): Date | null => {
-    if (s == "now") {
-      return new Date();
-    }
-
-    const relativeDurationRe = /^(\d+)([dhms])$/;
-    const match = s.match(relativeDurationRe);
-    if (match === null) {
-      const d = Date.parse(s);
-      if (Number.isNaN(d)) {
-        return null;
-      } else {
-        return new Date(d);
-      }
-    }
-
-    const figure = parseInt(match[1]);
-    const unit = match[2];
-    switch (unit) {
-      case "d": {
-        // <figure> days ago
-        return new Date(Date.now() - figure * 24 * 60 * 60 * 1000);
-      }
-      case "h": {
-        // <figure> hours ago
-        return new Date(Date.now() - figure * 60 * 60 * 1000);
-      }
-      case "m": {
-        // <figure> minutes ago
-        return new Date(Date.now() - figure * 60 * 1000);
-      }
-      case "s": {
-        // <figure> seconds ago
-        return new Date(Date.now() - figure * 1000);
-      }
-      default: {
-        error("unreachable");
-      }
-    }
-  };
-
-  const startDate = parse(start);
-  if (startDate === null) {
-    return null;
-  }
-  const endDate = parse(end);
-  if (endDate === null) {
-    return null;
-  }
-
-  return {
-    start: startDate,
-    end: endDate,
-  };
-}
-
 export function parseArgsForLogSubcommand(args: Args): LogSubcommandArgs {
   const DEFAULT_LIMIT = 100;
   const limit = parseInt(args.limit);
 
-  let timerange: LogSubcommandArgs["timerange"] = null;
-  if (args.timerange !== undefined) {
-    if (args.timerange.length === 0) {
-      const DEFAULT_TIMERANGE = {
-        start: new Date(Date.now() - 60 * 60 * 1000), // 1h ago
-        end: new Date(),
-      };
-      timerange = DEFAULT_TIMERANGE;
-    } else {
-      const t = parseTimerange(args.timerange);
-      if (t === null) {
-        console.error(help);
-        error("Invalid timerange");
-      }
-      timerange = t;
+  let since: Date | null = null;
+  if (args.since !== undefined) {
+    since = new Date(args.since);
+    if (Number.isNaN(since.valueOf())) {
+      console.error(help);
+      error("Invalid format found in --since");
+    }
+  }
+
+  let until: Date | null = null;
+  if (args.until !== undefined) {
+    until = new Date(args.until);
+    if (Number.isNaN(until.valueOf())) {
+      console.error(help);
+      error("Invalid format found in --until");
     }
   }
 
@@ -267,7 +204,8 @@ export function parseArgsForLogSubcommand(args: Args): LogSubcommandArgs {
     token: args.token ? String(args.token) : null,
     deployment: args.deployment ? String(args.deployment) : null,
     project: args.project ? String(args.project) : null,
-    timerange,
+    since,
+    until,
     grep: args.grep ?? null,
     levels: logLevels,
     regions,
@@ -368,8 +306,8 @@ async function queryLogs(api: API, opts: QueryLogOpts): Promise<void> {
       {
         regions: opts.regions ?? undefined,
         levels: opts.levels ?? undefined,
-        since: opts.timerange.start.toISOString(),
-        until: opts.timerange.end.toISOString(),
+        since: opts.since?.toISOString(),
+        until: opts.until?.toISOString(),
         q: opts.grep ? [opts.grep] : undefined,
         limit: opts.limit,
       },
