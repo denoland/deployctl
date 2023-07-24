@@ -144,3 +144,7 @@ export interface PersistedLog {
   timestamp: string;
   message: string;
 }
+
+export interface Metadata {
+  regionCodes: string[];
+}

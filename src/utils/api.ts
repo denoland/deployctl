@@ -8,6 +8,7 @@ import {
   LiveLog,
   LogQueryRequestParams,
   ManifestEntry,
+  Metadata,
   PersistedLog,
   Project,
   PushDeploymentRequest,
@@ -197,5 +198,9 @@ export class API {
       `/projects/${projectId}/deployment_github_actions`,
       { method: "POST", body: form },
     );
+  }
+
+  getMetadata(): Promise<Metadata> {
+    return this.#requestJson("/meta");
   }
 }
