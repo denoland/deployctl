@@ -106,15 +106,14 @@ export default async function (args: Args): Promise<void> {
 
   const api = API.fromToken(token);
   const { regionCodes } = await api.getMetadata();
-  if (
-    logSubcommandArgs.regions !== null &&
-    logSubcommandArgs.regions.some((r) => !regionCodes.includes(r))
-  ) {
-    error(
-      `Invalid region is specified. Available regions are:\n\n${
-        regionCodes.join("\n")
-      }`,
+  if (logSubcommandArgs.regions !== null) {
+    const invalidRegions = getInvalidRegions(
+      logSubcommandArgs.regions,
+      regionCodes,
     );
+    if (invalidRegions.length > 0) {
+      invalidRegionError(invalidRegions, regionCodes);
+    }
   }
 
   if (logSubcommandArgs.timerange === null) {
@@ -138,6 +137,32 @@ export default async function (args: Args): Promise<void> {
       limit: logSubcommandArgs.limit,
     });
   }
+}
+
+function getInvalidRegions(
+  specifiedRegions: string[],
+  availableRegions: string[],
+): string[] {
+  const invalidRegions = [];
+  for (const r of specifiedRegions) {
+    if (!availableRegions.includes(r)) {
+      invalidRegions.push(r);
+    }
+  }
+  return invalidRegions;
+}
+
+function invalidRegionError(
+  invalidRegions: string[],
+  availableRegions: string[],
+): never {
+  const invalid = `--regions contains invalid region(s): ${
+    invalidRegions.join(", ")
+  }`;
+  const availableRegionsList = availableRegions.map((r) => `- ${r}`).join("\n");
+  const available = `HINT: Available regions are:\n${availableRegionsList}`;
+
+  error(`${invalid}\n${available}`);
 }
 
 export function parseTimerange(
