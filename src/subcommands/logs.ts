@@ -61,7 +61,6 @@ export interface LogSubcommandArgs {
 
 type LogOptsBase = {
   prod: boolean;
-  token: string;
   deploymentId: string | null;
   projectId: string;
   grep: string | null;
@@ -105,10 +104,11 @@ export default async function (args: Args): Promise<void> {
     );
   }
 
+  const api = API.fromToken(token);
+
   if (logSubcommandArgs.timerange === null) {
-    await liveLogs({
+    await liveLogs(api, {
       prod: logSubcommandArgs.prod,
-      token,
       deploymentId: logSubcommandArgs.deployment,
       projectId: logSubcommandArgs.project,
       grep: logSubcommandArgs.grep,
@@ -116,9 +116,8 @@ export default async function (args: Args): Promise<void> {
       regions: logSubcommandArgs.regions,
     });
   } else {
-    await queryLogs({
+    await queryLogs(api, {
       prod: logSubcommandArgs.prod,
-      token,
       deploymentId: logSubcommandArgs.deployment,
       projectId: logSubcommandArgs.project,
       grep: logSubcommandArgs.grep,
@@ -258,9 +257,8 @@ async function fetchProjectInfo(
   return project;
 }
 
-async function liveLogs(opts: LiveLogOpts): Promise<void> {
+async function liveLogs(api: API, opts: LiveLogOpts): Promise<void> {
   const projectSpinner = wait("Fetching project information...").start();
-  const api = API.fromToken(opts.token);
   const project = await fetchProjectInfo(api, opts.projectId, (msg) => {
     projectSpinner.fail(msg);
     Deno.exit(1);
@@ -311,9 +309,8 @@ async function liveLogs(opts: LiveLogOpts): Promise<void> {
   }
 }
 
-async function queryLogs(opts: QueryLogOpts): Promise<void> {
+async function queryLogs(api: API, opts: QueryLogOpts): Promise<void> {
   const projectSpinner = wait("Fetching project information...").start();
-  const api = API.fromToken(opts.token);
   const project = await fetchProjectInfo(api, opts.projectId, (msg) => {
     projectSpinner.fail(msg);
     Deno.exit(1);
