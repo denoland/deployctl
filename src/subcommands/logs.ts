@@ -42,7 +42,7 @@ OPTIONS:
         --regions=<REGIONS>           Filter logs by regions (defaults to all regions)
                                       Multiple regions can be specified, e.g. --regions=region1,region2
         --limit=<LIMIT>               Limit the number of logs to return (defualts to 100)
-                                      This flag is effective only when '--timerange' is provided
+                                      This flag is effective only when --since and/or --until is specified
 `;
 
 export interface LogSubcommandArgs {
