@@ -34,7 +34,7 @@ OPTIONS:
     -p, --project=NAME                The project you want to get the logs
         --token=TOKEN                 The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
         --since=<DATETIME>            The start time of the logs you want to get. RFC3339 format (e.g. 2023-07-17T06:10:38+09:00) is supported.
-                                      NOTE: Logs generated over 2 days ago are not available
+                                      NOTE: Logs generated over 24 hours ago are not available
         --until=<DATETIME>            The end time of the logs you want to get. RFC3339 format (e.g. 2023-07-17T06:10:38+09:00) is supported.
         --grep=<WORD>                 Filter logs by a word
         --levels=<LEVELS>             Filter logs by log levels (defaults to all log levels)
