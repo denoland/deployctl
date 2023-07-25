@@ -30,6 +30,7 @@ export function parseArgs(args: string[]) {
       "regions",
       "limit",
     ],
+    collect: ["grep"],
     default: {
       static: true,
       limit: "100",

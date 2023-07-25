@@ -37,6 +37,7 @@ OPTIONS:
                                       NOTE: Logs generated over 24 hours ago are not available
         --until=<DATETIME>            The end time of the logs you want to get. RFC3339 format (e.g. 2023-07-17T06:10:38+09:00) is supported.
         --grep=<WORD>                 Filter logs by a word
+                                      Multiple words can be specified, e.g. --grep=foo --grep=bar
         --levels=<LEVELS>             Filter logs by log levels (defaults to all log levels)
                                       Mutliple levels can be specified, e.g. --levels=info,error
         --regions=<REGIONS>           Filter logs by regions (defaults to all regions)
@@ -53,7 +54,7 @@ export interface LogSubcommandArgs {
   project: string | null;
   since: Date | null;
   until: Date | null;
-  grep: string | null;
+  grep: string[];
   levels: string[] | null;
   regions: string[] | null;
   limit: number;
@@ -63,7 +64,7 @@ type LogOptsBase = {
   prod: boolean;
   deploymentId: string | null;
   projectId: string;
-  grep: string | null;
+  grep: string[];
   levels: string[] | null;
   regions: string[] | null;
 };
@@ -213,7 +214,7 @@ export function parseArgsForLogSubcommand(args: Args): LogSubcommandArgs {
     project: args.project ? String(args.project) : null,
     since,
     until,
-    grep: args.grep ?? null,
+    grep: args.grep,
     levels: logLevels,
     regions,
     limit: Number.isNaN(limit) ? DEFAULT_LIMIT : limit,
@@ -265,7 +266,7 @@ async function liveLogs(api: API, opts: LiveLogOpts): Promise<void> {
         continue;
       }
 
-      if (opts.grep !== null && !log.message.includes(opts.grep)) {
+      if (opts.grep.some((word) => !log.message.includes(word))) {
         continue;
       }
 
@@ -315,7 +316,7 @@ async function queryLogs(api: API, opts: QueryLogOpts): Promise<void> {
         levels: opts.levels ?? undefined,
         since: opts.since?.toISOString(),
         until: opts.until?.toISOString(),
-        q: opts.grep ? [opts.grep] : undefined,
+        q: opts.grep.length > 0 ? opts.grep : undefined,
         limit: opts.limit,
       },
     );
