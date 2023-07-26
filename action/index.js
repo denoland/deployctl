@@ -11,7 +11,7 @@ import {
 } from "./deps.js";
 
 // The origin of the server to make Deploy requests to.
-const ORIGIN = process.env.DEPLOY_API_ENDPOINT ?? "https://dash.deno.com/api";
+const ORIGIN = process.env.DEPLOY_API_ENDPOINT ?? "https://dash.deno.com";
 
 async function main() {
   const projectId = core.getInput("project", { required: true });
