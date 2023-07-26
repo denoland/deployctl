@@ -16,10 +16,10 @@ To show the live logs of a project's latest deployment:
 To show the live logs of a particular deployment:
   deployctl logs --project=helloworld --deployment=1234567890ab
 
-To show the live, error & info level logs of the production deployment generated in particular regions:
+To show the live error & info level logs of the production deployment generated in particular regions:
   deployctl logs --project=helloworld --prod --levels=error,info --regions=region1,region2
 
-To show the logs generated within [2h ago, 30m ago] and containing the word "foo":
+To show the logs generated within the past two hours, up until 30 minutes ago, and containing the word "foo":
   [Linux]
   deployctl logs --project=helloworld --since=$(date -Iseconds --date='2 hours ago') --until=$(date -Iseconds --date='30 minutes ago') --grep=foo
   [macOS]
@@ -37,7 +37,7 @@ OPTIONS:
                                       NOTE: Logs generated over 24 hours ago are not available
         --until=<DATETIME>            The end time of the logs you want to get. RFC3339 format (e.g. 2023-07-17T06:10:38+09:00) is supported.
         --grep=<WORD>                 Filter logs by a word
-                                      Multiple words can be specified, e.g. --grep=foo --grep=bar
+                                      Multiple words can be specified for AND search. For example, "--grep=foo --grep=bar" will match logs containing both "foo" and "bar"
         --levels=<LEVELS>             Filter logs by log levels (defaults to all log levels)
                                       Mutliple levels can be specified, e.g. --levels=info,error
         --regions=<REGIONS>           Filter logs by regions (defaults to all regions)
@@ -105,7 +105,7 @@ export default async function (args: Args): Promise<void> {
 
   if (
     logSubcommandArgs.since !== null && logSubcommandArgs.until !== null &&
-    logSubcommandArgs.since > logSubcommandArgs.until
+    logSubcommandArgs.since >= logSubcommandArgs.until
   ) {
     error("--since must be earlier than --until");
   }
