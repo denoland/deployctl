@@ -2,7 +2,8 @@
 
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { parseArgs, semverGreaterThanOrEquals } from "./deps.ts";
+import { semverGreaterThanOrEquals } from "./deps.ts";
+import { parseArgs } from "./src/args.ts";
 import { error } from "./src/error.ts";
 import deploySubcommand from "./src/subcommands/deploy.ts";
 import upgradeSubcommand from "./src/subcommands/upgrade.ts";
@@ -22,7 +23,7 @@ To deploy a remote script:
 SUBCOMMANDS:
     deploy    Deploy a script with static files to Deno Deploy
     upgrade   Upgrade deployctl to the given version (defaults to latest)
-    logs      Stream logs for the given project
+    logs      View logs for the given project
 `;
 
 if (!semverGreaterThanOrEquals(Deno.version.deno, MINIMUM_DENO_VERSION)) {
@@ -31,31 +32,7 @@ if (!semverGreaterThanOrEquals(Deno.version.deno, MINIMUM_DENO_VERSION)) {
   );
 }
 
-const args = parseArgs(Deno.args, {
-  alias: {
-    "help": "h",
-    "version": "V",
-    "project": "p",
-  },
-  boolean: [
-    "help",
-    "prod",
-    "static",
-    "version",
-    "dry-run",
-  ],
-  string: [
-    "project",
-    "token",
-    "include",
-    "exclude",
-    "import-map",
-    "deployment",
-  ],
-  default: {
-    static: true,
-  },
-});
+const args = parseArgs(Deno.args);
 
 if (Deno.isatty(Deno.stdin.rid)) {
   let latestVersion;

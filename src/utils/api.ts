@@ -5,8 +5,11 @@ import {
   DeploymentProgress,
   DeploymentsSummary,
   GitHubActionsDeploymentRequest,
-  Logs,
+  LiveLog,
+  LogQueryRequestParams,
   ManifestEntry,
+  Metadata,
+  PersistedLog,
   Project,
   PushDeploymentRequest,
 } from "./api_types.ts";
@@ -133,9 +136,25 @@ export class API {
     }
   }
 
-  getLogs(projectId: string, deploymentId: string): AsyncIterable<Logs> {
+  getLogs(
+    projectId: string,
+    deploymentId: string,
+  ): AsyncIterable<LiveLog> {
     return this.#requestStream(
       `/projects/${projectId}/deployments/${deploymentId}/logs/`,
+    );
+  }
+
+  async queryLogs(
+    projectId: string,
+    deploymentId: string,
+    params: LogQueryRequestParams,
+  ): Promise<{ logs: PersistedLog[] }> {
+    const searchParams = new URLSearchParams({
+      params: JSON.stringify(params),
+    });
+    return await this.#requestJson(
+      `/projects/${projectId}/deployments/${deploymentId}/query_logs?${searchParams.toString()}`,
     );
   }
 
@@ -179,5 +198,9 @@ export class API {
       `/projects/${projectId}/deployment_github_actions`,
       { method: "POST", body: form },
     );
+  }
+
+  getMetadata(): Promise<Metadata> {
+    return this.#requestJson("/meta");
   }
 }
