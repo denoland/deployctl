@@ -1,5 +1,5 @@
-name: Deno Deploy
-description: Deploy applications to Deno Deploy right from GitHub Actions
+name: Deploy to Deno Deploy
+description: Deploy your applications to Deno Deploy, right from GitHub Actions
 author: Deno Land Inc
 
 branding:
