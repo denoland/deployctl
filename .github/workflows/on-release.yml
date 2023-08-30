@@ -1,6 +1,10 @@
 name: Check on release
 
 on:
+  # TODO: this is to verify that this workflow file works fine. Remove before land.
+  pull_request:
+    branches: [main]
+
   release:
     types: [created]
 
