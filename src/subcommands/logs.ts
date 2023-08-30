@@ -12,6 +12,7 @@ generated, and query persisted logs where the logs generated in the past are fet
 
 To show the live logs of a project's latest deployment:
   deployctl logs --project=helloworld
+  deployctl logs helloworld
 
 To show the live logs of a particular deployment:
   deployctl logs --project=helloworld --deployment=1234567890ab
@@ -206,12 +207,19 @@ export function parseArgsForLogSubcommand(args: Args): LogSubcommandArgs {
     regions = args.regions.split(",");
   }
 
+  let project: string | null = null;
+  if (args.project !== undefined) {
+    project = args.project;
+  } else if (typeof args._[0] === "string") {
+    project = args._[0];
+  }
+
   return {
     help: !!args.help,
     prod: !!args.prod,
     token: args.token ? String(args.token) : null,
     deployment: args.deployment ? String(args.deployment) : null,
-    project: args.project ? String(args.project) : null,
+    project,
     since,
     until,
     grep: args.grep,
