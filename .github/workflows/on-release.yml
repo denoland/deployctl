@@ -1,0 +1,21 @@
+name: Check on release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  check-on-release:
+    runs-on: [ubuntu-latest]
+
+    steps:
+      - name: Setup repo
+        uses: actions/checkout@v3
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+
+      - name: check version match
+        run: deno task version-match
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
