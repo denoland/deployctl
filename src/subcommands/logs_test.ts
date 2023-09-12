@@ -7,7 +7,10 @@ import { parseArgs } from "../args.ts";
 
 Deno.test("parseArgsForLogSubcommand", async (t) => {
   const parseHelper = (args: string[]) =>
-    parseArgsForLogSubcommand(parseArgs(["logs", ...args]));
+    // NOTE: We omit `logs` subcommand from the arguments passed to `parseArgs()`
+    // in order to match the actual behavior; the first positional argument is
+    // removed using `args._.shift()` in `deployctl.ts`.
+    parseArgsForLogSubcommand(parseArgs(args));
 
   await t.step("specify help", () => {
     const got = parseHelper(["--help"]);
@@ -81,6 +84,27 @@ Deno.test("parseArgsForLogSubcommand", async (t) => {
       levels: ["info", "error"],
       regions: ["region1", "region2"],
       limit: 42,
+    });
+  });
+
+  await t.step("specify project name in a positional argument", () => {
+    const got = parseHelper([
+      "--prod",
+      "--token=abc",
+      "project_name",
+    ]);
+    assertEquals(got, {
+      help: false,
+      prod: true,
+      token: "abc",
+      deployment: null,
+      project: "project_name",
+      since: null,
+      until: null,
+      grep: [],
+      levels: null,
+      regions: null,
+      limit: 100,
     });
   });
 });
