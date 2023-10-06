@@ -1,7 +1,7 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
 import type { Args } from "../args.ts";
-import { wait } from "../../deps.ts";
+import { wait } from "../utils/spinner.ts";
 import { error } from "../error.ts";
 import { API, APIError } from "../utils/api.ts";
 import type { Project } from "../utils/api_types.ts";

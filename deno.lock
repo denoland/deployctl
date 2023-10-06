@@ -1,5 +1,16 @@
 {
-  "version": "2",
+  "version": "3",
+  "packages": {
+    "specifiers": {
+      "npm:keychain": "npm:keychain@1.5.0"
+    },
+    "npm": {
+      "keychain@1.5.0": {
+        "integrity": "sha512-liyp4r+93RI7EB2jhwaRd4MWfdgHH6shuldkaPMkELCJjMFvOOVXuTvw1pGqFfhsrgA6OqfykWWPQgBjQakVag==",
+        "dependencies": {}
+      }
+    }
+  },
   "remote": {
     "https://deno.land/std@0.116.0/fmt/colors.ts": "8368ddf2d48dfe413ffd04cdbb7ae6a1009cf0dccc9c7ff1d76259d9c61a0621",
     "https://deno.land/std@0.116.0/testing/_diff.ts": "e6a10d2aca8d6c27a9c5b8a2dbbf64353874730af539707b5b39d4128140642d",
