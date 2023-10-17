@@ -5,6 +5,16 @@ import { parseKVStrings } from "../utils/pairs.ts";
 
 const help = `deployctl env
 Manage environment variables for the given project
+
+To set environment variables for a project:
+  deployctl env --project=helloworld ENV1=VALUE_1 ENV2=VALUE_2
+
+USAGE:
+    deployctl env [OPTIONS] [<ENVVARS>]
+
+OPTIONS:
+    -p, --project=NAME  The project you want to get the logs
+        --token=TOKEN   The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
 `;
 
 export interface Args {
