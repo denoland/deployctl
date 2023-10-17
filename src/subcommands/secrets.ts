@@ -3,7 +3,7 @@ import { error } from "../error.ts";
 import { API, APIError } from "../utils/api.ts";
 import { parseKVStrings } from "../utils/pairs.ts";
 
-const help = `deployctl secrets
+const help = `deployctl env
 Manage environment variables for the given project
 `;
 
