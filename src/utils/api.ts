@@ -203,4 +203,16 @@ export class API {
   getMetadata(): Promise<Metadata> {
     return this.#requestJson("/meta");
   }
+
+  async editEnvs(
+    projectId: string,
+    envs: Record<string, string>,
+  ): Promise<string[]> {
+    const { envVars } = await this.#requestJson<{ envVars: string[] }>(
+      `/projects/${projectId}/env`,
+      { method: "PATCH", body: envs },
+    );
+
+    return envVars;
+  }
 }
