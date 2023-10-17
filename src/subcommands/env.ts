@@ -55,7 +55,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     project: args.project,
   };
 
-  await secrets(opts);
+  await env(opts);
 }
 
 interface SecretsOpts {
@@ -64,7 +64,7 @@ interface SecretsOpts {
   project: string;
 }
 
-async function secrets(opts: SecretsOpts) {
+async function env(opts: SecretsOpts) {
   const projectSpinner = wait("Fetching project information...").start();
   const api = API.fromToken(opts.token);
   const project = await api.getProject(opts.project);
@@ -76,7 +76,7 @@ async function secrets(opts: SecretsOpts) {
 
   const envSpinner = wait("Uploading environment variables").start();
   try {
-    await api.editEnvs(project!.id, opts.envVars);
+    await api.setEnvs(project!.id, opts.envVars);
     envSpinner.succeed(
       "A new production deployment will be created automatically with the new environment variables when you next push your code.",
     );

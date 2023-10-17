@@ -204,7 +204,7 @@ export class API {
     return this.#requestJson("/meta");
   }
 
-  async editEnvs(
+  async setEnvs(
     projectId: string,
     envs: Record<string, string>,
   ): Promise<string[]> {

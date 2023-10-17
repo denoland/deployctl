@@ -8,7 +8,7 @@ import { error } from "./src/error.ts";
 import deploySubcommand from "./src/subcommands/deploy.ts";
 import upgradeSubcommand from "./src/subcommands/upgrade.ts";
 import logsSubcommand from "./src/subcommands/logs.ts";
-import secretsSubcommand from "./src/subcommands/secrets.ts";
+import envSubcommand from "./src/subcommands/env.ts";
 import { MINIMUM_DENO_VERSION, VERSION } from "./src/version.ts";
 import { fetchReleases, getConfigPaths } from "./src/utils/info.ts";
 
@@ -89,7 +89,7 @@ switch (subcommand) {
     await logsSubcommand(args);
     break;
   case "secrets":
-    await secretsSubcommand(args);
+    await envSubcommand(args);
     break;
   default:
     if (args.version) {
