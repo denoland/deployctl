@@ -68,7 +68,7 @@ async function secrets(opts: SecretsOpts) {
   try {
     await api.editEnvs(project!.id, opts.envVars);
     envSpinner.succeed(
-      "Secrets have been staged. Deploy or update machines in this app for the secrets to take effect.",
+      "A new production deployment will be created automatically with the new environment variables when you next push your code.",
     );
   } catch (err) {
     envSpinner.fail("Failed to update environment variables");
