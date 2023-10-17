@@ -1,7 +1,7 @@
 import { wait } from "../../deps.ts";
 import { error } from "../error.ts";
 import { API, APIError } from "../utils/api.ts";
-import { parseKVStrings } from "../utils/pairs.ts";
+import { parsePairs } from "../utils/pairs.ts";
 
 const help = `deployctl env
 Manage environment variables for the given project
@@ -50,7 +50,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
   }
 
   const opts = {
-    envVars: await parseKVStrings(rawArgs._).catch((e) => error(e)),
+    envVars: await parsePairs(rawArgs._).catch((e) => error(e)),
     token,
     project: args.project,
   };
