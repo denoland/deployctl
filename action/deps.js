@@ -1084,40 +1084,64 @@ const mod1 = {
 const path = isWindows ? mod : mod1;
 const { join: join2 , normalize: normalize2  } = path;
 const path1 = isWindows ? mod : mod1;
-const { basename: basename2 , delimiter: delimiter2 , dirname: dirname2 , extname: extname2 , format: format2 , fromFileUrl: fromFileUrl2 , isAbsolute: isAbsolute2 , join: join3 , normalize: normalize3 , parse: parse2 , relative: relative2 , resolve: resolve2 , sep: sep2 , toFileUrl: toFileUrl2 , toNamespacedPath: toNamespacedPath2 ,  } = path1;
+const { basename: basename2 , delimiter: delimiter2 , dirname: dirname2 , extname: extname2 , format: format2 , fromFileUrl: fromFileUrl2 , isAbsolute: isAbsolute2 , join: join3 , normalize: normalize3 , parse: parse2 , relative: relative2 , resolve: resolve2 , sep: sep2 , toFileUrl: toFileUrl2 , toNamespacedPath: toNamespacedPath2  } = path1;
 const { Deno: Deno1  } = globalThis;
 typeof Deno1?.noColor === "boolean" ? Deno1.noColor : true;
 new RegExp([
     "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
-    "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))", 
+    "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))"
 ].join("|"), "g");
 const { hasOwn  } = Object;
-"\r".charCodeAt(0);
-"\n".charCodeAt(0);
-const MAX_SAFE_COMPONENT_LENGTH = 16;
+class TextLineStream extends TransformStream {
+    #allowCR;
+    #buf = "";
+    constructor(options){
+        super({
+            transform: (chunk, controller)=>this.#handle(chunk, controller),
+            flush: (controller)=>this.#handle("\r\n", controller)
+        });
+        this.#allowCR = options?.allowCR ?? false;
+    }
+    #handle(chunk, controller) {
+        chunk = this.#buf + chunk;
+        for(;;){
+            const lfIndex = chunk.indexOf("\n");
+            if (this.#allowCR) {
+                const crIndex = chunk.indexOf("\r");
+                if (crIndex !== -1 && crIndex !== chunk.length - 1 && (lfIndex === -1 || lfIndex - 1 > crIndex)) {
+                    controller.enqueue(chunk.slice(0, crIndex));
+                    chunk = chunk.slice(crIndex + 1);
+                    continue;
+                }
+            }
+            if (lfIndex !== -1) {
+                let crOrLfIndex = lfIndex;
+                if (chunk[lfIndex - 1] === "\r") {
+                    crOrLfIndex--;
+                }
+                controller.enqueue(chunk.slice(0, crOrLfIndex));
+                chunk = chunk.slice(lfIndex + 1);
+                continue;
+            }
+            break;
+        }
+        this.#buf = chunk;
+    }
+}
 const re = [];
 const src = [];
 let R = 0;
 const NUMERICIDENTIFIER = R++;
 src[NUMERICIDENTIFIER] = "0|[1-9]\\d*";
-const NUMERICIDENTIFIERLOOSE = R++;
-src[NUMERICIDENTIFIERLOOSE] = "[0-9]+";
 const NONNUMERICIDENTIFIER = R++;
 src[NONNUMERICIDENTIFIER] = "\\d*[a-zA-Z-][a-zA-Z0-9-]*";
 const MAINVERSION = R++;
 const nid = src[NUMERICIDENTIFIER];
 src[MAINVERSION] = `(${nid})\\.(${nid})\\.(${nid})`;
-const MAINVERSIONLOOSE = R++;
-const nidl = src[NUMERICIDENTIFIERLOOSE];
-src[MAINVERSIONLOOSE] = `(${nidl})\\.(${nidl})\\.(${nidl})`;
 const PRERELEASEIDENTIFIER = R++;
 src[PRERELEASEIDENTIFIER] = "(?:" + src[NUMERICIDENTIFIER] + "|" + src[NONNUMERICIDENTIFIER] + ")";
-const PRERELEASEIDENTIFIERLOOSE = R++;
-src[PRERELEASEIDENTIFIERLOOSE] = "(?:" + src[NUMERICIDENTIFIERLOOSE] + "|" + src[NONNUMERICIDENTIFIER] + ")";
 const PRERELEASE = R++;
 src[PRERELEASE] = "(?:-(" + src[PRERELEASEIDENTIFIER] + "(?:\\." + src[PRERELEASEIDENTIFIER] + ")*))";
-const PRERELEASELOOSE = R++;
-src[PRERELEASELOOSE] = "(?:-?(" + src[PRERELEASEIDENTIFIERLOOSE] + "(?:\\." + src[PRERELEASEIDENTIFIERLOOSE] + ")*))";
 const BUILDIDENTIFIER = R++;
 src[BUILDIDENTIFIER] = "[0-9A-Za-z-]+";
 const BUILD = R++;
@@ -1125,728 +1149,32 @@ src[BUILD] = "(?:\\+(" + src[BUILDIDENTIFIER] + "(?:\\." + src[BUILDIDENTIFIER] 
 const FULL = R++;
 const FULLPLAIN = "v?" + src[MAINVERSION] + src[PRERELEASE] + "?" + src[BUILD] + "?";
 src[FULL] = "^" + FULLPLAIN + "$";
-const LOOSEPLAIN = "[v=\\s]*" + src[MAINVERSIONLOOSE] + src[PRERELEASELOOSE] + "?" + src[BUILD] + "?";
-const LOOSE = R++;
-src[LOOSE] = "^" + LOOSEPLAIN + "$";
 const GTLT = R++;
 src[GTLT] = "((?:<|>)?=?)";
-const XRANGEIDENTIFIERLOOSE = R++;
-src[XRANGEIDENTIFIERLOOSE] = src[NUMERICIDENTIFIERLOOSE] + "|x|X|\\*";
 const XRANGEIDENTIFIER = R++;
 src[XRANGEIDENTIFIER] = src[NUMERICIDENTIFIER] + "|x|X|\\*";
 const XRANGEPLAIN = R++;
 src[XRANGEPLAIN] = "[v=\\s]*(" + src[XRANGEIDENTIFIER] + ")" + "(?:\\.(" + src[XRANGEIDENTIFIER] + ")" + "(?:\\.(" + src[XRANGEIDENTIFIER] + ")" + "(?:" + src[PRERELEASE] + ")?" + src[BUILD] + "?" + ")?)?";
-const XRANGEPLAINLOOSE = R++;
-src[XRANGEPLAINLOOSE] = "[v=\\s]*(" + src[XRANGEIDENTIFIERLOOSE] + ")" + "(?:\\.(" + src[XRANGEIDENTIFIERLOOSE] + ")" + "(?:\\.(" + src[XRANGEIDENTIFIERLOOSE] + ")" + "(?:" + src[PRERELEASELOOSE] + ")?" + src[BUILD] + "?" + ")?)?";
 const XRANGE = R++;
 src[XRANGE] = "^" + src[GTLT] + "\\s*" + src[XRANGEPLAIN] + "$";
-const XRANGELOOSE = R++;
-src[XRANGELOOSE] = "^" + src[GTLT] + "\\s*" + src[XRANGEPLAINLOOSE] + "$";
-const COERCE = R++;
-src[COERCE] = "(?:^|[^\\d])" + "(\\d{1," + MAX_SAFE_COMPONENT_LENGTH + "})" + "(?:\\.(\\d{1," + MAX_SAFE_COMPONENT_LENGTH + "}))?" + "(?:\\.(\\d{1," + MAX_SAFE_COMPONENT_LENGTH + "}))?" + "(?:$|[^\\d])";
 const LONETILDE = R++;
 src[LONETILDE] = "(?:~>?)";
-const TILDETRIM = R++;
-src[TILDETRIM] = "(\\s*)" + src[LONETILDE] + "\\s+";
-re[TILDETRIM] = new RegExp(src[TILDETRIM], "g");
-const tildeTrimReplace = "$1~";
 const TILDE = R++;
 src[TILDE] = "^" + src[LONETILDE] + src[XRANGEPLAIN] + "$";
-const TILDELOOSE = R++;
-src[TILDELOOSE] = "^" + src[LONETILDE] + src[XRANGEPLAINLOOSE] + "$";
 const LONECARET = R++;
 src[LONECARET] = "(?:\\^)";
-const CARETTRIM = R++;
-src[CARETTRIM] = "(\\s*)" + src[LONECARET] + "\\s+";
-re[CARETTRIM] = new RegExp(src[CARETTRIM], "g");
-const caretTrimReplace = "$1^";
 const CARET = R++;
 src[CARET] = "^" + src[LONECARET] + src[XRANGEPLAIN] + "$";
-const CARETLOOSE = R++;
-src[CARETLOOSE] = "^" + src[LONECARET] + src[XRANGEPLAINLOOSE] + "$";
-const COMPARATORLOOSE = R++;
-src[COMPARATORLOOSE] = "^" + src[GTLT] + "\\s*(" + LOOSEPLAIN + ")$|^$";
 const COMPARATOR = R++;
 src[COMPARATOR] = "^" + src[GTLT] + "\\s*(" + FULLPLAIN + ")$|^$";
-const COMPARATORTRIM = R++;
-src[COMPARATORTRIM] = "(\\s*)" + src[GTLT] + "\\s*(" + LOOSEPLAIN + "|" + src[XRANGEPLAIN] + ")";
-re[COMPARATORTRIM] = new RegExp(src[COMPARATORTRIM], "g");
-const comparatorTrimReplace = "$1$2$3";
 const HYPHENRANGE = R++;
 src[HYPHENRANGE] = "^\\s*(" + src[XRANGEPLAIN] + ")" + "\\s+-\\s+" + "(" + src[XRANGEPLAIN] + ")" + "\\s*$";
-const HYPHENRANGELOOSE = R++;
-src[HYPHENRANGELOOSE] = "^\\s*(" + src[XRANGEPLAINLOOSE] + ")" + "\\s+-\\s+" + "(" + src[XRANGEPLAINLOOSE] + ")" + "\\s*$";
 const STAR = R++;
 src[STAR] = "(<|>)?=?\\s*\\*";
 for(let i = 0; i < R; i++){
     if (!re[i]) {
         re[i] = new RegExp(src[i]);
     }
-}
-class SemVer {
-    raw;
-    loose;
-    options;
-    major;
-    minor;
-    patch;
-    version;
-    build;
-    prerelease;
-    constructor(version, optionsOrLoose){
-        if (!optionsOrLoose || typeof optionsOrLoose !== "object") {
-            optionsOrLoose = {
-                loose: !!optionsOrLoose,
-                includePrerelease: false
-            };
-        }
-        if (version instanceof SemVer) {
-            if (version.loose === optionsOrLoose.loose) {
-                return version;
-            } else {
-                version = version.version;
-            }
-        } else if (typeof version !== "string") {
-            throw new TypeError("Invalid Version: " + version);
-        }
-        if (version.length > 256) {
-            throw new TypeError("version is longer than " + 256 + " characters");
-        }
-        if (!(this instanceof SemVer)) {
-            return new SemVer(version, optionsOrLoose);
-        }
-        this.options = optionsOrLoose;
-        this.loose = !!optionsOrLoose.loose;
-        const m = version.trim().match(optionsOrLoose.loose ? re[LOOSE] : re[FULL]);
-        if (!m) {
-            throw new TypeError("Invalid Version: " + version);
-        }
-        this.raw = version;
-        this.major = +m[1];
-        this.minor = +m[2];
-        this.patch = +m[3];
-        if (this.major > Number.MAX_SAFE_INTEGER || this.major < 0) {
-            throw new TypeError("Invalid major version");
-        }
-        if (this.minor > Number.MAX_SAFE_INTEGER || this.minor < 0) {
-            throw new TypeError("Invalid minor version");
-        }
-        if (this.patch > Number.MAX_SAFE_INTEGER || this.patch < 0) {
-            throw new TypeError("Invalid patch version");
-        }
-        if (!m[4]) {
-            this.prerelease = [];
-        } else {
-            this.prerelease = m[4].split(".").map((id)=>{
-                if (/^[0-9]+$/.test(id)) {
-                    const num = +id;
-                    if (num >= 0 && num < Number.MAX_SAFE_INTEGER) {
-                        return num;
-                    }
-                }
-                return id;
-            });
-        }
-        this.build = m[5] ? m[5].split(".") : [];
-        this.format();
-    }
-    format() {
-        this.version = this.major + "." + this.minor + "." + this.patch;
-        if (this.prerelease.length) {
-            this.version += "-" + this.prerelease.join(".");
-        }
-        return this.version;
-    }
-    compare(other) {
-        if (!(other instanceof SemVer)) {
-            other = new SemVer(other, this.options);
-        }
-        return this.compareMain(other) || this.comparePre(other);
-    }
-    compareMain(other) {
-        if (!(other instanceof SemVer)) {
-            other = new SemVer(other, this.options);
-        }
-        return compareIdentifiers(this.major, other.major) || compareIdentifiers(this.minor, other.minor) || compareIdentifiers(this.patch, other.patch);
-    }
-    comparePre(other) {
-        if (!(other instanceof SemVer)) {
-            other = new SemVer(other, this.options);
-        }
-        if (this.prerelease.length && !other.prerelease.length) {
-            return -1;
-        } else if (!this.prerelease.length && other.prerelease.length) {
-            return 1;
-        } else if (!this.prerelease.length && !other.prerelease.length) {
-            return 0;
-        }
-        let i = 0;
-        do {
-            const a = this.prerelease[i];
-            const b = other.prerelease[i];
-            if (a === undefined && b === undefined) {
-                return 0;
-            } else if (b === undefined) {
-                return 1;
-            } else if (a === undefined) {
-                return -1;
-            } else if (a === b) {
-                continue;
-            } else {
-                return compareIdentifiers(a, b);
-            }
-        }while (++i)
-        return 1;
-    }
-    compareBuild(other) {
-        if (!(other instanceof SemVer)) {
-            other = new SemVer(other, this.options);
-        }
-        let i = 0;
-        do {
-            const a = this.build[i];
-            const b = other.build[i];
-            if (a === undefined && b === undefined) {
-                return 0;
-            } else if (b === undefined) {
-                return 1;
-            } else if (a === undefined) {
-                return -1;
-            } else if (a === b) {
-                continue;
-            } else {
-                return compareIdentifiers(a, b);
-            }
-        }while (++i)
-        return 1;
-    }
-    inc(release, identifier) {
-        switch(release){
-            case "premajor":
-                this.prerelease.length = 0;
-                this.patch = 0;
-                this.minor = 0;
-                this.major++;
-                this.inc("pre", identifier);
-                break;
-            case "preminor":
-                this.prerelease.length = 0;
-                this.patch = 0;
-                this.minor++;
-                this.inc("pre", identifier);
-                break;
-            case "prepatch":
-                this.prerelease.length = 0;
-                this.inc("patch", identifier);
-                this.inc("pre", identifier);
-                break;
-            case "prerelease":
-                if (this.prerelease.length === 0) {
-                    this.inc("patch", identifier);
-                }
-                this.inc("pre", identifier);
-                break;
-            case "major":
-                if (this.minor !== 0 || this.patch !== 0 || this.prerelease.length === 0) {
-                    this.major++;
-                }
-                this.minor = 0;
-                this.patch = 0;
-                this.prerelease = [];
-                break;
-            case "minor":
-                if (this.patch !== 0 || this.prerelease.length === 0) {
-                    this.minor++;
-                }
-                this.patch = 0;
-                this.prerelease = [];
-                break;
-            case "patch":
-                if (this.prerelease.length === 0) {
-                    this.patch++;
-                }
-                this.prerelease = [];
-                break;
-            case "pre":
-                if (this.prerelease.length === 0) {
-                    this.prerelease = [
-                        0
-                    ];
-                } else {
-                    let i = this.prerelease.length;
-                    while(--i >= 0){
-                        if (typeof this.prerelease[i] === "number") {
-                            this.prerelease[i]++;
-                            i = -2;
-                        }
-                    }
-                    if (i === -1) {
-                        this.prerelease.push(0);
-                    }
-                }
-                if (identifier) {
-                    if (this.prerelease[0] === identifier) {
-                        if (isNaN(this.prerelease[1])) {
-                            this.prerelease = [
-                                identifier,
-                                0
-                            ];
-                        }
-                    } else {
-                        this.prerelease = [
-                            identifier,
-                            0
-                        ];
-                    }
-                }
-                break;
-            default:
-                throw new Error("invalid increment argument: " + release);
-        }
-        this.format();
-        this.raw = this.version;
-        return this;
-    }
-    toString() {
-        return this.version;
-    }
-}
-const numeric = /^[0-9]+$/;
-function compareIdentifiers(a, b) {
-    const anum = numeric.test(a);
-    const bnum = numeric.test(b);
-    if (a === null || b === null) throw "Comparison against null invalid";
-    if (anum && bnum) {
-        a = +a;
-        b = +b;
-    }
-    return a === b ? 0 : anum && !bnum ? -1 : bnum && !anum ? 1 : a < b ? -1 : 1;
-}
-function compare(v1, v2, optionsOrLoose) {
-    return new SemVer(v1, optionsOrLoose).compare(new SemVer(v2, optionsOrLoose));
-}
-function gt(v1, v2, optionsOrLoose) {
-    return compare(v1, v2, optionsOrLoose) > 0;
-}
-function lt(v1, v2, optionsOrLoose) {
-    return compare(v1, v2, optionsOrLoose) < 0;
-}
-function eq(v1, v2, optionsOrLoose) {
-    return compare(v1, v2, optionsOrLoose) === 0;
-}
-function neq(v1, v2, optionsOrLoose) {
-    return compare(v1, v2, optionsOrLoose) !== 0;
-}
-function gte(v1, v2, optionsOrLoose) {
-    return compare(v1, v2, optionsOrLoose) >= 0;
-}
-function lte(v1, v2, optionsOrLoose) {
-    return compare(v1, v2, optionsOrLoose) <= 0;
-}
-function cmp(v1, operator, v2, optionsOrLoose) {
-    switch(operator){
-        case "===":
-            if (typeof v1 === "object") v1 = v1.version;
-            if (typeof v2 === "object") v2 = v2.version;
-            return v1 === v2;
-        case "!==":
-            if (typeof v1 === "object") v1 = v1.version;
-            if (typeof v2 === "object") v2 = v2.version;
-            return v1 !== v2;
-        case "":
-        case "=":
-        case "==":
-            return eq(v1, v2, optionsOrLoose);
-        case "!=":
-            return neq(v1, v2, optionsOrLoose);
-        case ">":
-            return gt(v1, v2, optionsOrLoose);
-        case ">=":
-            return gte(v1, v2, optionsOrLoose);
-        case "<":
-            return lt(v1, v2, optionsOrLoose);
-        case "<=":
-            return lte(v1, v2, optionsOrLoose);
-        default:
-            throw new TypeError("Invalid operator: " + operator);
-    }
-}
-const ANY = {};
-class Comparator {
-    semver;
-    operator;
-    value;
-    loose;
-    options;
-    constructor(comp, optionsOrLoose){
-        if (!optionsOrLoose || typeof optionsOrLoose !== "object") {
-            optionsOrLoose = {
-                loose: !!optionsOrLoose,
-                includePrerelease: false
-            };
-        }
-        if (comp instanceof Comparator) {
-            if (comp.loose === !!optionsOrLoose.loose) {
-                return comp;
-            } else {
-                comp = comp.value;
-            }
-        }
-        if (!(this instanceof Comparator)) {
-            return new Comparator(comp, optionsOrLoose);
-        }
-        this.options = optionsOrLoose;
-        this.loose = !!optionsOrLoose.loose;
-        this.parse(comp);
-        if (this.semver === ANY) {
-            this.value = "";
-        } else {
-            this.value = this.operator + this.semver.version;
-        }
-    }
-    parse(comp) {
-        const r = this.options.loose ? re[COMPARATORLOOSE] : re[COMPARATOR];
-        const m = comp.match(r);
-        if (!m) {
-            throw new TypeError("Invalid comparator: " + comp);
-        }
-        const m1 = m[1];
-        this.operator = m1 !== undefined ? m1 : "";
-        if (this.operator === "=") {
-            this.operator = "";
-        }
-        if (!m[2]) {
-            this.semver = ANY;
-        } else {
-            this.semver = new SemVer(m[2], this.options.loose);
-        }
-    }
-    test(version) {
-        if (this.semver === ANY || version === ANY) {
-            return true;
-        }
-        if (typeof version === "string") {
-            version = new SemVer(version, this.options);
-        }
-        return cmp(version, this.operator, this.semver, this.options);
-    }
-    intersects(comp, optionsOrLoose) {
-        if (!(comp instanceof Comparator)) {
-            throw new TypeError("a Comparator is required");
-        }
-        if (!optionsOrLoose || typeof optionsOrLoose !== "object") {
-            optionsOrLoose = {
-                loose: !!optionsOrLoose,
-                includePrerelease: false
-            };
-        }
-        let rangeTmp;
-        if (this.operator === "") {
-            if (this.value === "") {
-                return true;
-            }
-            rangeTmp = new Range(comp.value, optionsOrLoose);
-            return satisfies(this.value, rangeTmp, optionsOrLoose);
-        } else if (comp.operator === "") {
-            if (comp.value === "") {
-                return true;
-            }
-            rangeTmp = new Range(this.value, optionsOrLoose);
-            return satisfies(comp.semver, rangeTmp, optionsOrLoose);
-        }
-        const sameDirectionIncreasing = (this.operator === ">=" || this.operator === ">") && (comp.operator === ">=" || comp.operator === ">");
-        const sameDirectionDecreasing = (this.operator === "<=" || this.operator === "<") && (comp.operator === "<=" || comp.operator === "<");
-        const sameSemVer = this.semver.version === comp.semver.version;
-        const differentDirectionsInclusive = (this.operator === ">=" || this.operator === "<=") && (comp.operator === ">=" || comp.operator === "<=");
-        const oppositeDirectionsLessThan = cmp(this.semver, "<", comp.semver, optionsOrLoose) && (this.operator === ">=" || this.operator === ">") && (comp.operator === "<=" || comp.operator === "<");
-        const oppositeDirectionsGreaterThan = cmp(this.semver, ">", comp.semver, optionsOrLoose) && (this.operator === "<=" || this.operator === "<") && (comp.operator === ">=" || comp.operator === ">");
-        return sameDirectionIncreasing || sameDirectionDecreasing || sameSemVer && differentDirectionsInclusive || oppositeDirectionsLessThan || oppositeDirectionsGreaterThan;
-    }
-    toString() {
-        return this.value;
-    }
-}
-class Range {
-    range;
-    raw;
-    loose;
-    options;
-    includePrerelease;
-    set;
-    constructor(range, optionsOrLoose){
-        if (!optionsOrLoose || typeof optionsOrLoose !== "object") {
-            optionsOrLoose = {
-                loose: !!optionsOrLoose,
-                includePrerelease: false
-            };
-        }
-        if (range instanceof Range) {
-            if (range.loose === !!optionsOrLoose.loose && range.includePrerelease === !!optionsOrLoose.includePrerelease) {
-                return range;
-            } else {
-                return new Range(range.raw, optionsOrLoose);
-            }
-        }
-        if (range instanceof Comparator) {
-            return new Range(range.value, optionsOrLoose);
-        }
-        if (!(this instanceof Range)) {
-            return new Range(range, optionsOrLoose);
-        }
-        this.options = optionsOrLoose;
-        this.loose = !!optionsOrLoose.loose;
-        this.includePrerelease = !!optionsOrLoose.includePrerelease;
-        this.raw = range;
-        this.set = range.split(/\s*\|\|\s*/).map((range)=>this.parseRange(range.trim())).filter((c)=>{
-            return c.length;
-        });
-        if (!this.set.length) {
-            throw new TypeError("Invalid SemVer Range: " + range);
-        }
-        this.format();
-    }
-    format() {
-        this.range = this.set.map((comps)=>comps.join(" ").trim()).join("||").trim();
-        return this.range;
-    }
-    parseRange(range) {
-        const loose = this.options.loose;
-        range = range.trim();
-        const hr = loose ? re[HYPHENRANGELOOSE] : re[HYPHENRANGE];
-        range = range.replace(hr, hyphenReplace);
-        range = range.replace(re[COMPARATORTRIM], comparatorTrimReplace);
-        range = range.replace(re[TILDETRIM], tildeTrimReplace);
-        range = range.replace(re[CARETTRIM], caretTrimReplace);
-        range = range.split(/\s+/).join(" ");
-        const compRe = loose ? re[COMPARATORLOOSE] : re[COMPARATOR];
-        let set = range.split(" ").map((comp)=>parseComparator(comp, this.options)).join(" ").split(/\s+/);
-        if (this.options.loose) {
-            set = set.filter((comp)=>{
-                return !!comp.match(compRe);
-            });
-        }
-        return set.map((comp)=>new Comparator(comp, this.options));
-    }
-    test(version) {
-        if (typeof version === "string") {
-            version = new SemVer(version, this.options);
-        }
-        for(var i = 0; i < this.set.length; i++){
-            if (testSet(this.set[i], version, this.options)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    intersects(range, optionsOrLoose) {
-        if (!(range instanceof Range)) {
-            throw new TypeError("a Range is required");
-        }
-        return this.set.some((thisComparators)=>{
-            return isSatisfiable(thisComparators, optionsOrLoose) && range.set.some((rangeComparators)=>{
-                return isSatisfiable(rangeComparators, optionsOrLoose) && thisComparators.every((thisComparator)=>{
-                    return rangeComparators.every((rangeComparator)=>{
-                        return thisComparator.intersects(rangeComparator, optionsOrLoose);
-                    });
-                });
-            });
-        });
-    }
-    toString() {
-        return this.range;
-    }
-}
-function testSet(set, version, options) {
-    for(let i = 0; i < set.length; i++){
-        if (!set[i].test(version)) {
-            return false;
-        }
-    }
-    if (version.prerelease.length && !options.includePrerelease) {
-        for(let i1 = 0; i1 < set.length; i1++){
-            if (set[i1].semver === ANY) {
-                continue;
-            }
-            if (set[i1].semver.prerelease.length > 0) {
-                const allowed = set[i1].semver;
-                if (allowed.major === version.major && allowed.minor === version.minor && allowed.patch === version.patch) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    return true;
-}
-function isSatisfiable(comparators, options) {
-    let result = true;
-    const remainingComparators = comparators.slice();
-    let testComparator = remainingComparators.pop();
-    while(result && remainingComparators.length){
-        result = remainingComparators.every((otherComparator)=>{
-            return testComparator?.intersects(otherComparator, options);
-        });
-        testComparator = remainingComparators.pop();
-    }
-    return result;
-}
-function parseComparator(comp, options) {
-    comp = replaceCarets(comp, options);
-    comp = replaceTildes(comp, options);
-    comp = replaceXRanges(comp, options);
-    comp = replaceStars(comp, options);
-    return comp;
-}
-function isX(id) {
-    return !id || id.toLowerCase() === "x" || id === "*";
-}
-function replaceTildes(comp, options) {
-    return comp.trim().split(/\s+/).map((comp)=>replaceTilde(comp, options)).join(" ");
-}
-function replaceTilde(comp, options) {
-    const r = options.loose ? re[TILDELOOSE] : re[TILDE];
-    return comp.replace(r, (_, M, m, p, pr)=>{
-        let ret;
-        if (isX(M)) {
-            ret = "";
-        } else if (isX(m)) {
-            ret = ">=" + M + ".0.0 <" + (+M + 1) + ".0.0";
-        } else if (isX(p)) {
-            ret = ">=" + M + "." + m + ".0 <" + M + "." + (+m + 1) + ".0";
-        } else if (pr) {
-            ret = ">=" + M + "." + m + "." + p + "-" + pr + " <" + M + "." + (+m + 1) + ".0";
-        } else {
-            ret = ">=" + M + "." + m + "." + p + " <" + M + "." + (+m + 1) + ".0";
-        }
-        return ret;
-    });
-}
-function replaceCarets(comp, options) {
-    return comp.trim().split(/\s+/).map((comp)=>replaceCaret(comp, options)).join(" ");
-}
-function replaceCaret(comp, options) {
-    const r = options.loose ? re[CARETLOOSE] : re[CARET];
-    return comp.replace(r, (_, M, m, p, pr)=>{
-        let ret;
-        if (isX(M)) {
-            ret = "";
-        } else if (isX(m)) {
-            ret = ">=" + M + ".0.0 <" + (+M + 1) + ".0.0";
-        } else if (isX(p)) {
-            if (M === "0") {
-                ret = ">=" + M + "." + m + ".0 <" + M + "." + (+m + 1) + ".0";
-            } else {
-                ret = ">=" + M + "." + m + ".0 <" + (+M + 1) + ".0.0";
-            }
-        } else if (pr) {
-            if (M === "0") {
-                if (m === "0") {
-                    ret = ">=" + M + "." + m + "." + p + "-" + pr + " <" + M + "." + m + "." + (+p + 1);
-                } else {
-                    ret = ">=" + M + "." + m + "." + p + "-" + pr + " <" + M + "." + (+m + 1) + ".0";
-                }
-            } else {
-                ret = ">=" + M + "." + m + "." + p + "-" + pr + " <" + (+M + 1) + ".0.0";
-            }
-        } else {
-            if (M === "0") {
-                if (m === "0") {
-                    ret = ">=" + M + "." + m + "." + p + " <" + M + "." + m + "." + (+p + 1);
-                } else {
-                    ret = ">=" + M + "." + m + "." + p + " <" + M + "." + (+m + 1) + ".0";
-                }
-            } else {
-                ret = ">=" + M + "." + m + "." + p + " <" + (+M + 1) + ".0.0";
-            }
-        }
-        return ret;
-    });
-}
-function replaceXRanges(comp, options) {
-    return comp.split(/\s+/).map((comp)=>replaceXRange(comp, options)).join(" ");
-}
-function replaceXRange(comp, options) {
-    comp = comp.trim();
-    const r = options.loose ? re[XRANGELOOSE] : re[XRANGE];
-    return comp.replace(r, (ret, gtlt, M, m, p, pr)=>{
-        const xM = isX(M);
-        const xm = xM || isX(m);
-        const xp = xm || isX(p);
-        const anyX = xp;
-        if (gtlt === "=" && anyX) {
-            gtlt = "";
-        }
-        if (xM) {
-            if (gtlt === ">" || gtlt === "<") {
-                ret = "<0.0.0";
-            } else {
-                ret = "*";
-            }
-        } else if (gtlt && anyX) {
-            if (xm) {
-                m = 0;
-            }
-            p = 0;
-            if (gtlt === ">") {
-                gtlt = ">=";
-                if (xm) {
-                    M = +M + 1;
-                    m = 0;
-                    p = 0;
-                } else {
-                    m = +m + 1;
-                    p = 0;
-                }
-            } else if (gtlt === "<=") {
-                gtlt = "<";
-                if (xm) {
-                    M = +M + 1;
-                } else {
-                    m = +m + 1;
-                }
-            }
-            ret = gtlt + M + "." + m + "." + p;
-        } else if (xm) {
-            ret = ">=" + M + ".0.0 <" + (+M + 1) + ".0.0";
-        } else if (xp) {
-            ret = ">=" + M + "." + m + ".0 <" + M + "." + (+m + 1) + ".0";
-        }
-        return ret;
-    });
-}
-function replaceStars(comp, options) {
-    return comp.trim().replace(re[STAR], "");
-}
-function hyphenReplace($0, from, fM, fm, fp, fpr, fb, to, tM, tm, tp, tpr, tb) {
-    if (isX(fM)) {
-        from = "";
-    } else if (isX(fm)) {
-        from = ">=" + fM + ".0.0";
-    } else if (isX(fp)) {
-        from = ">=" + fM + "." + fm + ".0";
-    } else {
-        from = ">=" + from;
-    }
-    if (isX(tM)) {
-        to = "";
-    } else if (isX(tm)) {
-        to = "<" + (+tM + 1) + ".0.0";
-    } else if (isX(tp)) {
-        to = "<" + tM + "." + (+tm + 1) + ".0";
-    } else if (tpr) {
-        to = "<=" + tM + "." + tm + "." + tp + "-" + tpr;
-    } else {
-        to = "<=" + to;
-    }
-    return (from + " " + to).trim();
-}
-function satisfies(version, range, optionsOrLoose) {
-    try {
-        range = new Range(range, optionsOrLoose);
-    } catch (er) {
-        return false;
-    }
-    return range.test(version);
 }
 const noColor = globalThis.Deno?.noColor ?? true;
 let enabled = !noColor;
@@ -2104,7 +1432,7 @@ function rgb24(str, color) {
         2,
         clampAndTruncate(color.r),
         clampAndTruncate(color.g),
-        clampAndTruncate(color.b), 
+        clampAndTruncate(color.b)
     ], 39));
 }
 function bgRgb24(str, color) {
@@ -2122,12 +1450,12 @@ function bgRgb24(str, color) {
         2,
         clampAndTruncate(color.r),
         clampAndTruncate(color.g),
-        clampAndTruncate(color.b), 
+        clampAndTruncate(color.b)
     ], 49));
 }
 const ANSI_PATTERN = new RegExp([
     "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
-    "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))", 
+    "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))"
 ].join("|"), "g");
 function stripColor(string) {
     return string.replace(ANSI_PATTERN, "");
@@ -2182,10 +1510,643 @@ const mod2 = {
     bgRgb24: bgRgb24,
     stripColor: stripColor
 };
-new TextEncoder();
+const encoder = new TextEncoder();
+function encode(input) {
+    return encoder.encode(input);
+}
+const __default = [
+    [
+        0x0300,
+        0x036f
+    ],
+    [
+        0x0483,
+        0x0486
+    ],
+    [
+        0x0488,
+        0x0489
+    ],
+    [
+        0x0591,
+        0x05bd
+    ],
+    [
+        0x05bf,
+        0x05bf
+    ],
+    [
+        0x05c1,
+        0x05c2
+    ],
+    [
+        0x05c4,
+        0x05c5
+    ],
+    [
+        0x05c7,
+        0x05c7
+    ],
+    [
+        0x0600,
+        0x0603
+    ],
+    [
+        0x0610,
+        0x0615
+    ],
+    [
+        0x064b,
+        0x065e
+    ],
+    [
+        0x0670,
+        0x0670
+    ],
+    [
+        0x06d6,
+        0x06e4
+    ],
+    [
+        0x06e7,
+        0x06e8
+    ],
+    [
+        0x06ea,
+        0x06ed
+    ],
+    [
+        0x070f,
+        0x070f
+    ],
+    [
+        0x0711,
+        0x0711
+    ],
+    [
+        0x0730,
+        0x074a
+    ],
+    [
+        0x07a6,
+        0x07b0
+    ],
+    [
+        0x07eb,
+        0x07f3
+    ],
+    [
+        0x0901,
+        0x0902
+    ],
+    [
+        0x093c,
+        0x093c
+    ],
+    [
+        0x0941,
+        0x0948
+    ],
+    [
+        0x094d,
+        0x094d
+    ],
+    [
+        0x0951,
+        0x0954
+    ],
+    [
+        0x0962,
+        0x0963
+    ],
+    [
+        0x0981,
+        0x0981
+    ],
+    [
+        0x09bc,
+        0x09bc
+    ],
+    [
+        0x09c1,
+        0x09c4
+    ],
+    [
+        0x09cd,
+        0x09cd
+    ],
+    [
+        0x09e2,
+        0x09e3
+    ],
+    [
+        0x0a01,
+        0x0a02
+    ],
+    [
+        0x0a3c,
+        0x0a3c
+    ],
+    [
+        0x0a41,
+        0x0a42
+    ],
+    [
+        0x0a47,
+        0x0a48
+    ],
+    [
+        0x0a4b,
+        0x0a4d
+    ],
+    [
+        0x0a70,
+        0x0a71
+    ],
+    [
+        0x0a81,
+        0x0a82
+    ],
+    [
+        0x0abc,
+        0x0abc
+    ],
+    [
+        0x0ac1,
+        0x0ac5
+    ],
+    [
+        0x0ac7,
+        0x0ac8
+    ],
+    [
+        0x0acd,
+        0x0acd
+    ],
+    [
+        0x0ae2,
+        0x0ae3
+    ],
+    [
+        0x0b01,
+        0x0b01
+    ],
+    [
+        0x0b3c,
+        0x0b3c
+    ],
+    [
+        0x0b3f,
+        0x0b3f
+    ],
+    [
+        0x0b41,
+        0x0b43
+    ],
+    [
+        0x0b4d,
+        0x0b4d
+    ],
+    [
+        0x0b56,
+        0x0b56
+    ],
+    [
+        0x0b82,
+        0x0b82
+    ],
+    [
+        0x0bc0,
+        0x0bc0
+    ],
+    [
+        0x0bcd,
+        0x0bcd
+    ],
+    [
+        0x0c3e,
+        0x0c40
+    ],
+    [
+        0x0c46,
+        0x0c48
+    ],
+    [
+        0x0c4a,
+        0x0c4d
+    ],
+    [
+        0x0c55,
+        0x0c56
+    ],
+    [
+        0x0cbc,
+        0x0cbc
+    ],
+    [
+        0x0cbf,
+        0x0cbf
+    ],
+    [
+        0x0cc6,
+        0x0cc6
+    ],
+    [
+        0x0ccc,
+        0x0ccd
+    ],
+    [
+        0x0ce2,
+        0x0ce3
+    ],
+    [
+        0x0d41,
+        0x0d43
+    ],
+    [
+        0x0d4d,
+        0x0d4d
+    ],
+    [
+        0x0dca,
+        0x0dca
+    ],
+    [
+        0x0dd2,
+        0x0dd4
+    ],
+    [
+        0x0dd6,
+        0x0dd6
+    ],
+    [
+        0x0e31,
+        0x0e31
+    ],
+    [
+        0x0e34,
+        0x0e3a
+    ],
+    [
+        0x0e47,
+        0x0e4e
+    ],
+    [
+        0x0eb1,
+        0x0eb1
+    ],
+    [
+        0x0eb4,
+        0x0eb9
+    ],
+    [
+        0x0ebb,
+        0x0ebc
+    ],
+    [
+        0x0ec8,
+        0x0ecd
+    ],
+    [
+        0x0f18,
+        0x0f19
+    ],
+    [
+        0x0f35,
+        0x0f35
+    ],
+    [
+        0x0f37,
+        0x0f37
+    ],
+    [
+        0x0f39,
+        0x0f39
+    ],
+    [
+        0x0f71,
+        0x0f7e
+    ],
+    [
+        0x0f80,
+        0x0f84
+    ],
+    [
+        0x0f86,
+        0x0f87
+    ],
+    [
+        0x0f90,
+        0x0f97
+    ],
+    [
+        0x0f99,
+        0x0fbc
+    ],
+    [
+        0x0fc6,
+        0x0fc6
+    ],
+    [
+        0x102d,
+        0x1030
+    ],
+    [
+        0x1032,
+        0x1032
+    ],
+    [
+        0x1036,
+        0x1037
+    ],
+    [
+        0x1039,
+        0x1039
+    ],
+    [
+        0x1058,
+        0x1059
+    ],
+    [
+        0x1160,
+        0x11ff
+    ],
+    [
+        0x135f,
+        0x135f
+    ],
+    [
+        0x1712,
+        0x1714
+    ],
+    [
+        0x1732,
+        0x1734
+    ],
+    [
+        0x1752,
+        0x1753
+    ],
+    [
+        0x1772,
+        0x1773
+    ],
+    [
+        0x17b4,
+        0x17b5
+    ],
+    [
+        0x17b7,
+        0x17bd
+    ],
+    [
+        0x17c6,
+        0x17c6
+    ],
+    [
+        0x17c9,
+        0x17d3
+    ],
+    [
+        0x17dd,
+        0x17dd
+    ],
+    [
+        0x180b,
+        0x180d
+    ],
+    [
+        0x18a9,
+        0x18a9
+    ],
+    [
+        0x1920,
+        0x1922
+    ],
+    [
+        0x1927,
+        0x1928
+    ],
+    [
+        0x1932,
+        0x1932
+    ],
+    [
+        0x1939,
+        0x193b
+    ],
+    [
+        0x1a17,
+        0x1a18
+    ],
+    [
+        0x1b00,
+        0x1b03
+    ],
+    [
+        0x1b34,
+        0x1b34
+    ],
+    [
+        0x1b36,
+        0x1b3a
+    ],
+    [
+        0x1b3c,
+        0x1b3c
+    ],
+    [
+        0x1b42,
+        0x1b42
+    ],
+    [
+        0x1b6b,
+        0x1b73
+    ],
+    [
+        0x1dc0,
+        0x1dca
+    ],
+    [
+        0x1dfe,
+        0x1dff
+    ],
+    [
+        0x200b,
+        0x200f
+    ],
+    [
+        0x202a,
+        0x202e
+    ],
+    [
+        0x2060,
+        0x2063
+    ],
+    [
+        0x206a,
+        0x206f
+    ],
+    [
+        0x20d0,
+        0x20ef
+    ],
+    [
+        0x302a,
+        0x302f
+    ],
+    [
+        0x3099,
+        0x309a
+    ],
+    [
+        0xa806,
+        0xa806
+    ],
+    [
+        0xa80b,
+        0xa80b
+    ],
+    [
+        0xa825,
+        0xa826
+    ],
+    [
+        0xfb1e,
+        0xfb1e
+    ],
+    [
+        0xfe00,
+        0xfe0f
+    ],
+    [
+        0xfe20,
+        0xfe23
+    ],
+    [
+        0xfeff,
+        0xfeff
+    ],
+    [
+        0xfff9,
+        0xfffb
+    ],
+    [
+        0x10a01,
+        0x10a03
+    ],
+    [
+        0x10a05,
+        0x10a06
+    ],
+    [
+        0x10a0c,
+        0x10a0f
+    ],
+    [
+        0x10a38,
+        0x10a3a
+    ],
+    [
+        0x10a3f,
+        0x10a3f
+    ],
+    [
+        0x1d167,
+        0x1d169
+    ],
+    [
+        0x1d173,
+        0x1d182
+    ],
+    [
+        0x1d185,
+        0x1d18b
+    ],
+    [
+        0x1d1aa,
+        0x1d1ad
+    ],
+    [
+        0x1d242,
+        0x1d244
+    ],
+    [
+        0xe0001,
+        0xe0001
+    ],
+    [
+        0xe0020,
+        0xe007f
+    ],
+    [
+        0xe0100,
+        0xe01ef
+    ]
+];
+function wcswidth(str, { nul =0 , control =0  } = {}) {
+    const opts = {
+        nul,
+        control
+    };
+    if (typeof str !== "string") return wcwidth(str, opts);
+    let s = 0;
+    for(let i = 0; i < str.length; i++){
+        const n = wcwidth(str.charCodeAt(i), opts);
+        if (n < 0) return -1;
+        s += n;
+    }
+    return s;
+}
+function wcwidth(ucs, { nul =0 , control =0  } = {}) {
+    if (ucs === 0) return nul;
+    if (ucs < 32 || ucs >= 0x7f && ucs < 0xa0) return control;
+    if (bisearch(ucs)) return 0;
+    return 1 + (ucs >= 0x1100 && (ucs <= 0x115f || ucs == 0x2329 || ucs == 0x232a || ucs >= 0x2e80 && ucs <= 0xa4cf && ucs != 0x303f || ucs >= 0xac00 && ucs <= 0xd7a3 || ucs >= 0xf900 && ucs <= 0xfaff || ucs >= 0xfe10 && ucs <= 0xfe19 || ucs >= 0xfe30 && ucs <= 0xfe6f || ucs >= 0xff00 && ucs <= 0xff60 || ucs >= 0xffe0 && ucs <= 0xffe6 || ucs >= 0x20000 && ucs <= 0x2fffd || ucs >= 0x30000 && ucs <= 0x3fffd) ? 1 : 0);
+}
+function bisearch(ucs) {
+    let min = 0;
+    let max = __default.length - 1;
+    let mid;
+    if (ucs < __default[0][0] || ucs > __default[max][1]) return false;
+    while(max >= min){
+        mid = Math.floor((min + max) / 2);
+        if (ucs > __default[mid][1]) min = mid + 1;
+        else if (ucs < __default[mid][0]) max = mid - 1;
+        else return true;
+    }
+    return false;
+}
+function ansiRegex({ onlyFirst =false  } = {}) {
+    const pattern = [
+        "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
+        "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))"
+    ].join("|");
+    return new RegExp(pattern, onlyFirst ? undefined : "g");
+}
+async function isInteractiveAsync(stream) {
+    if (await Deno.permissions.query({
+        name: "env"
+    })) {
+        return Deno.isatty(stream.rid) && Deno.env.get("TERM") !== "dumb" && !Deno.env.get("CI");
+    }
+    return Deno.isatty(stream.rid);
+}
+function isInteractive(stream) {
+    return Deno.isatty(stream.rid);
+}
 const mac = (await Deno.permissions.query({
     name: "env"
 })).state === "granted" ? Deno.env.get("TERM_PROGRAM") === "Apple_Terminal" : false;
+async function write(str, writer) {
+    await writer.write(encode(str));
+}
+function writeSync(str, writer) {
+    writer.writeSync(encode(str));
+}
+function stripAnsi(dirty) {
+    return dirty.replace(ansiRegex(), "");
+}
 const ESC = "\u001B[";
 const SAVE = mac ? "\u001B7" : ESC + "s";
 const RESTORE = mac ? "\u001B8" : ESC + "u";
@@ -2209,7 +2170,133 @@ const NEXT_LINE = "1E";
 const PREV_LINE = "1F";
 const COLUMN = "1G";
 const HOME = "H";
-await async function() {
+async function restore(writer = Deno.stdout) {
+    await write(RESTORE, writer);
+}
+async function cursor(action, writer = Deno.stdout) {
+    await write(ESC + action, writer);
+}
+async function position(writer = Deno.stdout) {
+    await cursor(POSITION, writer);
+}
+async function hideCursor(writer = Deno.stdout) {
+    await cursor(HIDE, writer);
+}
+async function showCursor(writer = Deno.stdout) {
+    await cursor(SHOW, writer);
+}
+async function scrollUp(writer = Deno.stdout) {
+    await cursor(SCROLL_UP, writer);
+}
+async function scrollDown(writer = Deno.stdout) {
+    await cursor(SCROLL_DOWN, writer);
+}
+async function clearUp(writer = Deno.stdout) {
+    await cursor(CLEAR_UP, writer);
+}
+async function clearDown(writer = Deno.stdout) {
+    await cursor(CLEAR_DOWN, writer);
+}
+async function clearLeft(writer = Deno.stdout) {
+    await cursor(CLEAR_LEFT, writer);
+}
+async function clearRight(writer = Deno.stdout) {
+    await cursor(CLEAR_RIGHT, writer);
+}
+async function clearLine(writer = Deno.stdout) {
+    await cursor(CLEAR_LINE, writer);
+}
+async function clearScreen(writer = Deno.stdout) {
+    await cursor(CLEAR_SCREEN, writer);
+}
+async function nextLine(writer = Deno.stdout) {
+    await cursor(NEXT_LINE, writer);
+}
+async function prevLine(writer = Deno.stdout) {
+    await cursor(PREV_LINE, writer);
+}
+async function goHome(writer = Deno.stdout) {
+    await cursor(HOME, writer);
+}
+async function goUp(y = 1, writer = Deno.stdout) {
+    await cursor(y + UP, writer);
+}
+async function goDown(y = 1, writer = Deno.stdout) {
+    await cursor(y + DOWN, writer);
+}
+async function goLeft(x = 1, writer = Deno.stdout) {
+    await cursor(x + LEFT, writer);
+}
+async function goRight(x = 1, writer = Deno.stdout) {
+    await cursor(x + RIGHT, writer);
+}
+async function goTo(x, y, writer = Deno.stdout) {
+    await write(ESC + y + ";" + x + HOME, writer);
+}
+function restoreSync(writer = Deno.stdout) {
+    writeSync(RESTORE, writer);
+}
+function cursorSync(action, writer = Deno.stdout) {
+    writeSync(ESC + action, writer);
+}
+function positionSync(writer = Deno.stdout) {
+    cursorSync(POSITION, writer);
+}
+function hideCursorSync(writer = Deno.stdout) {
+    cursorSync(HIDE, writer);
+}
+function showCursorSync(writer = Deno.stdout) {
+    cursorSync(SHOW, writer);
+}
+function scrollUpSync(writer = Deno.stdout) {
+    cursorSync(SCROLL_UP, writer);
+}
+function scrollDownSync(writer = Deno.stdout) {
+    cursorSync(SCROLL_DOWN, writer);
+}
+function clearUpSync(writer = Deno.stdout) {
+    cursorSync(CLEAR_UP, writer);
+}
+function clearDownSync(writer = Deno.stdout) {
+    cursorSync(CLEAR_DOWN, writer);
+}
+function clearLeftSync(writer = Deno.stdout) {
+    cursorSync(CLEAR_LEFT, writer);
+}
+function clearRightSync(writer = Deno.stdout) {
+    cursorSync(CLEAR_RIGHT, writer);
+}
+function clearLineSync(writer = Deno.stdout) {
+    cursorSync(CLEAR_LINE, writer);
+}
+function clearScreenSync(writer = Deno.stdout) {
+    cursorSync(CLEAR_SCREEN, writer);
+}
+function nextLineSync(writer = Deno.stdout) {
+    cursorSync(NEXT_LINE, writer);
+}
+function prevLineSync(writer = Deno.stdout) {
+    cursorSync(PREV_LINE, writer);
+}
+function goHomeSync(writer = Deno.stdout) {
+    cursorSync(HOME, writer);
+}
+function goUpSync(y = 1, writer = Deno.stdout) {
+    cursorSync(y + UP, writer);
+}
+function goDownSync(y = 1, writer = Deno.stdout) {
+    cursorSync(y + DOWN, writer);
+}
+function goLeftSync(x = 1, writer = Deno.stdout) {
+    cursorSync(x + LEFT, writer);
+}
+function goRightSync(x = 1, writer = Deno.stdout) {
+    cursorSync(`${x}${RIGHT}`, writer);
+}
+function goToSync(x, y, writer = Deno.stdout) {
+    writeSync(ESC + y + ";" + x + HOME, writer);
+}
+const mod3 = await async function() {
     return {
         ESC: ESC,
         SAVE: SAVE,
@@ -2233,29 +2320,1361 @@ await async function() {
         NEXT_LINE: NEXT_LINE,
         PREV_LINE: PREV_LINE,
         COLUMN: COLUMN,
-        HOME: HOME
+        HOME: HOME,
+        write,
+        restore,
+        cursor,
+        position,
+        hideCursor,
+        showCursor,
+        scrollUp,
+        scrollDown,
+        clearUp,
+        clearDown,
+        clearLeft,
+        clearRight,
+        clearLine,
+        clearScreen,
+        nextLine,
+        prevLine,
+        goHome,
+        goUp,
+        goDown,
+        goLeft,
+        goRight,
+        goTo,
+        writeSync,
+        restoreSync,
+        cursorSync,
+        positionSync,
+        hideCursorSync,
+        showCursorSync,
+        scrollUpSync,
+        scrollDownSync,
+        clearUpSync,
+        clearDownSync,
+        clearLeftSync,
+        clearRightSync,
+        clearLineSync,
+        clearScreenSync,
+        nextLineSync,
+        prevLineSync,
+        goHomeSync,
+        goUpSync,
+        goDownSync,
+        goLeftSync,
+        goRightSync,
+        goToSync,
+        wcswidth,
+        ansiRegex,
+        stripAnsi,
+        isInteractiveAsync,
+        isInteractive
     };
 }();
+const __default1 = {
+    dots: {
+        interval: 80,
+        frames: [
+            "⠋",
+            "⠙",
+            "⠹",
+            "⠸",
+            "⠼",
+            "⠴",
+            "⠦",
+            "⠧",
+            "⠇",
+            "⠏"
+        ]
+    },
+    dots2: {
+        interval: 80,
+        frames: [
+            "⣾",
+            "⣽",
+            "⣻",
+            "⢿",
+            "⡿",
+            "⣟",
+            "⣯",
+            "⣷"
+        ]
+    },
+    dots3: {
+        interval: 80,
+        frames: [
+            "⠋",
+            "⠙",
+            "⠚",
+            "⠞",
+            "⠖",
+            "⠦",
+            "⠴",
+            "⠲",
+            "⠳",
+            "⠓"
+        ]
+    },
+    dots4: {
+        interval: 80,
+        frames: [
+            "⠄",
+            "⠆",
+            "⠇",
+            "⠋",
+            "⠙",
+            "⠸",
+            "⠰",
+            "⠠",
+            "⠰",
+            "⠸",
+            "⠙",
+            "⠋",
+            "⠇",
+            "⠆"
+        ]
+    },
+    dots5: {
+        interval: 80,
+        frames: [
+            "⠋",
+            "⠙",
+            "⠚",
+            "⠒",
+            "⠂",
+            "⠂",
+            "⠒",
+            "⠲",
+            "⠴",
+            "⠦",
+            "⠖",
+            "⠒",
+            "⠐",
+            "⠐",
+            "⠒",
+            "⠓",
+            "⠋"
+        ]
+    },
+    dots6: {
+        interval: 80,
+        frames: [
+            "⠁",
+            "⠉",
+            "⠙",
+            "⠚",
+            "⠒",
+            "⠂",
+            "⠂",
+            "⠒",
+            "⠲",
+            "⠴",
+            "⠤",
+            "⠄",
+            "⠄",
+            "⠤",
+            "⠴",
+            "⠲",
+            "⠒",
+            "⠂",
+            "⠂",
+            "⠒",
+            "⠚",
+            "⠙",
+            "⠉",
+            "⠁"
+        ]
+    },
+    dots7: {
+        interval: 80,
+        frames: [
+            "⠈",
+            "⠉",
+            "⠋",
+            "⠓",
+            "⠒",
+            "⠐",
+            "⠐",
+            "⠒",
+            "⠖",
+            "⠦",
+            "⠤",
+            "⠠",
+            "⠠",
+            "⠤",
+            "⠦",
+            "⠖",
+            "⠒",
+            "⠐",
+            "⠐",
+            "⠒",
+            "⠓",
+            "⠋",
+            "⠉",
+            "⠈"
+        ]
+    },
+    dots8: {
+        interval: 80,
+        frames: [
+            "⠁",
+            "⠁",
+            "⠉",
+            "⠙",
+            "⠚",
+            "⠒",
+            "⠂",
+            "⠂",
+            "⠒",
+            "⠲",
+            "⠴",
+            "⠤",
+            "⠄",
+            "⠄",
+            "⠤",
+            "⠠",
+            "⠠",
+            "⠤",
+            "⠦",
+            "⠖",
+            "⠒",
+            "⠐",
+            "⠐",
+            "⠒",
+            "⠓",
+            "⠋",
+            "⠉",
+            "⠈",
+            "⠈"
+        ]
+    },
+    dots9: {
+        interval: 80,
+        frames: [
+            "⢹",
+            "⢺",
+            "⢼",
+            "⣸",
+            "⣇",
+            "⡧",
+            "⡗",
+            "⡏"
+        ]
+    },
+    dots10: {
+        interval: 80,
+        frames: [
+            "⢄",
+            "⢂",
+            "⢁",
+            "⡁",
+            "⡈",
+            "⡐",
+            "⡠"
+        ]
+    },
+    dots11: {
+        interval: 100,
+        frames: [
+            "⠁",
+            "⠂",
+            "⠄",
+            "⡀",
+            "⢀",
+            "⠠",
+            "⠐",
+            "⠈"
+        ]
+    },
+    dots12: {
+        interval: 80,
+        frames: [
+            "⢀⠀",
+            "⡀⠀",
+            "⠄⠀",
+            "⢂⠀",
+            "⡂⠀",
+            "⠅⠀",
+            "⢃⠀",
+            "⡃⠀",
+            "⠍⠀",
+            "⢋⠀",
+            "⡋⠀",
+            "⠍⠁",
+            "⢋⠁",
+            "⡋⠁",
+            "⠍⠉",
+            "⠋⠉",
+            "⠋⠉",
+            "⠉⠙",
+            "⠉⠙",
+            "⠉⠩",
+            "⠈⢙",
+            "⠈⡙",
+            "⢈⠩",
+            "⡀⢙",
+            "⠄⡙",
+            "⢂⠩",
+            "⡂⢘",
+            "⠅⡘",
+            "⢃⠨",
+            "⡃⢐",
+            "⠍⡐",
+            "⢋⠠",
+            "⡋⢀",
+            "⠍⡁",
+            "⢋⠁",
+            "⡋⠁",
+            "⠍⠉",
+            "⠋⠉",
+            "⠋⠉",
+            "⠉⠙",
+            "⠉⠙",
+            "⠉⠩",
+            "⠈⢙",
+            "⠈⡙",
+            "⠈⠩",
+            "⠀⢙",
+            "⠀⡙",
+            "⠀⠩",
+            "⠀⢘",
+            "⠀⡘",
+            "⠀⠨",
+            "⠀⢐",
+            "⠀⡐",
+            "⠀⠠",
+            "⠀⢀",
+            "⠀⡀"
+        ]
+    },
+    dots8Bit: {
+        interval: 80,
+        frames: [
+            "⠀",
+            "⠁",
+            "⠂",
+            "⠃",
+            "⠄",
+            "⠅",
+            "⠆",
+            "⠇",
+            "⡀",
+            "⡁",
+            "⡂",
+            "⡃",
+            "⡄",
+            "⡅",
+            "⡆",
+            "⡇",
+            "⠈",
+            "⠉",
+            "⠊",
+            "⠋",
+            "⠌",
+            "⠍",
+            "⠎",
+            "⠏",
+            "⡈",
+            "⡉",
+            "⡊",
+            "⡋",
+            "⡌",
+            "⡍",
+            "⡎",
+            "⡏",
+            "⠐",
+            "⠑",
+            "⠒",
+            "⠓",
+            "⠔",
+            "⠕",
+            "⠖",
+            "⠗",
+            "⡐",
+            "⡑",
+            "⡒",
+            "⡓",
+            "⡔",
+            "⡕",
+            "⡖",
+            "⡗",
+            "⠘",
+            "⠙",
+            "⠚",
+            "⠛",
+            "⠜",
+            "⠝",
+            "⠞",
+            "⠟",
+            "⡘",
+            "⡙",
+            "⡚",
+            "⡛",
+            "⡜",
+            "⡝",
+            "⡞",
+            "⡟",
+            "⠠",
+            "⠡",
+            "⠢",
+            "⠣",
+            "⠤",
+            "⠥",
+            "⠦",
+            "⠧",
+            "⡠",
+            "⡡",
+            "⡢",
+            "⡣",
+            "⡤",
+            "⡥",
+            "⡦",
+            "⡧",
+            "⠨",
+            "⠩",
+            "⠪",
+            "⠫",
+            "⠬",
+            "⠭",
+            "⠮",
+            "⠯",
+            "⡨",
+            "⡩",
+            "⡪",
+            "⡫",
+            "⡬",
+            "⡭",
+            "⡮",
+            "⡯",
+            "⠰",
+            "⠱",
+            "⠲",
+            "⠳",
+            "⠴",
+            "⠵",
+            "⠶",
+            "⠷",
+            "⡰",
+            "⡱",
+            "⡲",
+            "⡳",
+            "⡴",
+            "⡵",
+            "⡶",
+            "⡷",
+            "⠸",
+            "⠹",
+            "⠺",
+            "⠻",
+            "⠼",
+            "⠽",
+            "⠾",
+            "⠿",
+            "⡸",
+            "⡹",
+            "⡺",
+            "⡻",
+            "⡼",
+            "⡽",
+            "⡾",
+            "⡿",
+            "⢀",
+            "⢁",
+            "⢂",
+            "⢃",
+            "⢄",
+            "⢅",
+            "⢆",
+            "⢇",
+            "⣀",
+            "⣁",
+            "⣂",
+            "⣃",
+            "⣄",
+            "⣅",
+            "⣆",
+            "⣇",
+            "⢈",
+            "⢉",
+            "⢊",
+            "⢋",
+            "⢌",
+            "⢍",
+            "⢎",
+            "⢏",
+            "⣈",
+            "⣉",
+            "⣊",
+            "⣋",
+            "⣌",
+            "⣍",
+            "⣎",
+            "⣏",
+            "⢐",
+            "⢑",
+            "⢒",
+            "⢓",
+            "⢔",
+            "⢕",
+            "⢖",
+            "⢗",
+            "⣐",
+            "⣑",
+            "⣒",
+            "⣓",
+            "⣔",
+            "⣕",
+            "⣖",
+            "⣗",
+            "⢘",
+            "⢙",
+            "⢚",
+            "⢛",
+            "⢜",
+            "⢝",
+            "⢞",
+            "⢟",
+            "⣘",
+            "⣙",
+            "⣚",
+            "⣛",
+            "⣜",
+            "⣝",
+            "⣞",
+            "⣟",
+            "⢠",
+            "⢡",
+            "⢢",
+            "⢣",
+            "⢤",
+            "⢥",
+            "⢦",
+            "⢧",
+            "⣠",
+            "⣡",
+            "⣢",
+            "⣣",
+            "⣤",
+            "⣥",
+            "⣦",
+            "⣧",
+            "⢨",
+            "⢩",
+            "⢪",
+            "⢫",
+            "⢬",
+            "⢭",
+            "⢮",
+            "⢯",
+            "⣨",
+            "⣩",
+            "⣪",
+            "⣫",
+            "⣬",
+            "⣭",
+            "⣮",
+            "⣯",
+            "⢰",
+            "⢱",
+            "⢲",
+            "⢳",
+            "⢴",
+            "⢵",
+            "⢶",
+            "⢷",
+            "⣰",
+            "⣱",
+            "⣲",
+            "⣳",
+            "⣴",
+            "⣵",
+            "⣶",
+            "⣷",
+            "⢸",
+            "⢹",
+            "⢺",
+            "⢻",
+            "⢼",
+            "⢽",
+            "⢾",
+            "⢿",
+            "⣸",
+            "⣹",
+            "⣺",
+            "⣻",
+            "⣼",
+            "⣽",
+            "⣾",
+            "⣿"
+        ]
+    },
+    line: {
+        interval: 130,
+        frames: [
+            "-",
+            "\\",
+            "|",
+            "/"
+        ]
+    },
+    line2: {
+        interval: 100,
+        frames: [
+            "⠂",
+            "-",
+            "–",
+            "—",
+            "–",
+            "-"
+        ]
+    },
+    pipe: {
+        interval: 100,
+        frames: [
+            "┤",
+            "┘",
+            "┴",
+            "└",
+            "├",
+            "┌",
+            "┬",
+            "┐"
+        ]
+    },
+    simpleDots: {
+        interval: 400,
+        frames: [
+            ".  ",
+            ".. ",
+            "...",
+            "   "
+        ]
+    },
+    simpleDotsScrolling: {
+        interval: 200,
+        frames: [
+            ".  ",
+            ".. ",
+            "...",
+            " ..",
+            "  .",
+            "   "
+        ]
+    },
+    star: {
+        interval: 70,
+        frames: [
+            "✶",
+            "✸",
+            "✹",
+            "✺",
+            "✹",
+            "✷"
+        ]
+    },
+    star2: {
+        interval: 80,
+        frames: [
+            "+",
+            "x",
+            "*"
+        ]
+    },
+    flip: {
+        interval: 70,
+        frames: [
+            "_",
+            "_",
+            "_",
+            "-",
+            "`",
+            "`",
+            "'",
+            "´",
+            "-",
+            "_",
+            "_",
+            "_"
+        ]
+    },
+    hamburger: {
+        interval: 100,
+        frames: [
+            "☱",
+            "☲",
+            "☴"
+        ]
+    },
+    growVertical: {
+        interval: 120,
+        frames: [
+            "▁",
+            "▃",
+            "▄",
+            "▅",
+            "▆",
+            "▇",
+            "▆",
+            "▅",
+            "▄",
+            "▃"
+        ]
+    },
+    growHorizontal: {
+        interval: 120,
+        frames: [
+            "▏",
+            "▎",
+            "▍",
+            "▌",
+            "▋",
+            "▊",
+            "▉",
+            "▊",
+            "▋",
+            "▌",
+            "▍",
+            "▎"
+        ]
+    },
+    balloon: {
+        interval: 140,
+        frames: [
+            " ",
+            ".",
+            "o",
+            "O",
+            "@",
+            "*",
+            " "
+        ]
+    },
+    balloon2: {
+        interval: 120,
+        frames: [
+            ".",
+            "o",
+            "O",
+            "°",
+            "O",
+            "o",
+            "."
+        ]
+    },
+    noise: {
+        interval: 100,
+        frames: [
+            "▓",
+            "▒",
+            "░"
+        ]
+    },
+    bounce: {
+        interval: 120,
+        frames: [
+            "⠁",
+            "⠂",
+            "⠄",
+            "⠂"
+        ]
+    },
+    boxBounce: {
+        interval: 120,
+        frames: [
+            "▖",
+            "▘",
+            "▝",
+            "▗"
+        ]
+    },
+    boxBounce2: {
+        interval: 100,
+        frames: [
+            "▌",
+            "▀",
+            "▐",
+            "▄"
+        ]
+    },
+    triangle: {
+        interval: 50,
+        frames: [
+            "◢",
+            "◣",
+            "◤",
+            "◥"
+        ]
+    },
+    arc: {
+        interval: 100,
+        frames: [
+            "◜",
+            "◠",
+            "◝",
+            "◞",
+            "◡",
+            "◟"
+        ]
+    },
+    circle: {
+        interval: 120,
+        frames: [
+            "◡",
+            "⊙",
+            "◠"
+        ]
+    },
+    squareCorners: {
+        interval: 180,
+        frames: [
+            "◰",
+            "◳",
+            "◲",
+            "◱"
+        ]
+    },
+    circleQuarters: {
+        interval: 120,
+        frames: [
+            "◴",
+            "◷",
+            "◶",
+            "◵"
+        ]
+    },
+    circleHalves: {
+        interval: 50,
+        frames: [
+            "◐",
+            "◓",
+            "◑",
+            "◒"
+        ]
+    },
+    squish: {
+        interval: 100,
+        frames: [
+            "╫",
+            "╪"
+        ]
+    },
+    toggle: {
+        interval: 250,
+        frames: [
+            "⊶",
+            "⊷"
+        ]
+    },
+    toggle2: {
+        interval: 80,
+        frames: [
+            "▫",
+            "▪"
+        ]
+    },
+    toggle3: {
+        interval: 120,
+        frames: [
+            "□",
+            "■"
+        ]
+    },
+    toggle4: {
+        interval: 100,
+        frames: [
+            "■",
+            "□",
+            "▪",
+            "▫"
+        ]
+    },
+    toggle5: {
+        interval: 100,
+        frames: [
+            "▮",
+            "▯"
+        ]
+    },
+    toggle6: {
+        interval: 300,
+        frames: [
+            "ဝ",
+            "၀"
+        ]
+    },
+    toggle7: {
+        interval: 80,
+        frames: [
+            "⦾",
+            "⦿"
+        ]
+    },
+    toggle8: {
+        interval: 100,
+        frames: [
+            "◍",
+            "◌"
+        ]
+    },
+    toggle9: {
+        interval: 100,
+        frames: [
+            "◉",
+            "◎"
+        ]
+    },
+    toggle10: {
+        interval: 100,
+        frames: [
+            "㊂",
+            "㊀",
+            "㊁"
+        ]
+    },
+    toggle11: {
+        interval: 50,
+        frames: [
+            "⧇",
+            "⧆"
+        ]
+    },
+    toggle12: {
+        interval: 120,
+        frames: [
+            "☗",
+            "☖"
+        ]
+    },
+    toggle13: {
+        interval: 80,
+        frames: [
+            "=",
+            "*",
+            "-"
+        ]
+    },
+    arrow: {
+        interval: 100,
+        frames: [
+            "←",
+            "↖",
+            "↑",
+            "↗",
+            "→",
+            "↘",
+            "↓",
+            "↙"
+        ]
+    },
+    arrow2: {
+        interval: 80,
+        frames: [
+            "⬆️ ",
+            "↗️ ",
+            "➡️ ",
+            "↘️ ",
+            "⬇️ ",
+            "↙️ ",
+            "⬅️ ",
+            "↖️ "
+        ]
+    },
+    arrow3: {
+        interval: 120,
+        frames: [
+            "▹▹▹▹▹",
+            "▸▹▹▹▹",
+            "▹▸▹▹▹",
+            "▹▹▸▹▹",
+            "▹▹▹▸▹",
+            "▹▹▹▹▸"
+        ]
+    },
+    bouncingBar: {
+        interval: 80,
+        frames: [
+            "[    ]",
+            "[=   ]",
+            "[==  ]",
+            "[=== ]",
+            "[ ===]",
+            "[  ==]",
+            "[   =]",
+            "[    ]",
+            "[   =]",
+            "[  ==]",
+            "[ ===]",
+            "[====]",
+            "[=== ]",
+            "[==  ]",
+            "[=   ]"
+        ]
+    },
+    bouncingBall: {
+        interval: 80,
+        frames: [
+            "( ●    )",
+            "(  ●   )",
+            "(   ●  )",
+            "(    ● )",
+            "(     ●)",
+            "(    ● )",
+            "(   ●  )",
+            "(  ●   )",
+            "( ●    )",
+            "(●     )"
+        ]
+    },
+    smiley: {
+        interval: 200,
+        frames: [
+            "😄 ",
+            "😝 "
+        ]
+    },
+    monkey: {
+        interval: 300,
+        frames: [
+            "🙈 ",
+            "🙈 ",
+            "🙉 ",
+            "🙊 "
+        ]
+    },
+    hearts: {
+        interval: 100,
+        frames: [
+            "💛 ",
+            "💙 ",
+            "💜 ",
+            "💚 ",
+            "❤️ "
+        ]
+    },
+    clock: {
+        interval: 100,
+        frames: [
+            "🕛 ",
+            "🕐 ",
+            "🕑 ",
+            "🕒 ",
+            "🕓 ",
+            "🕔 ",
+            "🕕 ",
+            "🕖 ",
+            "🕗 ",
+            "🕘 ",
+            "🕙 ",
+            "🕚 "
+        ]
+    },
+    earth: {
+        interval: 180,
+        frames: [
+            "🌍 ",
+            "🌎 ",
+            "🌏 "
+        ]
+    },
+    material: {
+        interval: 17,
+        frames: [
+            "█▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
+            "██▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
+            "███▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
+            "████▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
+            "██████▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
+            "██████▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
+            "███████▁▁▁▁▁▁▁▁▁▁▁▁▁",
+            "████████▁▁▁▁▁▁▁▁▁▁▁▁",
+            "█████████▁▁▁▁▁▁▁▁▁▁▁",
+            "█████████▁▁▁▁▁▁▁▁▁▁▁",
+            "██████████▁▁▁▁▁▁▁▁▁▁",
+            "███████████▁▁▁▁▁▁▁▁▁",
+            "█████████████▁▁▁▁▁▁▁",
+            "██████████████▁▁▁▁▁▁",
+            "██████████████▁▁▁▁▁▁",
+            "▁██████████████▁▁▁▁▁",
+            "▁██████████████▁▁▁▁▁",
+            "▁██████████████▁▁▁▁▁",
+            "▁▁██████████████▁▁▁▁",
+            "▁▁▁██████████████▁▁▁",
+            "▁▁▁▁█████████████▁▁▁",
+            "▁▁▁▁██████████████▁▁",
+            "▁▁▁▁██████████████▁▁",
+            "▁▁▁▁▁██████████████▁",
+            "▁▁▁▁▁██████████████▁",
+            "▁▁▁▁▁██████████████▁",
+            "▁▁▁▁▁▁██████████████",
+            "▁▁▁▁▁▁██████████████",
+            "▁▁▁▁▁▁▁█████████████",
+            "▁▁▁▁▁▁▁█████████████",
+            "▁▁▁▁▁▁▁▁████████████",
+            "▁▁▁▁▁▁▁▁████████████",
+            "▁▁▁▁▁▁▁▁▁███████████",
+            "▁▁▁▁▁▁▁▁▁███████████",
+            "▁▁▁▁▁▁▁▁▁▁██████████",
+            "▁▁▁▁▁▁▁▁▁▁██████████",
+            "▁▁▁▁▁▁▁▁▁▁▁▁████████",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁███████",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁██████",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█████",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█████",
+            "█▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁████",
+            "██▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁███",
+            "██▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁███",
+            "███▁▁▁▁▁▁▁▁▁▁▁▁▁▁███",
+            "████▁▁▁▁▁▁▁▁▁▁▁▁▁▁██",
+            "█████▁▁▁▁▁▁▁▁▁▁▁▁▁▁█",
+            "█████▁▁▁▁▁▁▁▁▁▁▁▁▁▁█",
+            "██████▁▁▁▁▁▁▁▁▁▁▁▁▁█",
+            "████████▁▁▁▁▁▁▁▁▁▁▁▁",
+            "█████████▁▁▁▁▁▁▁▁▁▁▁",
+            "█████████▁▁▁▁▁▁▁▁▁▁▁",
+            "█████████▁▁▁▁▁▁▁▁▁▁▁",
+            "█████████▁▁▁▁▁▁▁▁▁▁▁",
+            "███████████▁▁▁▁▁▁▁▁▁",
+            "████████████▁▁▁▁▁▁▁▁",
+            "████████████▁▁▁▁▁▁▁▁",
+            "██████████████▁▁▁▁▁▁",
+            "██████████████▁▁▁▁▁▁",
+            "▁██████████████▁▁▁▁▁",
+            "▁██████████████▁▁▁▁▁",
+            "▁▁▁█████████████▁▁▁▁",
+            "▁▁▁▁▁████████████▁▁▁",
+            "▁▁▁▁▁████████████▁▁▁",
+            "▁▁▁▁▁▁███████████▁▁▁",
+            "▁▁▁▁▁▁▁▁█████████▁▁▁",
+            "▁▁▁▁▁▁▁▁█████████▁▁▁",
+            "▁▁▁▁▁▁▁▁▁█████████▁▁",
+            "▁▁▁▁▁▁▁▁▁█████████▁▁",
+            "▁▁▁▁▁▁▁▁▁▁█████████▁",
+            "▁▁▁▁▁▁▁▁▁▁▁████████▁",
+            "▁▁▁▁▁▁▁▁▁▁▁████████▁",
+            "▁▁▁▁▁▁▁▁▁▁▁▁███████▁",
+            "▁▁▁▁▁▁▁▁▁▁▁▁███████▁",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁███████",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁███████",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█████",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁████",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁████",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁████",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁███",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁███",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁██",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁██",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁██",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁",
+            "▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁"
+        ]
+    },
+    moon: {
+        interval: 80,
+        frames: [
+            "🌑 ",
+            "🌒 ",
+            "🌓 ",
+            "🌔 ",
+            "🌕 ",
+            "🌖 ",
+            "🌗 ",
+            "🌘 "
+        ]
+    },
+    runner: {
+        interval: 140,
+        frames: [
+            "🚶 ",
+            "🏃 "
+        ]
+    },
+    pong: {
+        interval: 80,
+        frames: [
+            "▐⠂       ▌",
+            "▐⠈       ▌",
+            "▐ ⠂      ▌",
+            "▐ ⠠      ▌",
+            "▐  ⡀     ▌",
+            "▐  ⠠     ▌",
+            "▐   ⠂    ▌",
+            "▐   ⠈    ▌",
+            "▐    ⠂   ▌",
+            "▐    ⠠   ▌",
+            "▐     ⡀  ▌",
+            "▐     ⠠  ▌",
+            "▐      ⠂ ▌",
+            "▐      ⠈ ▌",
+            "▐       ⠂▌",
+            "▐       ⠠▌",
+            "▐       ⡀▌",
+            "▐      ⠠ ▌",
+            "▐      ⠂ ▌",
+            "▐     ⠈  ▌",
+            "▐     ⠂  ▌",
+            "▐    ⠠   ▌",
+            "▐    ⡀   ▌",
+            "▐   ⠠    ▌",
+            "▐   ⠂    ▌",
+            "▐  ⠈     ▌",
+            "▐  ⠂     ▌",
+            "▐ ⠠      ▌",
+            "▐ ⡀      ▌",
+            "▐⠠       ▌"
+        ]
+    },
+    shark: {
+        interval: 120,
+        frames: [
+            "▐|\\____________▌",
+            "▐_|\\___________▌",
+            "▐__|\\__________▌",
+            "▐___|\\_________▌",
+            "▐____|\\________▌",
+            "▐_____|\\_______▌",
+            "▐______|\\______▌",
+            "▐_______|\\_____▌",
+            "▐________|\\____▌",
+            "▐_________|\\___▌",
+            "▐__________|\\__▌",
+            "▐___________|\\_▌",
+            "▐____________|\\▌",
+            "▐____________/|▌",
+            "▐___________/|_▌",
+            "▐__________/|__▌",
+            "▐_________/|___▌",
+            "▐________/|____▌",
+            "▐_______/|_____▌",
+            "▐______/|______▌",
+            "▐_____/|_______▌",
+            "▐____/|________▌",
+            "▐___/|_________▌",
+            "▐__/|__________▌",
+            "▐_/|___________▌",
+            "▐/|____________▌"
+        ]
+    },
+    dqpb: {
+        interval: 100,
+        frames: [
+            "d",
+            "q",
+            "p",
+            "b"
+        ]
+    },
+    weather: {
+        interval: 100,
+        frames: [
+            "☀️ ",
+            "☀️ ",
+            "☀️ ",
+            "🌤 ",
+            "⛅️ ",
+            "🌥 ",
+            "☁️ ",
+            "🌧 ",
+            "🌨 ",
+            "🌧 ",
+            "🌨 ",
+            "🌧 ",
+            "🌨 ",
+            "⛈ ",
+            "🌨 ",
+            "🌧 ",
+            "🌨 ",
+            "☁️ ",
+            "🌥 ",
+            "⛅️ ",
+            "🌤 ",
+            "☀️ ",
+            "☀️ "
+        ]
+    },
+    christmas: {
+        interval: 400,
+        frames: [
+            "🌲",
+            "🎄"
+        ]
+    },
+    grenade: {
+        interval: 80,
+        frames: [
+            "،   ",
+            "′   ",
+            " ´ ",
+            " ‾ ",
+            "  ⸌",
+            "  ⸊",
+            "  |",
+            "  ⁎",
+            "  ⁕",
+            " ෴ ",
+            "  ⁓",
+            "   ",
+            "   ",
+            "   "
+        ]
+    },
+    point: {
+        interval: 125,
+        frames: [
+            "∙∙∙",
+            "●∙∙",
+            "∙●∙",
+            "∙∙●",
+            "∙∙∙"
+        ]
+    },
+    layer: {
+        interval: 150,
+        frames: [
+            "-",
+            "=",
+            "≡"
+        ]
+    },
+    betaWave: {
+        interval: 80,
+        frames: [
+            "ρββββββ",
+            "βρβββββ",
+            "ββρββββ",
+            "βββρβββ",
+            "ββββρββ",
+            "βββββρβ",
+            "ββββββρ"
+        ]
+    }
+};
 let supported = true;
 if ((await Deno.permissions.query({
     name: "env"
 })).state === "granted") {
     supported = supported && (!!Deno.env.get("CI") || Deno.env.get("TERM") === "xterm-256color");
 }
-({
+const main = {
     info: mod2.blue("ℹ"),
     success: mod2.green("✔"),
     warning: mod2.yellow("⚠"),
     error: mod2.red("✖")
-});
-({
+};
+const fallbacks = {
     info: mod2.blue("i"),
     success: mod2.green("√"),
     warning: mod2.yellow("‼"),
     error: mod2.red("×")
-});
-new TextEncoder();
-({
+};
+const symbols = supported ? main : fallbacks;
+const encoder1 = new TextEncoder();
+const colormap = {
     black: mod2.black,
     red: mod2.red,
     green: mod2.green,
@@ -2265,7 +3684,166 @@ new TextEncoder();
     cyan: mod2.cyan,
     white: mod2.white,
     gray: mod2.gray
-});
+};
+class Spinner {
+    #opts;
+    isSpinning;
+    #stream;
+    indent;
+    interval;
+    #id = 0;
+    #enabled;
+    #frameIndex;
+    #linesToClear;
+    #linesCount;
+    constructor(opts){
+        this.#opts = opts;
+        this.#stream = this.#opts.stream;
+        this.text = this.#opts.text;
+        this.prefix = this.#opts.prefix;
+        this.color = this.#opts.color;
+        this.spinner = this.#opts.spinner;
+        this.indent = this.#opts.indent;
+        this.interval = this.#opts.interval;
+        this.isSpinning = false;
+        this.#frameIndex = 0;
+        this.#linesToClear = 0;
+        this.#linesCount = 1;
+        this.#enabled = typeof opts.enabled === "boolean" ? opts.enabled : mod3.isInteractive(this.#stream);
+        if (opts.hideCursor) {
+            addEventListener("unload", ()=>{
+                mod3.showCursorSync(this.#stream);
+            });
+        }
+    }
+    #spinner = __default1.dots;
+    #color = mod2.cyan;
+    #text = "";
+    #prefix = "";
+    set spinner(spin) {
+        this.#frameIndex = 0;
+        if (typeof spin === "string") this.#spinner = __default1[spin];
+        else this.#spinner = spin;
+    }
+    get spinner() {
+        return this.#spinner;
+    }
+    set color(color) {
+        if (typeof color === "string") this.#color = colormap[color];
+        else this.#color = color;
+    }
+    get color() {
+        return this.#color;
+    }
+    set text(value) {
+        this.#text = value;
+        this.updateLines();
+    }
+    get text() {
+        return this.#text;
+    }
+    set prefix(value) {
+        this.#prefix = value;
+        this.updateLines();
+    }
+    get prefix() {
+        return this.#prefix;
+    }
+    write(data) {
+        this.#stream.writeSync(encoder1.encode(data));
+    }
+    start() {
+        if (!this.#enabled) {
+            if (this.text) {
+                this.write(`- ${this.text}\n`);
+            }
+            return this;
+        }
+        if (this.isSpinning) return this;
+        if (this.#opts.hideCursor) {
+            mod3.hideCursorSync(this.#stream);
+        }
+        this.render();
+        this.#id = setInterval(this.render.bind(this), this.interval);
+        return this;
+    }
+    render() {
+        this.clear();
+        this.write(`${this.frame()}\n`);
+        this.updateLines();
+        this.#linesToClear = this.#linesCount;
+    }
+    frame() {
+        const { frames  } = this.#spinner;
+        let frame = frames[this.#frameIndex];
+        frame = this.#color(frame);
+        this.#frameIndex = ++this.#frameIndex % frames.length;
+        const fullPrefixText = typeof this.prefix === "string" && this.prefix !== "" ? this.prefix + " " : "";
+        const fullText = typeof this.text === "string" ? " " + this.text : "";
+        return fullPrefixText + frame + fullText;
+    }
+    clear() {
+        if (!this.#enabled) return;
+        for(let i = 0; i < this.#linesToClear; i++){
+            mod3.goUpSync(1, this.#stream);
+            mod3.clearLineSync(this.#stream);
+            mod3.goRightSync(this.indent - 1, this.#stream);
+        }
+        this.#linesToClear = 0;
+    }
+    updateLines() {
+        let columns = 80;
+        try {
+            columns = Deno.consoleSize(this.#stream.rid)?.columns ?? columns;
+        } catch  {}
+        const fullPrefixText = typeof this.prefix === "string" ? this.prefix + "-" : "";
+        this.#linesCount = mod3.stripAnsi(fullPrefixText + "--" + this.text).split("\n").reduce((count, line)=>{
+            return count + Math.max(1, Math.ceil(mod3.wcswidth(line) / columns));
+        }, 0);
+    }
+    stop() {
+        if (!this.#enabled) return;
+        clearInterval(this.#id);
+        this.#id = -1;
+        this.#frameIndex = 0;
+        this.clear();
+        if (this.#opts.hideCursor) {
+            mod3.showCursorSync(this.#stream);
+        }
+    }
+    stopAndPersist(options = {}) {
+        const prefix = options.prefix || this.prefix;
+        const fullPrefix = typeof prefix === "string" && prefix !== "" ? prefix + " " : "";
+        const text = options.text || this.text;
+        const fullText = typeof text === "string" ? " " + text : "";
+        this.stop();
+        console.log(`${fullPrefix}${options.symbol || " "}${fullText}`);
+    }
+    succeed(text) {
+        return this.stopAndPersist({
+            symbol: symbols.success,
+            text
+        });
+    }
+    fail(text) {
+        return this.stopAndPersist({
+            symbol: symbols.error,
+            text
+        });
+    }
+    warn(text) {
+        return this.stopAndPersist({
+            symbol: symbols.warning,
+            text
+        });
+    }
+    info(text) {
+        return this.stopAndPersist({
+            symbol: symbols.info,
+            text
+        });
+    }
+}
 async function parseEntrypoint(entrypoint, root, diagnosticName = "entrypoint") {
     let entrypointSpecifier;
     try {
@@ -2285,174 +3863,6 @@ async function parseEntrypoint(entrypoint, root, diagnosticName = "entrypoint") 
         }
     }
     return entrypointSpecifier;
-}
-class BytesList {
-    len = 0;
-    chunks = [];
-    constructor(){}
-    size() {
-        return this.len;
-    }
-    add(value, start = 0, end = value.byteLength) {
-        if (value.byteLength === 0 || end - start === 0) {
-            return;
-        }
-        checkRange(start, end, value.byteLength);
-        this.chunks.push({
-            value,
-            end,
-            start,
-            offset: this.len
-        });
-        this.len += end - start;
-    }
-    shift(n) {
-        if (n === 0) {
-            return;
-        }
-        if (this.len <= n) {
-            this.chunks = [];
-            this.len = 0;
-            return;
-        }
-        const idx = this.getChunkIndex(n);
-        this.chunks.splice(0, idx);
-        const [chunk] = this.chunks;
-        if (chunk) {
-            const diff = n - chunk.offset;
-            chunk.start += diff;
-        }
-        let offset = 0;
-        for (const chunk1 of this.chunks){
-            chunk1.offset = offset;
-            offset += chunk1.end - chunk1.start;
-        }
-        this.len = offset;
-    }
-    getChunkIndex(pos) {
-        let max = this.chunks.length;
-        let min = 0;
-        while(true){
-            const i = min + Math.floor((max - min) / 2);
-            if (i < 0 || this.chunks.length <= i) {
-                return -1;
-            }
-            const { offset , start , end  } = this.chunks[i];
-            const len = end - start;
-            if (offset <= pos && pos < offset + len) {
-                return i;
-            } else if (offset + len <= pos) {
-                min = i + 1;
-            } else {
-                max = i - 1;
-            }
-        }
-    }
-    get(i) {
-        if (i < 0 || this.len <= i) {
-            throw new Error("out of range");
-        }
-        const idx = this.getChunkIndex(i);
-        const { value , offset , start  } = this.chunks[idx];
-        return value[start + i - offset];
-    }
-    *iterator(start = 0) {
-        const startIdx = this.getChunkIndex(start);
-        if (startIdx < 0) return;
-        const first = this.chunks[startIdx];
-        let firstOffset = start - first.offset;
-        for(let i = startIdx; i < this.chunks.length; i++){
-            const chunk = this.chunks[i];
-            for(let j = chunk.start + firstOffset; j < chunk.end; j++){
-                yield chunk.value[j];
-            }
-            firstOffset = 0;
-        }
-    }
-    slice(start, end = this.len) {
-        if (end === start) {
-            return new Uint8Array();
-        }
-        checkRange(start, end, this.len);
-        const result = new Uint8Array(end - start);
-        const startIdx = this.getChunkIndex(start);
-        const endIdx = this.getChunkIndex(end - 1);
-        let written = 0;
-        for(let i = startIdx; i < endIdx; i++){
-            const chunk = this.chunks[i];
-            const len = chunk.end - chunk.start;
-            result.set(chunk.value.subarray(chunk.start, chunk.end), written);
-            written += len;
-        }
-        const last = this.chunks[endIdx];
-        const rest = end - start - written;
-        result.set(last.value.subarray(last.start, last.start + rest), written);
-        return result;
-    }
-    concat() {
-        const result = new Uint8Array(this.len);
-        let sum = 0;
-        for (const { value , start , end  } of this.chunks){
-            result.set(value.subarray(start, end), sum);
-            sum += end - start;
-        }
-        return result;
-    }
-}
-function checkRange(start, end, len) {
-    if (start < 0 || len < start || end < 0 || len < end || end < start) {
-        throw new Error("invalid range");
-    }
-}
-const CR = "\r".charCodeAt(0);
-const LF = "\n".charCodeAt(0);
-class LineStream extends TransformStream {
-    #bufs = new BytesList();
-    #prevHadCR = false;
-    constructor(){
-        super({
-            transform: (chunk, controller)=>{
-                this.#handle(chunk, controller);
-            },
-            flush: (controller)=>{
-                controller.enqueue(this.#mergeBufs(false));
-            }
-        });
-    }
-     #handle(chunk, controller) {
-        const lfIndex = chunk.indexOf(LF);
-        if (this.#prevHadCR) {
-            this.#prevHadCR = false;
-            if (lfIndex === 0) {
-                controller.enqueue(this.#mergeBufs(true));
-                this.#handle(chunk.subarray(1), controller);
-                return;
-            }
-        }
-        if (lfIndex === -1) {
-            if (chunk.at(-1) === CR) {
-                this.#prevHadCR = true;
-            }
-            this.#bufs.add(chunk);
-        } else {
-            let crOrLfIndex = lfIndex;
-            if (chunk[lfIndex - 1] === CR) {
-                crOrLfIndex--;
-            }
-            this.#bufs.add(chunk.subarray(0, crOrLfIndex));
-            controller.enqueue(this.#mergeBufs(false));
-            this.#handle(chunk.subarray(lfIndex + 1), controller);
-        }
-    }
-     #mergeBufs(prevHadCR) {
-        const mergeBuf = this.#bufs.concat();
-        this.#bufs = new BytesList();
-        if (prevHadCR) {
-            return mergeBuf.subarray(0, -1);
-        } else {
-            return mergeBuf;
-        }
-    }
 }
 class APIError extends Error {
     code;
@@ -2523,9 +3933,8 @@ class API {
         if (res1.body === null) {
             throw new Error("Stream ended unexpectedly");
         }
-        const lines = res1.body.pipeThrough(new LineStream());
-        for await (const chunk1 of lines){
-            const line = new TextDecoder().decode(chunk1);
+        const lines = res1.body.pipeThrough(new TextDecoderStream()).pipeThrough(new TextLineStream());
+        for await (const line of lines){
             if (line === "") return;
             yield JSON.parse(line);
         }
@@ -2539,6 +3948,19 @@ class API {
             }
             throw err;
         }
+    }
+    async getDeployments(projectId) {
+        try {
+            return await this.#requestJson(`/projects/${projectId}/deployments/`);
+        } catch (err) {
+            if (err instanceof APIError && err.code === "projectNotFound") {
+                return null;
+            }
+            throw err;
+        }
+    }
+    getLogs(projectId, deploymentId) {
+        return this.#requestStream(`/projects/${projectId}/deployments/${deploymentId}/logs/`);
     }
     async projectNegotiateAssets(id, manifest) {
         return await this.#requestJson(`/projects/${id}/assets/negotiate`, {

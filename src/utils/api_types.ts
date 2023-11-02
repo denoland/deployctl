@@ -26,6 +26,14 @@ export interface Project {
   envVars: string[];
 }
 
+export interface DeploymentsSummary {
+  page: number;
+  count: number;
+  limit: number;
+  totalCount: number;
+  totalPages: number;
+}
+
 export interface ManifestEntryFile {
   kind: "file";
   gitSha1: string;
@@ -93,4 +101,50 @@ export interface DeploymentProgressError {
   type: "error";
   code: string;
   ctx: string;
+}
+
+export interface LiveLogReady {
+  type: "ready";
+}
+
+export interface LiveLogPing {
+  type: "ping";
+}
+
+export interface LiveLogMessage {
+  type: "message";
+  time: string;
+  message: string;
+  level: "debug" | "info" | "warning" | "error";
+  region: string;
+}
+
+export type LiveLog =
+  | LiveLogReady
+  | LiveLogPing
+  | LiveLogMessage;
+
+export interface LogQueryRequestParams {
+  regions?: string[];
+  levels?: string[];
+  // RFC3339
+  since?: string;
+  // RFC3339
+  until?: string;
+  q?: string[];
+  limit?: number;
+}
+
+export interface PersistedLog {
+  deploymentId: string;
+  isolateId: string;
+  region: string;
+  level: "debug" | "info" | "warning" | "error";
+  // RFC3339
+  timestamp: string;
+  message: string;
+}
+
+export interface Metadata {
+  regionCodes: string[];
 }

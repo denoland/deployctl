@@ -1,3 +1,3 @@
-export const VERSION = "1.3.0";
+export const VERSION = "1.8.2";
 
-export const MINIMUM_DENO_VERSION = "1.20.0";
+export const MINIMUM_DENO_VERSION = "1.28.3";

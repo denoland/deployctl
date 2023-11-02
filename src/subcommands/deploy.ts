@@ -128,7 +128,21 @@ async function deploy(opts: DeployOpts): Promise<void> {
     projectSpinner.fail("Project not found.");
     Deno.exit(1);
   }
-  projectSpinner.succeed(`Project: ${project.name}`);
+
+  const deploymentsListing = await api.getDeployments(project!.id);
+  if (deploymentsListing === null) {
+    projectSpinner.fail("Project deployments details not found.");
+    Deno.exit(1);
+  }
+  const [projectDeployments, _pagination] = deploymentsListing!;
+  projectSpinner.succeed(`Project: ${project!.name}`);
+
+  if (projectDeployments.length === 0) {
+    wait("").start().info(
+      "Empty project detected, automatically pushing initial deployment to production (use --prod for further updates).",
+    );
+    opts.prod = true;
+  }
 
   let url = opts.entrypoint;
   const cwd = Deno.cwd();
@@ -234,13 +248,15 @@ async function deploy(opts: DeployOpts): Promise<void> {
         case "uploadComplete":
           deploySpinner!.text = `Finishing deployment...`;
           break;
-        case "success":
-          deploySpinner!.succeed(`Deployment complete.`);
+        case "success": {
+          const deploymentKind = opts.prod ? "Production" : "Preview";
+          deploySpinner!.succeed(`${deploymentKind} deployment complete.`);
           console.log("\nView at:");
           for (const { domain } of event.domainMappings) {
             console.log(` - https://${domain}`);
           }
           break;
+        }
         case "error":
           if (uploadSpinner) {
             uploadSpinner.fail(`Upload failed.`);

@@ -1,8 +1,15 @@
-import { LineStream } from "https://deno.land/std@0.116.0/streams/delimiter.ts";
+import { TextLineStream } from "../../deps.ts";
+
 import {
+  Deployment,
   DeploymentProgress,
+  DeploymentsSummary,
   GitHubActionsDeploymentRequest,
+  LiveLog,
+  LogQueryRequestParams,
   ManifestEntry,
+  Metadata,
+  PersistedLog,
   Project,
   PushDeploymentRequest,
 } from "./api_types.ts";
@@ -96,9 +103,10 @@ export class API {
       throw new Error("Stream ended unexpectedly");
     }
 
-    const lines = res.body.pipeThrough(new LineStream());
-    for await (const chunk of lines) {
-      const line = new TextDecoder().decode(chunk);
+    const lines = res.body
+      .pipeThrough(new TextDecoderStream())
+      .pipeThrough(new TextLineStream());
+    for await (const line of lines) {
       if (line === "") return;
       yield JSON.parse(line);
     }
@@ -113,6 +121,41 @@ export class API {
       }
       throw err;
     }
+  }
+
+  async getDeployments(
+    projectId: string,
+  ): Promise<[Deployment[], DeploymentsSummary] | null> {
+    try {
+      return await this.#requestJson(`/projects/${projectId}/deployments/`);
+    } catch (err) {
+      if (err instanceof APIError && err.code === "projectNotFound") {
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  getLogs(
+    projectId: string,
+    deploymentId: string,
+  ): AsyncIterable<LiveLog> {
+    return this.#requestStream(
+      `/projects/${projectId}/deployments/${deploymentId}/logs/`,
+    );
+  }
+
+  async queryLogs(
+    projectId: string,
+    deploymentId: string,
+    params: LogQueryRequestParams,
+  ): Promise<{ logs: PersistedLog[] }> {
+    const searchParams = new URLSearchParams({
+      params: JSON.stringify(params),
+    });
+    return await this.#requestJson(
+      `/projects/${projectId}/deployments/${deploymentId}/query_logs?${searchParams.toString()}`,
+    );
   }
 
   async projectNegotiateAssets(
@@ -155,6 +198,10 @@ export class API {
       `/projects/${projectId}/deployment_github_actions`,
       { method: "POST", body: form },
     );
+  }
+
+  getMetadata(): Promise<Metadata> {
+    return this.#requestJson("/meta");
   }
 
   async sendEnv(

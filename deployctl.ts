@@ -1,12 +1,14 @@
-#!/usr/bin/env -S deno run --allow-read --allow-write --allow-env --allow-net --allow-run --no-check
+#!/usr/bin/env -S deno run --allow-read --allow-write --allow-env --allow-net --allow-run
 
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { parseArgs, semverGreaterThanOrEquals } from "./deps.ts";
+import { semverGreaterThanOrEquals } from "./deps.ts";
+import { parseArgs } from "./src/args.ts";
 import { error } from "./src/error.ts";
 import deploySubcommand from "./src/subcommands/deploy.ts";
 import upgradeSubcommand from "./src/subcommands/upgrade.ts";
 import syncEnvSubcommand from "./src/subcommands/sync_env.ts";
+import logsSubcommand from "./src/subcommands/logs.ts";
 import { MINIMUM_DENO_VERSION, VERSION } from "./src/version.ts";
 import { fetchReleases, getConfigPaths } from "./src/utils/info.ts";
 
@@ -25,6 +27,7 @@ To send local env vars a project:
 SUBCOMMANDS:
     deploy    Deploy a script with static files to Deno Deploy
     upgrade   Upgrade deployctl to the given version (defaults to latest)
+    logs      View logs for the given project
     env       Send environment variables defined in a file to a project
 `;
 
@@ -34,30 +37,7 @@ if (!semverGreaterThanOrEquals(Deno.version.deno, MINIMUM_DENO_VERSION)) {
   );
 }
 
-const args = parseArgs(Deno.args, {
-  alias: {
-    "help": "h",
-    "version": "V",
-    "project": "p",
-  },
-  boolean: [
-    "help",
-    "prod",
-    "static",
-    "version",
-    "dry-run",
-  ],
-  string: [
-    "project",
-    "token",
-    "include",
-    "exclude",
-    "import-map",
-  ],
-  default: {
-    static: true,
-  },
-});
+const args = parseArgs(Deno.args);
 
 if (Deno.isatty(Deno.stdin.rid)) {
   let latestVersion;
@@ -111,6 +91,8 @@ switch (subcommand) {
     break;
   case "env":
     await syncEnvSubcommand(args);
+  case "logs":
+    await logsSubcommand(args);
     break;
   default:
     if (args.version) {
