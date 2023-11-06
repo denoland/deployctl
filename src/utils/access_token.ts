@@ -76,7 +76,7 @@ async function provision(): Promise<string> {
     wait({ text: "", indent: errIndent + 1 }).start().fail(error);
   }
 
-  const spinner = wait("waiting for authorization...").start();
+  const spinner = wait("Waiting for authorization...").start();
 
   const tokenOrError = await tokenStream.json();
 
