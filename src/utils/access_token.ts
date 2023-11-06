@@ -54,26 +54,34 @@ async function provision(): Promise<string> {
       break;
     }
   }
-  const open = new Deno.Command(openCmd, {
-    args: [url],
-    stderr: "piped",
-    stdout: "piped",
-  })
-    .spawn();
+  const open = openCmd !== undefined
+    ? new Deno.Command(openCmd, {
+      args: [url],
+      stderr: "piped",
+      stdout: "piped",
+    })
+      .spawn()
+    : undefined;
 
-  if (!(await open.status).success) {
+  if (open == undefined) {
+    const warn =
+      "Cannot open the authorization URL automatically. Please navigate to it manually using your usual browser";
+    wait("").start().info(warn);
+  } else if (!(await open.status).success) {
     const warn =
       "Failed to open the authorization URL in your default browser. Please navigate to it manually";
     wait("").start().warn(warn);
-    let error = new TextDecoder().decode((await open.output()).stderr);
-    const errIndent = 2;
-    const elipsis = "...";
-    const maxErrLength = warn.length - errIndent;
-    if (error.length > maxErrLength) {
-      error = error.slice(0, maxErrLength - elipsis.length) + elipsis;
+    if (open !== undefined) {
+      let error = new TextDecoder().decode((await open.output()).stderr);
+      const errIndent = 2;
+      const elipsis = "...";
+      const maxErrLength = warn.length - errIndent;
+      if (error.length > maxErrLength) {
+        error = error.slice(0, maxErrLength - elipsis.length) + elipsis;
+      }
+      // resulting indentation is 1 less than configured
+      wait({ text: "", indent: errIndent + 1 }).start().fail(error);
     }
-    // resulting indentation is 1 less than configured
-    wait({ text: "", indent: errIndent + 1 }).start().fail(error);
   }
 
   const spinner = wait("Waiting for authorization...").start();
