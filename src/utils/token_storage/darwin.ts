@@ -1,4 +1,4 @@
-import keychain from "npm:keychain";
+import keychain from "npm:keychain@1.5.0";
 
 const KEYCHAIN_CREDS = { account: "Deno Deploy", service: "DeployCTL" };
 
