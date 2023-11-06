@@ -24,7 +24,7 @@ jobs:
       - name: Setup Deno
         uses: denoland/setup-deno@v1
         with:
-          deno-version: ${{ matrix.deno == 'old' && '1.28.3' || (matrix.deno == 'stable' && '1.x' || matrix.deno) }}
+          deno-version: ${{ matrix.deno == 'old' && '1.37.2' || (matrix.deno == 'stable' && '1.x' || matrix.deno) }}
 
       - run: deno --version
 
