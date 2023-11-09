@@ -5,6 +5,7 @@ import { wait } from "../utils/spinner.ts";
 import { error } from "../error.ts";
 import { API, APIError } from "../utils/api.ts";
 import type { Project } from "../utils/api_types.ts";
+import TokenProvisioner from "../utils/access_token.ts";
 
 const help = `deployctl logs
 View logs for the given project. It supports both live logs where the logs are streamed to the console as they are
@@ -85,10 +86,6 @@ export default async function (args: Args): Promise<void> {
   }
   const token = logSubcommandArgs.token ?? Deno.env.get("DENO_DEPLOY_TOKEN") ??
     null;
-  if (token === null) {
-    console.error(help);
-    error("Missing access token. Set via --token or DENO_DEPLOY_TOKEN.");
-  }
   if (logSubcommandArgs.project === null) {
     console.error(help);
     error("Missing project ID.");
@@ -111,7 +108,9 @@ export default async function (args: Args): Promise<void> {
     error("--since must be earlier than --until");
   }
 
-  const api = API.fromToken(token);
+  const api = token
+    ? API.fromToken(token)
+    : API.withTokenProvisioner(TokenProvisioner);
   const { regionCodes } = await api.getMetadata();
   if (logSubcommandArgs.regions !== null) {
     const invalidRegions = getInvalidRegions(
