@@ -130,7 +130,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
   if (project === null) {
     projectInfoSpinner.stop();
     const projectCreationSpinner = wait(
-      `Project '${opts.project}' not found. Creating...`,
+      `Project '${opts.project}' not found in any of the user's organizations. Creating...`,
     ).start();
     try {
       project = await api.createProject(opts.project);
