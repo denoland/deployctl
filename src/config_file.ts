@@ -1,7 +1,6 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { dirname } from "https://deno.land/std@0.170.0/path/win32.ts";
-import { join } from "../deps.ts";
+import { dirname, join } from "../deps.ts";
 import { error } from "./error.ts";
 import { wait } from "./utils/spinner.ts";
 

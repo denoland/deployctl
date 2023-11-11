@@ -2,6 +2,7 @@
 
 // std
 export {
+  dirname,
   fromFileUrl,
   join,
   normalize,
