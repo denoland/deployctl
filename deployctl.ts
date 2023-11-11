@@ -10,6 +10,8 @@ import upgradeSubcommand from "./src/subcommands/upgrade.ts";
 import logsSubcommand from "./src/subcommands/logs.ts";
 import { MINIMUM_DENO_VERSION, VERSION } from "./src/version.ts";
 import { fetchReleases, getConfigPaths } from "./src/utils/info.ts";
+import configFile from "./src/config_file.ts";
+import { wait } from "./src/utils/spinner.ts";
 
 const help = `deployctl ${VERSION}
 Command line tool for Deno Deploy.
@@ -33,6 +35,17 @@ if (!semverGreaterThanOrEquals(Deno.version.deno, MINIMUM_DENO_VERSION)) {
 }
 
 const args = parseArgs(Deno.args);
+const config = await configFile.read(
+  args.config ?? configFile.cwdOrAncestors(),
+);
+if (config === null && args.config !== undefined && !args["save-config"]) {
+  error(`Could not find or read the config file '${args.config}'`);
+}
+if (config !== null) {
+  wait("").info(`Using config file '${config.path()}'`);
+  config.useAsDefaultFor(args);
+  args.config = config.path();
+}
 
 if (Deno.isatty(Deno.stdin.rid)) {
   let latestVersion;

@@ -2,6 +2,7 @@
 
 import { fromFileUrl, normalize, Spinner } from "../../deps.ts";
 import { wait } from "../utils/spinner.ts";
+import configFile from "../config_file.ts";
 import { error } from "../error.ts";
 import { API, APIError } from "../utils/api.ts";
 import { ManifestEntry } from "../utils/api_types.ts";
@@ -49,6 +50,8 @@ export interface Args {
   project: string | null;
   importMap: string | null;
   dryRun: boolean;
+  config: string | null;
+  saveConfig: boolean;
 }
 
 // deno-lint-ignore no-explicit-any
@@ -63,6 +66,8 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     exclude: rawArgs.exclude?.split(","),
     include: rawArgs.include?.split(","),
     dryRun: !!rawArgs["dry-run"],
+    config: rawArgs.config ? String(rawArgs.config) : null,
+    saveConfig: !!rawArgs["save-config"],
   };
   const entrypoint: string | null = typeof rawArgs._[0] === "string"
     ? rawArgs._[0]
@@ -98,6 +103,8 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     include: args.include?.map((pattern) => normalize(pattern)),
     exclude: args.exclude?.map((pattern) => normalize(pattern)),
     dryRun: args.dryRun,
+    config: args.config,
+    saveConfig: args.saveConfig,
   };
 
   await deploy(opts);
@@ -113,6 +120,8 @@ interface DeployOpts {
   token: string | null;
   project: string;
   dryRun: boolean;
+  config: string | null;
+  saveConfig: boolean;
 }
 
 async function deploy(opts: DeployOpts): Promise<void> {
@@ -127,16 +136,19 @@ async function deploy(opts: DeployOpts): Promise<void> {
   const project = await api.getProject(opts.project);
   if (project === null) {
     projectSpinner.fail("Project not found.");
-    Deno.exit(1);
+    return Deno.exit(1);
   }
+  // opts.project is persisted in deno.json. We want to store the project id even if user provided
+  // project name to facilitate project renaming.
+  opts.project = project.id;
 
-  const deploymentsListing = await api.getDeployments(project!.id);
+  const deploymentsListing = await api.getDeployments(project.id);
   if (deploymentsListing === null) {
     projectSpinner.fail("Project deployments details not found.");
     Deno.exit(1);
   }
   const [projectDeployments, _pagination] = deploymentsListing!;
-  projectSpinner.succeed(`Project: ${project!.name}`);
+  projectSpinner.succeed(`Project: ${project.name}`);
 
   if (projectDeployments.length === 0) {
     wait("").start().info(
@@ -252,6 +264,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
         case "success": {
           const deploymentKind = opts.prod ? "Production" : "Preview";
           deploySpinner!.succeed(`${deploymentKind} deployment complete.`);
+          await configFile.maybeWrite(opts.config, opts, opts.saveConfig)
           console.log("\nView at:");
           for (const { domain } of event.domainMappings) {
             console.log(` - https://${domain}`);
