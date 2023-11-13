@@ -264,7 +264,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
         case "success": {
           const deploymentKind = opts.prod ? "Production" : "Preview";
           deploySpinner!.succeed(`${deploymentKind} deployment complete.`);
-          await configFile.maybeWrite(opts.config, opts, opts.saveConfig)
+          await configFile.maybeWrite(opts.config, opts, opts.saveConfig);
           console.log("\nView at:");
           for (const { domain } of event.domainMappings) {
             console.log(` - https://${domain}`);

@@ -15,7 +15,7 @@ export function parseArgs(args: string[]) {
       "static",
       "version",
       "dry-run",
-      "save-config"
+      "save-config",
     ],
     string: [
       "project",
