@@ -31,6 +31,7 @@ export function parseArgs(args: string[]) {
       "regions",
       "limit",
       "config",
+      "entrypoint",
     ],
     collect: ["grep"],
     default: {

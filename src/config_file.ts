@@ -1,7 +1,8 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { dirname, join } from "../deps.ts";
+import { dirname, join, relative, resolve } from "../deps.ts";
 import { error } from "./error.ts";
+import { isURL } from "./utils/entrypoint.ts";
 import { wait } from "./utils/spinner.ts";
 
 const DEFAULT_FILENAME = "deno.json";
@@ -9,6 +10,7 @@ const DEFAULT_FILENAME = "deno.json";
 /** Arguments persisted in the deno.json config file */
 interface ConfigArgs {
   project?: string;
+  entrypoint?: string;
 }
 
 class ConfigFile {
@@ -17,7 +19,10 @@ class ConfigFile {
 
   constructor(path: string, content: { deploy?: ConfigArgs }) {
     this.#path = path;
-    this.#content = content;
+    this.#content = {
+      ...content,
+      deploy: content.deploy && this.normalize(content.deploy),
+    };
   }
 
   /**
@@ -38,11 +43,8 @@ class ConfigFile {
    * Ignores any property in `args` not meant to be persisted.
    */
   override(args: ConfigArgs) {
-    if (this.#content.deploy === undefined) {
-      this.#content.deploy = {};
-    }
-    // Update only specific properties as args might contain properties we don't want in the config file
-    this.#content.deploy.project = args.project;
+    const normalizedArgs = this.normalize(args);
+    this.#content.deploy = normalizedArgs;
   }
 
   /**
@@ -50,8 +52,12 @@ class ConfigFile {
    * the arg, fill it with the value in this `ConfigFile`, if any.
    */
   useAsDefaultFor(args: ConfigArgs) {
-    if (args.project === undefined && this.#content.deploy?.project) {
-      args.project = this.#content.deploy?.project;
+    for (const [key, thisValue] of Object.entries(this.args())) {
+      // deno-lint-ignore no-explicit-any
+      if ((args as any)[key] === undefined && thisValue) {
+        // deno-lint-ignore no-explicit-any
+        (args as any)[key] = thisValue;
+      }
     }
   }
 
@@ -60,16 +66,27 @@ class ConfigFile {
    * Ignores any property in `args` not meant to be persisted.
    */
   eq(args: ConfigArgs) {
-    const thisContent = (this.#content.deploy ?? {}) as {
-      [x: string]: unknown;
-    };
-    const otherConfig = ConfigFile.create(this.#path, args);
-    for (const [key, otherValue] of Object.entries(otherConfig.args())) {
-      if (thisContent[key] !== otherValue) {
+    const otherConfigArgs = this.normalize(args);
+    // Iterate over the other args as they might include args not yet persisted in the config file
+    for (const [key, otherValue] of Object.entries(otherConfigArgs)) {
+      // deno-lint-ignore no-explicit-any
+      if ((this.args() as any)[key] !== otherValue) {
         return false;
       }
     }
     return true;
+  }
+
+  normalize(args: ConfigArgs): ConfigArgs {
+    // Copy object as normalization is internal to the config file
+    const normalizedArgs = {
+      project: args.project,
+      entrypoint: (args.entrypoint && !isURL(args.entrypoint))
+        ? resolve(args.entrypoint)
+        // Backoff if entrypoint is URL, the user knows what they're doing
+        : args.entrypoint,
+    };
+    return normalizedArgs;
   }
 
   /** Return whether the `ConfigFile` has the `deploy` namespace */
@@ -77,8 +94,37 @@ class ConfigFile {
     return this.#content.deploy !== undefined;
   }
 
-  stringify() {
-    return JSON.stringify(this.#content, null, 2);
+  static fromFileContent(filepath: string, content: string) {
+    const parsedContent = JSON.parse(content);
+    const configContent = {
+      ...parsedContent,
+      deploy: parsedContent.deploy && {
+        ...parsedContent.deploy,
+        entrypoint: parsedContent.deploy.entrypoint &&
+          (isURL(parsedContent.deploy.entrypoint)
+            // Backoff if entrypoint is URL, the user knows what they're doing
+            ? parsedContent.deploy.entrypoint
+            // entrypoint must be interpreted as absolute or relative to the config file
+            : resolve(dirname(filepath), parsedContent.deploy.entrypoint)),
+      },
+    };
+    return new ConfigFile(filepath, configContent);
+  }
+
+  toFileContent() {
+    const content = {
+      ...this.#content,
+      deploy: this.#content.deploy && {
+        ...this.#content.deploy,
+        entrypoint: this.#content.deploy.entrypoint &&
+          (isURL(this.#content.deploy.entrypoint)
+            // Backoff if entrypoint is URL, the user knows what they're doing
+            ? this.#content.deploy.entrypoint
+            // entrypoint must be stored relative to the config file
+            : relative(dirname(this.#path), this.#content.deploy.entrypoint)),
+      },
+    };
+    return JSON.stringify(content, null, 2);
   }
 
   path() {
@@ -105,8 +151,7 @@ export default {
         continue;
       }
       try {
-        const parsedContent = JSON.parse(content);
-        return new ConfigFile(filepath, parsedContent);
+        return ConfigFile.fromFileContent(filepath, content);
       } catch (e) {
         error(e);
       }
@@ -147,7 +192,7 @@ export default {
     }
     await Deno.writeTextFile(
       config.path(),
-      (config satisfies ConfigFile).stringify(),
+      (config satisfies ConfigFile).toFileContent(),
     );
     wait("").succeed(
       `${

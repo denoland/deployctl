@@ -8,6 +8,7 @@ export {
   normalize,
   resolve,
   toFileUrl,
+  relative,
 } from "https://deno.land/std@0.170.0/path/mod.ts";
 export {
   bold,

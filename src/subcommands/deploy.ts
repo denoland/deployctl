@@ -35,7 +35,8 @@ OPTIONS:
     -h, --help                Prints help information
         --no-static           Don't include the files in the CWD as static files
         --prod                Create a production deployment (default is preview deployment)
-    -p, --project=NAME        The project to deploy to
+    -p, --project=<NAME|ID>   The project to deploy to
+    -e, --entrypoint=<URL>
         --token=TOKEN         The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
         --dry-run             Dry run the deployment process.
 `;
@@ -48,6 +49,7 @@ export interface Args {
   include?: string[];
   token: string | null;
   project: string | null;
+  entrypoint: string | null;
   importMap: string | null;
   dryRun: boolean;
   config: string | null;
@@ -56,12 +58,20 @@ export interface Args {
 
 // deno-lint-ignore no-explicit-any
 export default async function (rawArgs: Record<string, any>): Promise<void> {
+  const positionalEntrypoint: string | null = typeof rawArgs._[0] === "string"
+    ? rawArgs._[0]
+    : null;
   const args: Args = {
     help: !!rawArgs.help,
     static: !!rawArgs.static,
     prod: !!rawArgs.prod,
     token: rawArgs.token ? String(rawArgs.token) : null,
     project: rawArgs.project ? String(rawArgs.project) : null,
+    entrypoint: positionalEntrypoint !== null
+      ? positionalEntrypoint
+      : rawArgs["entrypoint"]
+      ? String(rawArgs["entrypoint"])
+      : null,
     importMap: rawArgs["import-map"] ? String(rawArgs["import-map"]) : null,
     exclude: rawArgs.exclude?.split(","),
     include: rawArgs.include?.split(","),
@@ -69,15 +79,14 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     config: rawArgs.config ? String(rawArgs.config) : null,
     saveConfig: !!rawArgs["save-config"],
   };
-  const entrypoint: string | null = typeof rawArgs._[0] === "string"
-    ? rawArgs._[0]
-    : null;
+
   if (args.help) {
     console.log(help);
     Deno.exit(0);
   }
   const token = args.token ?? Deno.env.get("DENO_DEPLOY_TOKEN") ?? null;
-  if (entrypoint === null) {
+
+  if (args.entrypoint === null) {
     console.error(help);
     error("No entrypoint specifier given.");
   }
@@ -91,7 +100,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
   }
 
   const opts = {
-    entrypoint: await parseEntrypoint(entrypoint).catch((e) => error(e)),
+    entrypoint: args.entrypoint,
     importMapUrl: args.importMap === null
       ? null
       : await parseEntrypoint(args.importMap, undefined, "import map")
@@ -111,7 +120,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
 }
 
 interface DeployOpts {
-  entrypoint: URL;
+  entrypoint: string;
   importMapUrl: URL | null;
   static: boolean;
   prod: boolean;
@@ -125,6 +134,7 @@ interface DeployOpts {
 }
 
 async function deploy(opts: DeployOpts): Promise<void> {
+  let url = await parseEntrypoint(opts.entrypoint).catch(error);
   if (opts.dryRun) {
     wait("").start().info("Performing dry run of deployment");
   }
@@ -157,12 +167,14 @@ async function deploy(opts: DeployOpts): Promise<void> {
     opts.prod = true;
   }
 
-  let url = opts.entrypoint;
   const cwd = Deno.cwd();
   if (url.protocol === "file:") {
     const path = fromFileUrl(url);
     if (!path.startsWith(cwd)) {
+      wait("").fail(`Entrypoint: ${path}`);
       error("Entrypoint must be in the current working directory.");
+    } else {
+      wait("").succeed(`Entrypoint: ${path}`);
     }
     const entrypoint = path.slice(cwd.length);
     url = new URL(`file:///src${entrypoint}`);
