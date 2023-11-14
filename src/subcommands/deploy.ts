@@ -39,6 +39,8 @@ OPTIONS:
     -e, --entrypoint=<URL>
         --token=TOKEN         The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
         --dry-run             Dry run the deployment process.
+        --config              Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
+        --save-config         Persist the arguments used into the DeployCTL config file
 `;
 
 export interface Args {
