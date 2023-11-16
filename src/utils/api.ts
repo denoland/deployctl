@@ -159,6 +159,15 @@ export class API {
     }
   }
 
+  async createProject(
+    name?: string,
+    organizationId?: string,
+    envs?: Record<string, string>,
+  ): Promise<Project> {
+    const body = { name, organizationId, envs };
+    return await this.#requestJson(`/projects/`, { method: "POST", body });
+  }
+
   async getDeployments(
     projectId: string,
   ): Promise<[Deployment[], DeploymentsSummary] | null> {
