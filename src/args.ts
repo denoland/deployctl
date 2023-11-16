@@ -38,6 +38,7 @@ export function parseArgs(args: string[]) {
       static: true,
       limit: "100",
       config: Deno.env.get("DEPLOYCTL_CONFIG_FILE"),
+      token: Deno.env.get("DENO_DEPLOY_TOKEN"),
     },
   });
   return parsed;
