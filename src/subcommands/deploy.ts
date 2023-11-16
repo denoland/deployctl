@@ -36,7 +36,7 @@ OPTIONS:
         --no-static             Don't include the files in the CWD as static files
         --prod                  Create a production deployment (default is preview deployment)
         --project=<NAME|ID>     The project to deploy to
-        --entrypoint=<PATH|URL>
+        --entrypoint=<PATH|URL> The file that Deno Deploy will run
         --token=TOKEN           The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
         --dry-run               Dry run the deployment process.
         --config                Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
