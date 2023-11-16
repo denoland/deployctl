@@ -141,8 +141,6 @@ async function deploy(opts: DeployOpts): Promise<void> {
     wait({ text: "", indent: 3 }).start().info(
       `You can configure the name, env vars, custom domains and more in https://dash.deno.com/projects/${project.name}/settings`,
     );
-
-    opts.prod = true;
     projectIsEmpty = true;
   } else {
     const deploymentsListing = await api.getDeployments(project.id);
@@ -154,12 +152,12 @@ async function deploy(opts: DeployOpts): Promise<void> {
     projectInfoSpinner.succeed(`Project: ${project.name}`);
 
     if (projectDeployments.length === 0) {
-      opts.prod = true;
       projectIsEmpty = true;
     }
   }
 
   if (projectIsEmpty) {
+    opts.prod = true;
     wait({ text: "", indent: 3 }).start().info(
       "The project does not have a deployment yet. Automatically pushing initial deployment to production (use --prod for further updates).",
     );
