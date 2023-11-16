@@ -119,30 +119,48 @@ async function deploy(opts: DeployOpts): Promise<void> {
   if (opts.dryRun) {
     wait("").start().info("Performing dry run of deployment");
   }
-  const projectSpinner = wait("Fetching project information...").start();
+  const projectInfoSpinner = wait(
+    `Fetching project '${opts.project}' information...`,
+  ).start();
   const api = opts.token
     ? API.fromToken(opts.token)
     : API.withTokenProvisioner(TokenProvisioner);
-
-  const project = await api.getProject(opts.project);
+  let projectIsEmpty = false;
+  let project = await api.getProject(opts.project);
   if (project === null) {
-    projectSpinner.fail("Project not found.");
-    Deno.exit(1);
-  }
-
-  const deploymentsListing = await api.getDeployments(project!.id);
-  if (deploymentsListing === null) {
-    projectSpinner.fail("Project deployments details not found.");
-    Deno.exit(1);
-  }
-  const [projectDeployments, _pagination] = deploymentsListing!;
-  projectSpinner.succeed(`Project: ${project!.name}`);
-
-  if (projectDeployments.length === 0) {
-    wait("").start().info(
-      "Empty project detected, automatically pushing initial deployment to production (use --prod for further updates).",
+    projectInfoSpinner.stop();
+    const projectCreationSpinner = wait(
+      `Project '${opts.project}' not found in any of the user's organizations. Creating...`,
+    ).start();
+    try {
+      project = await api.createProject(opts.project);
+    } catch (e) {
+      error(e.message);
+    }
+    projectCreationSpinner.succeed(`Created new project '${opts.project}'.`);
+    wait({ text: "", indent: 3 }).start().info(
+      `You can configure the name, env vars, custom domains and more in https://dash.deno.com/projects/${project.name}/settings`,
     );
+    projectIsEmpty = true;
+  } else {
+    const deploymentsListing = await api.getDeployments(project.id);
+    if (deploymentsListing === null) {
+      projectInfoSpinner.fail("Project deployments details not found.");
+      Deno.exit(1);
+    }
+    const [projectDeployments, _pagination] = deploymentsListing!;
+    projectInfoSpinner.succeed(`Project: ${project.name}`);
+
+    if (projectDeployments.length === 0) {
+      projectIsEmpty = true;
+    }
+  }
+
+  if (projectIsEmpty) {
     opts.prod = true;
+    wait({ text: "", indent: 3 }).start().info(
+      "The project does not have a deployment yet. Automatically pushing initial deployment to production (use --prod for further updates).",
+    );
   }
 
   let url = opts.entrypoint;
