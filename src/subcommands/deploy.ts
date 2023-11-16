@@ -29,18 +29,18 @@ USAGE:
     deployctl deploy [OPTIONS] <ENTRYPOINT>
 
 OPTIONS:
-        --exclude=<PATTERNS>  Exclude files that match this pattern
-        --include=<PATTERNS>  Only upload files that match this pattern
-        --import-map=<FILE>   Use import map file
-    -h, --help                Prints help information
-        --no-static           Don't include the files in the CWD as static files
-        --prod                Create a production deployment (default is preview deployment)
-        --project=<NAME|ID>   The project to deploy to
-        --entrypoint=<URL>
-        --token=TOKEN         The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
-        --dry-run             Dry run the deployment process.
-        --config              Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
-        --save-config         Persist the arguments used into the DeployCTL config file
+        --exclude=<PATTERNS>    Exclude files that match this pattern
+        --include=<PATTERNS>    Only upload files that match this pattern
+        --import-map=<FILE>     Use import map file
+    -h, --help                  Prints help information
+        --no-static             Don't include the files in the CWD as static files
+        --prod                  Create a production deployment (default is preview deployment)
+        --project=<NAME|ID>     The project to deploy to
+        --entrypoint=<PATH|URL>
+        --token=TOKEN           The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
+        --dry-run               Dry run the deployment process.
+        --config                Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
+        --save-config           Persist the arguments used into the DeployCTL config file
 `;
 
 export interface Args {
