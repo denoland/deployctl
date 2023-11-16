@@ -1,11 +1,13 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { fromFileUrl, normalize, Spinner, wait } from "../../deps.ts";
+import { fromFileUrl, normalize, Spinner } from "../../deps.ts";
+import { wait } from "../utils/spinner.ts";
 import { error } from "../error.ts";
 import { API, APIError } from "../utils/api.ts";
 import { ManifestEntry } from "../utils/api_types.ts";
 import { parseEntrypoint } from "../utils/entrypoint.ts";
 import { walk } from "../utils/walk.ts";
+import TokenProvisioner from "../utils/access_token.ts";
 
 const help = `deployctl deploy
 Deploy a script with static files to Deno Deploy.
@@ -70,10 +72,6 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     Deno.exit(0);
   }
   const token = args.token ?? Deno.env.get("DENO_DEPLOY_TOKEN") ?? null;
-  if (token === null) {
-    console.error(help);
-    error("Missing access token. Set via --token or DENO_DEPLOY_TOKEN.");
-  }
   if (entrypoint === null) {
     console.error(help);
     error("No entrypoint specifier given.");
@@ -112,7 +110,7 @@ interface DeployOpts {
   prod: boolean;
   exclude?: string[];
   include?: string[];
-  token: string;
+  token: string | null;
   project: string;
   dryRun: boolean;
 }
@@ -124,7 +122,9 @@ async function deploy(opts: DeployOpts): Promise<void> {
   const projectInfoSpinner = wait(
     "Fetching project '${opts.project}' information...",
   ).start();
-  const api = API.fromToken(opts.token);
+  const api = opts.token
+    ? API.fromToken(opts.token)
+    : API.withTokenProvisioner(TokenProvisioner);
   let projectIsEmpty = false;
   let project = await api.getProject(opts.project);
   if (project === null) {

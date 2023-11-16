@@ -42,19 +42,44 @@ export class APIError extends Error {
   }
 }
 
+export function endpoint() {
+  return Deno.env.get("DEPLOY_API_ENDPOINT") ?? "https://dash.deno.com";
+}
+
+interface TokenProvisioner {
+  /**
+   * Get the access token from a secure local storage or any other cache form.
+   * If there isn't any token cached, returns `null`.
+   */
+  get(): Promise<string | null>;
+  /**
+   * Provision a new access token for DeployCTL
+   */
+  provision(): Promise<string>;
+  /**
+   * Delete the token from cache, forcing a new provision in the next request
+   */
+  revoke(): Promise<void>;
+}
+
 export class API {
   #endpoint: string;
-  #authorization: string;
+  #authorization: string | TokenProvisioner;
 
-  constructor(authorization: string, endpoint: string) {
+  constructor(
+    authorization: string | TokenProvisioner,
+    endpoint: string,
+  ) {
     this.#authorization = authorization;
     this.#endpoint = endpoint;
   }
 
   static fromToken(token: string) {
-    const endpoint = Deno.env.get("DEPLOY_API_ENDPOINT") ??
-      "https://dash.deno.com";
-    return new API(`Bearer ${token}`, endpoint);
+    return new API(`Bearer ${token}`, endpoint());
+  }
+
+  static withTokenProvisioner(provisioner: TokenProvisioner) {
+    return new API(provisioner, endpoint());
   }
 
   async #request(path: string, opts: RequestOptions = {}): Promise<Response> {
@@ -63,16 +88,27 @@ export class API {
     const body = opts.body !== undefined
       ? opts.body instanceof FormData ? opts.body : JSON.stringify(opts.body)
       : undefined;
+    const authorization = typeof this.#authorization === "string"
+      ? this.#authorization
+      : `Bearer ${
+        await this.#authorization.get() ?? await this.#authorization.provision()
+      }`;
     const headers = {
       "Accept": "application/json",
-      "Authorization": this.#authorization,
+      "Authorization": authorization,
       ...(opts.body !== undefined
         ? opts.body instanceof FormData
           ? {}
           : { "Content-Type": "application/json" }
         : {}),
     };
-    return await fetch(url, { method, headers, body });
+    let res = await fetch(url, { method, headers, body });
+    if (res.status === 401 && typeof this.#authorization === "object") {
+      // Token expired or revoked. Provision again and retry
+      headers.Authorization = `Bearer ${await this.#authorization.provision()}`;
+      res = await fetch(url, { method, headers, body });
+    }
+    return res;
   }
 
   async #requestJson<T>(path: string, opts?: RequestOptions): Promise<T> {
