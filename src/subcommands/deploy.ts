@@ -120,7 +120,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
     wait("").start().info("Performing dry run of deployment");
   }
   const projectInfoSpinner = wait(
-    "Fetching project '${opts.project}' information...",
+    `Fetching project '${opts.project}' information...`,
   ).start();
   const api = opts.token
     ? API.fromToken(opts.token)
@@ -137,7 +137,11 @@ async function deploy(opts: DeployOpts): Promise<void> {
     } catch (e) {
       error(e.message);
     }
-    projectCreationSpinner.succeed(`Created new project: ${opts.project}.`);
+    projectCreationSpinner.succeed(`Created new project '${opts.project}'.`);
+    wait({ text: "", indent: 3 }).start().info(
+      `You can configure the name, env vars, custom domains and more in https://dash.deno.com/projects/${project.name}/settings`,
+    );
+
     opts.prod = true;
     projectIsEmpty = true;
   } else {
