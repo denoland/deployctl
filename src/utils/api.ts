@@ -160,7 +160,7 @@ export class API {
   }
 
   async createProject(
-    name: string,
+    name?: string,
     organizationId?: string,
     envs?: Record<string, string>,
   ): Promise<Project> {
