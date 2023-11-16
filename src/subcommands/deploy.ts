@@ -29,18 +29,18 @@ USAGE:
     deployctl deploy [OPTIONS] <ENTRYPOINT>
 
 OPTIONS:
-        --exclude=<PATTERNS>  Exclude files that match this pattern
-        --include=<PATTERNS>  Only upload files that match this pattern
-        --import-map=<FILE>   Use import map file
-    -h, --help                Prints help information
-        --no-static           Don't include the files in the CWD as static files
-        --prod                Create a production deployment (default is preview deployment)
-    -p, --project=<NAME|ID>   The project to deploy to
-    -e, --entrypoint=<URL>
-        --token=TOKEN         The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
-        --dry-run             Dry run the deployment process.
-        --config              Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
-        --save-config         Persist the arguments used into the DeployCTL config file
+        --exclude=<PATTERNS>    Exclude files that match this pattern
+        --include=<PATTERNS>    Only upload files that match this pattern
+        --import-map=<FILE>     Use import map file
+    -h, --help                  Prints help information
+        --no-static             Don't include the files in the CWD as static files
+        --prod                  Create a production deployment (default is preview deployment)
+        --project=<NAME|ID>     The project to deploy to
+        --entrypoint=<PATH|URL> The file that Deno Deploy will run
+        --token=TOKEN           The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
+        --dry-run               Dry run the deployment process.
+        --config                Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
+        --save-config           Persist the arguments used into the DeployCTL config file
 `;
 
 export interface Args {
@@ -139,33 +139,51 @@ async function deploy(opts: DeployOpts): Promise<void> {
   if (opts.dryRun) {
     wait("").start().info("Performing dry run of deployment");
   }
-  const projectSpinner = wait("Fetching project information...").start();
+  const projectInfoSpinner = wait(
+    `Fetching project '${opts.project}' information...`,
+  ).start();
   const api = opts.token
     ? API.fromToken(opts.token)
     : API.withTokenProvisioner(TokenProvisioner);
-
-  const project = await api.getProject(opts.project);
+  let projectIsEmpty = false;
+  let project = await api.getProject(opts.project);
   if (project === null) {
-    projectSpinner.fail("Project not found.");
-    return Deno.exit(1);
-  }
-  // opts.project is persisted in deno.json. We want to store the project id even if user provided
-  // project name to facilitate project renaming.
-  opts.project = project.id;
-
-  const deploymentsListing = await api.getDeployments(project.id);
-  if (deploymentsListing === null) {
-    projectSpinner.fail("Project deployments details not found.");
-    Deno.exit(1);
-  }
-  const [projectDeployments, _pagination] = deploymentsListing!;
-  projectSpinner.succeed(`Deploying to project ${project.name}.`);
-
-  if (projectDeployments.length === 0) {
-    wait("").start().info(
-      "Empty project detected, automatically pushing initial deployment to production (use --prod for further updates).",
+    projectInfoSpinner.stop();
+    const projectCreationSpinner = wait(
+      `Project '${opts.project}' not found in any of the user's organizations. Creating...`,
+    ).start();
+    try {
+      project = await api.createProject(opts.project);
+    } catch (e) {
+      error(e.message);
+    }
+    // opts.project is persisted in deno.json. We want to store the project id even if user provided
+    // project name to facilitate project renaming.
+    opts.project = project.id;
+    projectCreationSpinner.succeed(`Created new project '${opts.project}'.`);
+    wait({ text: "", indent: 3 }).start().info(
+      `You can configure the name, env vars, custom domains and more in https://dash.deno.com/projects/${project.name}/settings`,
     );
+    projectIsEmpty = true;
+  } else {
+    const deploymentsListing = await api.getDeployments(project.id);
+    if (deploymentsListing === null) {
+      projectInfoSpinner.fail("Project deployments details not found.");
+      Deno.exit(1);
+    }
+    const [projectDeployments, _pagination] = deploymentsListing!;
+    projectInfoSpinner.succeed(`Deploying to project ${project.name}.`);
+
+    if (projectDeployments.length === 0) {
+      projectIsEmpty = true;
+    }
+  }
+
+  if (projectIsEmpty) {
     opts.prod = true;
+    wait({ text: "", indent: 3 }).start().info(
+      "The project does not have a deployment yet. Automatically pushing initial deployment to production (use --prod for further updates).",
+    );
   }
 
   const cwd = Deno.cwd();

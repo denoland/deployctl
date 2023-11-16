@@ -7,7 +7,6 @@ export function parseArgs(args: string[]) {
     alias: {
       "help": "h",
       "version": "V",
-      "project": "p",
     },
     boolean: [
       "help",
