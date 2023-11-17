@@ -17,6 +17,7 @@ import {
 export interface RequestOptions {
   method?: string;
   body?: unknown;
+  accept?: string;
 }
 
 export class APIError extends Error {
@@ -94,7 +95,7 @@ export class API {
         await this.#authorization.get() ?? await this.#authorization.provision()
       }`;
     const headers = {
-      "Accept": "application/json",
+      "Accept": opts.accept ?? "application/json",
       "Authorization": authorization,
       ...(opts.body !== undefined
         ? opts.body instanceof FormData
@@ -187,6 +188,9 @@ export class API {
   ): AsyncIterable<LiveLog> {
     return this.#requestStream(
       `/projects/${projectId}/deployments/${deploymentId}/logs/`,
+      {
+        accept: "application/x-ndjson",
+      },
     );
   }
 
