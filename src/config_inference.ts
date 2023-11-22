@@ -79,7 +79,7 @@ async function inferProject(api: API) {
           spinner.stop();
         } else {
           spinner.fail(
-            `Trying project name '${projectName}': Creating project...`,
+            `Guessing project name '${projectName}': Creating project...`,
           );
           error(e.code);
         }
