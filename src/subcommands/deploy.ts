@@ -13,20 +13,23 @@ import TokenProvisioner from "../utils/access_token.ts";
 const help = `deployctl deploy
 Deploy a script with static files to Deno Deploy.
 
+Basic usage:
+  deployctl deploy
+
 To deploy a local script:
-  deployctl deploy --project=helloworld main.ts
+  deployctl deploy --project=helloworld --entrypoint=main.ts
 
 To deploy a remote script:
-  deployctl deploy --project=helloworld https://deno.com/examples/hello.js
+  deployctl deploy --project=helloworld --entrypoint=https://deno.com/examples/hello.js
 
 To deploy a remote script without static files:
-  deployctl deploy --project=helloworld --no-static https://deno.com/examples/hello.js
+  deployctl deploy --project=helloworld --entrypoint=https://deno.com/examples/hello.js --no-static
 
 To ignore the node_modules directory while deploying:
-  deployctl deploy --project=helloworld --exclude=node_modules main.tsx
+  deployctl deploy --project=helloworld --entrypoint=main.tsx --exclude=node_modules
 
 USAGE:
-    deployctl deploy [OPTIONS] <ENTRYPOINT>
+    deployctl deploy [OPTIONS] [<ENTRYPOINT>]
 
 OPTIONS:
         --exclude=<PATTERNS>    Exclude files that match this pattern
@@ -36,7 +39,7 @@ OPTIONS:
         --no-static             Don't include the files in the CWD as static files
         --prod                  Create a production deployment (default is preview deployment)
         --project=<NAME|ID>     The project to deploy to
-        --entrypoint=<PATH|URL> The file that Deno Deploy will run
+        --entrypoint=<PATH|URL> The file that Deno Deploy will run. Also available as positional argument, which takes precedence
         --token=TOKEN           The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
         --dry-run               Dry run the deployment process.
         --config                Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
