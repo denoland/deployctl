@@ -140,6 +140,7 @@ export class API {
       throw new Error("Stream ended unexpectedly");
     }
 
+
     const lines = res.body
       .pipeThrough(new TextDecoderStream())
       .pipeThrough(new TextLineStream());
@@ -251,5 +252,10 @@ export class API {
 
   getMetadata(): Promise<Metadata> {
     return this.#requestJson("/meta");
+  }
+
+  stream_metering(project: string) {
+    // deno-lint-ignore no-explicit-any
+    return this.#requestStream<any>(`/projects/${project}/metering`);
   }
 }

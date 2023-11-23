@@ -8,6 +8,7 @@ import { error } from "./src/error.ts";
 import deploySubcommand from "./src/subcommands/deploy.ts";
 import upgradeSubcommand from "./src/subcommands/upgrade.ts";
 import logsSubcommand from "./src/subcommands/logs.ts";
+import topSubcommand from "./src/subcommands/top.ts";
 import { MINIMUM_DENO_VERSION, VERSION } from "./src/version.ts";
 import { fetchReleases, getConfigPaths } from "./src/utils/info.ts";
 
@@ -87,6 +88,8 @@ switch (subcommand) {
   case "logs":
     await logsSubcommand(args);
     break;
+  case "top":
+    await topSubcommand(args);
   default:
     if (args.version) {
       console.log(`deployctl ${VERSION}`);
