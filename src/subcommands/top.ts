@@ -30,11 +30,11 @@ import {
   handleKeyboardControls,
   handleMouseControls,
 } from "https://deno.land/x/tui@2.1.6/mod.ts";
+import { Table, TableUnicodeCharacters } from "https://deno.land/x/tui@2.1.6/src/components/table.ts";
 
 export default async function topSubcommand(args: Args) {
-  const isolateBoxHeight = 6;
-  const isolateBoxWidth = 32;
-  const regions = new Signal([], { deepObserve: true, watchObjectIndex: true });
+  const regionTableHeight = new Signal(4);
+  let regionTableWidth = 0;
   let tui;
   try {
     tui = new Tui({ refreshRate: 1000 / 60 });
@@ -71,65 +71,9 @@ export default async function topSubcommand(args: Args) {
         width: tui.rectangle.value.width - 2,
         height: tui.rectangle.value.height - 3,
       })),
-      // rectangle: new Computed(() => {
-      //   const numCols = Math.floor(
-      //     tui.rectangle.value.width / isolateBoxWidth,
-      //   );
-      //   const width = numCols * isolateBoxWidth;
-      //   const height = Math.ceil(regions.value.length / numCols) *
-      //     isolateBoxHeight;
-      //   return {
-      //     row: 1,
-      //     column: 0,
-      //     width,
-      //     height,
-      //   };
-      // }),
     });
-    //   const numItems = new Signal(0);
-    //   const mainLayout = new GridLayout({
-    //     rectangle: mainBox.rectangle,
-    //     // gapX: 1,
-    //     // gapY: 1,
-    //     pattern: new Computed(() => {
-    //       let grid = [];
-    //       let row = [];
-    //       const minRows = Math.floor(
-    //         mainBox.rectangle.value.height / isolateBoxHeight,
-    //       );
-    //       const numCols = Math.floor(
-    //         mainBox.rectangle.value.width / isolateBoxWidth,
-    //       );
-
-    //       for (const regionId of regions.value) {
-    //         row.push(regionId);
-    //         if (row.length === numCols) {
-    //           grid.push(row);
-    //           row = [];
-    //         }
-    //       }
-    //       if (row) {
-    //         for (let x = row.length; x < numCols; x++) {
-    //           row.push(crypto.randomUUID());
-    //         }
-    //         grid.push(row);
-    //       }
-    //       for (let x = grid.length; x < minRows; x++) {
-    //         grid.push(new Array(numCols).fill("empty"));
-    //       }
-    //       return grid;
-    //     }),
-    //   });
-    //   new Frame({
-    //     parent: tui,
-    //     rectangle: mainBox.rectangle,
-    //     zIndex: 0,
-    //     theme: {},
-    //     charMap: "sharp",
-    //   });
     tui.dispatch();
     tui.run();
-    //   spinner = wait("Gathering data...").start();
     let lastUpdate;
     setInterval(() => {
       if (lastUpdate) {
@@ -143,228 +87,156 @@ export default async function topSubcommand(args: Args) {
     const spinner = wait(`fetching metering of ${args.project}`).start();
     const metering_items = api.stream_metering(args.project!);
     spinner.succeed(`Metering of ${args.project} ready`);
-    const items: { [region: string]: { ts: Date; item: Signal<any> } } = {};
+    const layout = new Signal([], {
+      deepObserve: true,
+      watchObjectIndex: true,
+    });
+    const regions: {
+      [region: string]: {
+        instances: Signal<{
+          [instance: string]: { ts: Date; item: any };
+        }>;
+      };
+    } = {};
     for await (const item of metering_items) {
-      let x = items[item.runner];
-      if (x) {
-        x.ts = new Date();
-        x.item.value = item;
-      } else {
-        x = items[item.runner] = {
-          ts: new Date(),
-          item: new Signal(item),
+      if (item.region.includes("fake")) {
+        continue;
+      }
+      lastUpdate = new Date();
+      let region = regions[item.region];
+      if (region) {
+        region.instances.value[item.runner] = {
+          ts: lastUpdate,
+          item,
         };
+      } else {
+        region = regions[item.region] = {
+          instances: new Signal({
+            [item.runner]: {
+              ts: lastUpdate,
+              item,
+            },
+          }, { deepObserve: true, watchObjectIndex: true }),
+        };
+        layout.value.push(item.region);
 
-        const regionId = crypto.randomUUID().toString();
-        regions.value.push(regionId);
-        x.regionId = regionId;
-
-        const isolateBox = new Box({
+        console.error("NEW TABLE");
+        const regionTable = new Table({
           parent: tui,
-          theme: {},
+          theme: {
+            frame: {},
+            header: {},
+            selectedRow: {},
+          },
           zIndex: 0,
-          // rectangle: mainLayout.element(regionId),
+          // Hack to workaround bug in Tui
+          // (deepObserve in the TableUnicodeCharacters fail with TypeError: Cannot redefine property: Symbol(connected_signal))
+          charMap: new Signal(TableUnicodeCharacters.sharp),
+        //   charMap: "sharp",
+          headers: [
+            {
+              title: "Requests/min",
+            },
+            {
+              title: "CPU usage",
+            },
+            {
+              title: "CPU time/req",
+            },
+            {
+              title: "RSS/5min",
+            },
+          ],
+          data: new Computed(() => {
+            const data = [];
+            for (const instance in region.instances.value) {
+              const { item } = region.instances.value[instance];
+              data.push([
+                item.rpm.toFixed(0),
+                `${(item.cpuTimePerSecond / 10).toFixed(2)}%`,
+                `${(item.cpuTimePerRequest || 0).toFixed(2)}ms`,
+                `${(item.maxRssMemory5Minutes / 1_000_000).toFixed(3)}MB`,
+              ]);
+            }
+            return data;
+          }),
+
           rectangle: new Computed(() => {
+            // console.error("table width: ", regionTableWidth);
             const numCols = Math.floor(
-              mainBox.rectangle.value.width / isolateBoxWidth,
+              mainBox.rectangle.value.width / regionTableWidth,
             );
-            const index = regions.value.indexOf(regionId);
+            const index = layout.value.indexOf(item.region);
             const row = Math.floor(index / numCols);
             const extraRow = row === 0 ? 0 : row;
             const col = index % numCols;
             const extraCol = col === 0 ? 0 : col;
             const remainingWidth = mainBox.rectangle.value.width -
-              (numCols * isolateBoxWidth);
+              (numCols * regionTableWidth);
             const gap = remainingWidth / numCols;
             const rowGap = row !== 0 ? row : 0;
             const colGap = col !== 0 ? gap * col : 0;
             return {
-              row: mainBox.rectangle.value.row + (row * isolateBoxHeight) +
-                extraRow + rowGap,
-              column: mainBox.rectangle.value.column + (col * isolateBoxWidth) +
+              row: mainBox.rectangle.value.row + (row * regionTableHeight.value) +
+                extraRow + rowGap + 1,
+              column: mainBox.rectangle.value.column + (col * regionTableWidth) +
                 extraCol + colGap,
-              height: isolateBoxHeight,
-              width: isolateBoxWidth,
+              height: regionTableHeight.value,
+              width: regionTableWidth,
             };
           }),
-          // rectangle: { row: 2, column: 1, width: 32, height: 6 },
         });
-        new Frame({
-          parent: tui,
+        // console.error("tui --", tui.rectangle.value, "\tmainBox --", mainBox.rectangle.value, "\ttable --", regionTable.rectangle.value);
+        regionTableWidth = regionTable.rectangle.value.width;
+        const regionTitle = new Label({
+          parent: regionTable,
           theme: {},
           zIndex: 0,
-          rectangle: isolateBox.rectangle,
-          charMap: "sharp",
-        });
-        const isolateBoxLayout = new VerticalLayout({
-          rectangle: isolateBox.rectangle,
-          pattern: ["title", "frame", "rpm", "cpuUsage", "cpuRequest", "rss"],
-          // gapY: 1,
-          // gapX: 1,
-        });
-        const regionTitle = new Text({
-          parent: isolateBox,
-          theme: {},
-          zIndex: 0,
+          overwriteRectangle: true,
+          align: {
+            vertical: "center",
+            horizontal: "center",
+          },
           // rectangle: { row: 2, column: 1, width: isolateBox.rectangle.width },
-          rectangle: isolateBoxLayout.element("title"),
-          text: x.item.value.region,
+          rectangle: new Computed(() => ({
+            row: regionTable.rectangle.value.row - 1,
+            column: regionTable.rectangle.value.column,
+            width: regionTable.rectangle.value.width,
+            height: 1,
+          })),
+          text: item.region,
         });
         new Frame({
-          parent: isolateBox,
+          parent: regionTable,
           theme: {},
           zIndex: 0,
           rectangle: regionTitle.rectangle,
           charMap: "sharp",
         });
-        const rpmLayout = new HorizontalLayout({
-          rectangle: isolateBoxLayout.element("rpm"),
-          pattern: ["value", "value", "label", "label", "label", "label"],
-          gapX: 1,
-        });
-        new Label({
-          parent: isolateBox,
-          theme: {},
-          zIndex: 0,
-          overwriteRectangle: true,
-          rectangle: rpmLayout.element("value"),
-          align: { vertical: "center", horizontal: "right" },
-          text: new Computed(() => x.item.value.rpm.toFixed(0)),
-        });
-        new Label({
-          parent: isolateBox,
-          theme: {},
-          zIndex: 0,
-          rectangle: rpmLayout.element("label"),
-          align: { vertical: "center", horizontal: "left" },
-          text: "Requests/s",
-        });
-        const cpuUsageLayout = new HorizontalLayout({
-          rectangle: isolateBoxLayout.element("cpuUsage"),
-          pattern: ["value", "value", "label", "label", "label", "label"],
-          gapX: 1,
-        });
-        new Label({
-          parent: isolateBox,
-          theme: {},
-          zIndex: 0,
-          overwriteRectangle: true,
-          rectangle: cpuUsageLayout.element("value"),
-          align: { vertical: "center", horizontal: "right" },
-          text: new Computed(() =>
-            `${(x.item.value.cpuTimePerSecond / 10).toFixed(2)}%`
-          ),
-        });
-        new Label({
-          parent: isolateBox,
-          theme: {},
-          zIndex: 0,
-          rectangle: cpuUsageLayout.element("label"),
-          align: { vertical: "center", horizontal: "left" },
-          text: "CPU usage/isolate",
-        });
-        const cpuRequestLayout = new HorizontalLayout({
-          rectangle: isolateBoxLayout.element("cpuRequest"),
-          pattern: ["value", "value", "label", "label", "label", "label"],
-          gapX: 1,
-        });
-        new Label({
-          parent: isolateBox,
-          theme: {},
-          zIndex: 0,
-          overwriteRectangle: true,
-          rectangle: cpuRequestLayout.element("value"),
-          align: { vertical: "center", horizontal: "right" },
-          text: new Computed(() =>
-            `${(x.item.value.cpuTimePerRequest || 0).toFixed(2)}ms`
-          ),
-        });
-        new Label({
-          parent: isolateBox,
-          theme: {},
-          zIndex: 0,
-          rectangle: cpuRequestLayout.element("label"),
-          align: { vertical: "center", horizontal: "left" },
-          text: "CPU time/request",
-        });
-        const rssLayout = new HorizontalLayout({
-          rectangle: isolateBoxLayout.element("rss"),
-          pattern: ["value", "value", "label", "label", "label", "label"],
-          gapX: 1,
-        });
-        new Label({
-          parent: isolateBox,
-          theme: {},
-          zIndex: 0,
-          overwriteRectangle: true,
-          rectangle: rssLayout.element("value"),
-          align: { vertical: "center", horizontal: "right" },
-          text: new Computed(() =>
-            `${(x.item.value.maxRssMemory5Minutes / 1_000_000).toFixed(3)}MB`
-          ),
-        });
-        new Label({
-          parent: isolateBox,
-          theme: {},
-          zIndex: 0,
-          rectangle: rssLayout.element("label"),
-          align: { vertical: "center", horizontal: "left" },
-          text: "MAX RSS/5min",
-        });
-        //   new Label({
-        //     parent: isolateBox,
-        //     theme: {},
-        //     zIndex: 0,
-        //     rectangle: { row: 4, column: 1 },
-        //     text: new Computed(() =>
-        //       `${x.item.value.rpm.toFixed(0)} RPM\n${
-        //         (x.item.value.cpuTimePerSecond / 10).toFixed(2)
-        //       }% CPU usage/isolate\n${
-        //         (x.item.value.cpuTimePerRequest || 0).toFixed(2)
-        //       }ms CPU time/request\n${
-        //         (x.item.value.maxRssMemory5Minutes / 1_000_000).toFixed(3)
-        //       }MB MAX RSS/5min`
-        //     ),
-        //     align: {
-        //       horizontal: "left",
-        //       vertical: "top",
-        //     },
-        //   });
-        x.box = isolateBox;
+
+        region.table = regionTable;
       }
 
-      lastUpdate = x.ts;
       headerText.value = "Updated now!";
-      // items[item.runner] = {
-      //   ts: new Date(),
-      //   item: new Signal(item),
-      // };
-      for (const runner of Object.keys(items)) {
-        if (new Date() - items[runner].ts > 30_000) {
-          regions.value.splice(
-            regions.value.indexOf(items[runner].regionId),
-            1,
-          );
-          items[runner].box.destroy();
-          delete items[runner];
+      let maxInstances = 0;
+      for (const region in regions) {
+        if (maxInstances < Object.keys(regions[region].instances.value).length) {
+          maxInstances = Object.keys(regions[region].instances.value).length;
+        }
+        for (const instance in regions[region].instances.value) {
+          if (
+            new Date() - regions[region].instances.value[instance].ts > 30_000
+          ) {
+            delete regions[region].instances.value[instance];
+          }
+        }
+        if (Object.keys(regions[region].instances.value).length === 0) {
+          layout.value.splice(layout.value.indexOf(region));
+          regions[region].table.destroy();
+          delete regions[region];
         }
       }
-      // for (const item of items) {
-      // spinner.stop();
-      // spinner = wait(
-      //   "Updating...\n" +
-      //     Object.values(items).map((item) =>
-      //       `${item.item.region} / ${item.item.runner}\n\t${
-      //         item.item.rpm.toFixed(0)
-      //       } RPM\n\t${
-      //         (item.item.cpuTimePerSecond / 10).toFixed(2)
-      //       }% CPU usage/isolate\n\t${
-      //         item.item.cpuTimePerRequest.toFixed(2)
-      //       }ms CPU time/request\n\t${
-      //         (item.item.maxRssMemory5Minutes / 1_000_000).toFixed(3)
-      //       }MB MAX RSS/5min`
-      //     ).join("\n---\n"),
-      // ).start();
+      regionTableHeight.value = maxInstances + 4;
     }
   } finally {
     if (tui) {
@@ -380,4 +252,3 @@ export default async function topSubcommand(args: Args) {
 // - CPU
 // - memory
 // - network
-
