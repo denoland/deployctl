@@ -90,6 +90,7 @@ switch (subcommand) {
     break;
   case "top":
     await topSubcommand(args);
+    break;
   default:
     if (args.version) {
       console.log(`deployctl ${VERSION}`);

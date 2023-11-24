@@ -30,15 +30,19 @@ import {
   handleKeyboardControls,
   handleMouseControls,
 } from "https://deno.land/x/tui@2.1.6/mod.ts";
-import { Table, TableUnicodeCharacters } from "https://deno.land/x/tui@2.1.6/src/components/table.ts";
+import {
+  Table,
+  TableUnicodeCharacters,
+} from "https://deno.land/x/tui@2.1.6/src/components/table.ts";
 
 export default async function topSubcommand(args: Args) {
-  const regionTableHeight = new Signal(4);
-  let regionTableWidth = 0;
+  const regionTableHeight = new Signal(5);
+  const usesKv = new Signal(false);
+  const usesQueues = new Signal(false);
+  let regionTableWidth = new Signal(0);
   let tui;
   try {
     tui = new Tui({ refreshRate: 1000 / 60 });
-
     handleInput(tui);
     handleMouseControls(tui);
     handleKeyboardControls(tui);
@@ -93,15 +97,14 @@ export default async function topSubcommand(args: Args) {
     });
     const regions: {
       [region: string]: {
+        kvHeadersReady: Signal<boolean>;
+        queuesHeadersReady: Signal<boolean>;
         instances: Signal<{
           [instance: string]: { ts: Date; item: any };
         }>;
       };
     } = {};
     for await (const item of metering_items) {
-      if (item.region.includes("fake")) {
-        continue;
-      }
       lastUpdate = new Date();
       let region = regions[item.region];
       if (region) {
@@ -111,6 +114,10 @@ export default async function topSubcommand(args: Args) {
         };
       } else {
         region = regions[item.region] = {
+          kvHeadersReady: new Signal(usesKv.peek()),
+          queuesHeadersReady: new Signal(usesQueues.peek()),
+          kvRectangleReady: new Signal(usesKv.peek()),
+          queuesRectangleReady: new Signal(usesQueues.peek()),
           instances: new Signal({
             [item.runner]: {
               ts: lastUpdate,
@@ -120,74 +127,132 @@ export default async function topSubcommand(args: Args) {
         };
         layout.value.push(item.region);
 
-        console.error("NEW TABLE");
         const regionTable = new Table({
           parent: tui,
           theme: {
             frame: {},
             header: {},
-            selectedRow: {},
+            selectedRow: { base: (text) => colors.bgBlue(colors.black(text)) },
           },
           zIndex: 0,
           // Hack to workaround bug in Tui
           // (deepObserve in the TableUnicodeCharacters fail with TypeError: Cannot redefine property: Symbol(connected_signal))
           charMap: new Signal(TableUnicodeCharacters.sharp),
-        //   charMap: "sharp",
-          headers: [
-            {
-              title: "Requests/min",
-            },
-            {
-              title: "CPU usage",
-            },
-            {
-              title: "CPU time/req",
-            },
-            {
-              title: "RSS/5min",
-            },
-          ],
+          //   charMap: "sharp",
+          headers: new Computed(() => {
+            const headers = [
+              {
+                title: "Req/min".padStart(7, " "),
+              },
+              {
+                title: "CPU%".padStart(7, " "),
+              },
+              {
+                title: "CPU/req".padStart(8, " "),
+              },
+              {
+                title: "RSS/5min".padStart(9, " "),
+              },
+            ];
+            if (region.kvRectangleReady.value && (usesKv.value || region.kvHeadersReady.value)) {
+              headers.push(
+                {
+                  title: "KVr/min".padStart(7, " "),
+                },
+              );
+              headers.push({
+                title: "KVw/min".padStart(7, " "),
+              });
+              region.kvHeadersReady.value = true;
+            } else {
+                region.queuesHeadersReady.value = false;
+            }
+            if (region.queuesRectangleReady.value && (usesQueues.value || region.queuesHeadersReady.value)) {
+              headers.push(
+                {
+                  title: "enqueue/min".padStart(11, " "),
+                },
+              );
+              headers.push({
+                title: "dequeue/min".padStart(11, " "),
+              });
+              region.queuesHeadersReady.value = true;
+            } else {
+                region.queuesHeadersReady.value = false;
+            }
+            return headers;
+          }),
+
           data: new Computed(() => {
             const data = [];
             for (const instance in region.instances.value) {
               const { item } = region.instances.value[instance];
-              data.push([
-                item.rpm.toFixed(0),
-                `${(item.cpuTimePerSecond / 10).toFixed(2)}%`,
-                `${(item.cpuTimePerRequest || 0).toFixed(2)}ms`,
-                `${(item.maxRssMemory5Minutes / 1_000_000).toFixed(3)}MB`,
-              ]);
+              const row = [
+                item.rpm.toFixed(0).padStart(7, " "),
+                `${(item.cpuTimePerSecond / 10).toFixed(2)}%`.padStart(7, " "),
+                `${(item.cpuTimePerRequest || 0).toFixed(2)}ms`.padStart(
+                  8,
+                  " ",
+                ),
+                `${(item.maxRssMemory5Minutes / 1_000_000).toFixed(3)}MB`
+                  .padStart(9, " "),
+              ];
+              if (usesKv.value && region.kvHeadersReady.value) {
+                row.push(item.kvReadUnitsPerMinute.toFixed(0).padStart(7, " "));
+                row.push(
+                  item.kvWriteUnitsPerMinute.toFixed(0).padStart(7, " "),
+                );
+              } else {
+                region.kvHeadersReady.value = false;
+              }
+              if (usesQueues.value && region.queuesHeadersReady.value) {
+                row.push(
+                  item.queueEnqueuePerMinute.toFixed(0).padStart(11, " "),
+                );
+                row.push(
+                  item.queueDequeuePerMinute.toFixed(0).padStart(11, " "),
+                );
+              } else {
+                region.queuesHeadersReady.value = false;
+              }
+              data.push(row);
             }
             return data;
           }),
 
           rectangle: new Computed(() => {
-            // console.error("table width: ", regionTableWidth);
             const numCols = Math.floor(
-              mainBox.rectangle.value.width / regionTableWidth,
+              mainBox.rectangle.value.width / regionTableWidth.value,
             );
             const index = layout.value.indexOf(item.region);
             const row = Math.floor(index / numCols);
             const extraRow = row === 0 ? 0 : row;
             const col = index % numCols;
             const extraCol = col === 0 ? 0 : col;
-            const remainingWidth = mainBox.rectangle.value.width -
-              (numCols * regionTableWidth);
-            const gap = remainingWidth / numCols;
+            const remainingWidth = Math.floor(
+              mainBox.rectangle.value.width -
+                (numCols * regionTableWidth.value),
+            ) - 1;
+            const gap = Math.floor(remainingWidth / numCols);
             const rowGap = row !== 0 ? row : 0;
             const colGap = col !== 0 ? gap * col : 0;
             return {
-              row: mainBox.rectangle.value.row + (row * regionTableHeight.value) +
-                extraRow + rowGap + 1,
-              column: mainBox.rectangle.value.column + (col * regionTableWidth) +
-                extraCol + colGap,
+              row: Math.ceil(
+                mainBox.rectangle.value.row +
+                  (row * regionTableHeight.value) +
+                  extraRow + rowGap + 1,
+              ),
+              column: Math.ceil(
+                mainBox.rectangle.value.column +
+                  (col * regionTableWidth.value) +
+                  extraCol + colGap,
+              ),
               height: regionTableHeight.value,
-              width: regionTableWidth,
+              width: regionTableWidth.value,
             };
           }),
         });
-        // console.error("tui --", tui.rectangle.value, "\tmainBox --", mainBox.rectangle.value, "\ttable --", regionTable.rectangle.value);
-        regionTableWidth = regionTable.rectangle.value.width;
+        new Effect(() => regionTableWidth.value = regionTable.rectangle.value.width);
         const regionTitle = new Label({
           parent: regionTable,
           theme: {},
@@ -200,8 +265,8 @@ export default async function topSubcommand(args: Args) {
           // rectangle: { row: 2, column: 1, width: isolateBox.rectangle.width },
           rectangle: new Computed(() => ({
             row: regionTable.rectangle.value.row - 1,
-            column: regionTable.rectangle.value.column,
-            width: regionTable.rectangle.value.width,
+            column: regionTable.rectangle.value.column + 1,
+            width: regionTable.rectangle.value.width - 2,
             height: 1,
           })),
           text: item.region,
@@ -219,15 +284,31 @@ export default async function topSubcommand(args: Args) {
 
       headerText.value = "Updated now!";
       let maxInstances = 0;
+      let kv = false;
+      let queues = false;
       for (const region in regions) {
-        if (maxInstances < Object.keys(regions[region].instances.value).length) {
+        if (
+          maxInstances < Object.keys(regions[region].instances.value).length
+        ) {
           maxInstances = Object.keys(regions[region].instances.value).length;
         }
         for (const instance in regions[region].instances.value) {
-          if (
-            new Date() - regions[region].instances.value[instance].ts > 30_000
-          ) {
+          const i = regions[region].instances.value[instance];
+          if (new Date() - i.ts > 30_000) {
             delete regions[region].instances.value[instance];
+          } else {
+            if (
+              i.item.kvReadUnitsPerMinute !== 0 ||
+              i.item.kvWriteUnitsPerMinute !== 0
+            ) {
+              kv = true;
+            }
+            if (
+              i.item.queueEnqueuePerMinute !== 0 ||
+              i.item.queueDequeuePerMinute !== 0
+            ) {
+              queues = true;
+            }
           }
         }
         if (Object.keys(regions[region].instances.value).length === 0) {
@@ -236,7 +317,9 @@ export default async function topSubcommand(args: Args) {
           delete regions[region];
         }
       }
-      regionTableHeight.value = maxInstances + 4;
+      regionTableHeight.value = Math.min(maxInstances, 5) + 4;
+      usesKv.value = kv;
+      usesQueues.value = queues;
     }
   } finally {
     if (tui) {
