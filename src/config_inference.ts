@@ -22,67 +22,75 @@ interface InferredArgs {
  * - Otherwise, use the directory name from where DeployCTL is being executed,
  *   unless the name is useless like "src" or "dist".
  */
-async function inferProject(api: API) {
-  let projectName = await inferProjectFromOriginUrl() ||
-    inferProjectFromCWD();
-  if (projectName) {
-    wait("").start().warn(
-      "No project name or ID provided with either the --project arg or a config file.",
+async function inferProject(api: API, dryRun: boolean) {
+  wait("").start().warn(
+    "No project name or ID provided with either the --project arg or a config file.",
+  );
+  let projectName = await inferProjectFromOriginUrl() || inferProjectFromCWD();
+  if (!projectName) {
+    return;
+  }
+  if (dryRun) {
+    wait("").start().succeed(
+      `Guessed project name '${projectName}'.`,
     );
-    for (;;) {
-      let spinner;
+    wait({ text: "", indent: 3 }).start().info(
+      "This is a dry run. In a live run the guessed name might be different if this one is invalid or already used.",
+    );
+    return projectName;
+  }
+  for (;;) {
+    let spinner;
+    if (projectName) {
+      spinner = wait(
+        `Guessing project name '${projectName}': creating project...`,
+      ).start();
+    } else {
+      spinner = wait("Creating new project with a random name...").start();
+    }
+    try {
+      const project = await api.createProject(projectName);
       if (projectName) {
-        spinner = wait(
-          `Guessing project name '${projectName}': creating project...`,
-        )
-          .start();
-      } else {
-        spinner = wait("Creating new project with a random name...").start();
-      }
-      try {
-        const project = await api.createProject(projectName);
-        if (projectName) {
-          spinner.succeed(
-            `Guessed project name '${project.name}'.`,
-          );
-        } else {
-          spinner.succeed(`Created new project '${project.name}'`);
-        }
-        wait({ text: "", indent: 3 }).start().info(
-          `You can always change the project name in https://dash.deno.com/projects/${project.name}/settings`,
+        spinner.succeed(
+          `Guessed project name '${project.name}'.`,
         );
-        return project.name;
-      } catch (e) {
-        if (e instanceof APIError && e.code == "projectNameInUse") {
+      } else {
+        spinner.succeed(`Created new project '${project.name}'`);
+      }
+      wait({ text: "", indent: 3 }).start().info(
+        `You can always change the project name in https://dash.deno.com/projects/${project.name}/settings`,
+      );
+      return project.name;
+    } catch (e) {
+      if (e instanceof APIError && e.code == "projectNameInUse") {
+        spinner.stop();
+        spinner = wait(
+          `Guessing project name '${projectName}': this project name is already used. Checking ownership...`,
+        ).start();
+        const hasAccess = projectName &&
+          (await api.getProject(projectName)) !== null;
+        if (hasAccess) {
           spinner.stop();
-          spinner = wait(
-            `Guessing project name '${projectName}': this project name is already used. Checking ownership...`,
-          ).start();
-          const hasAccess = projectName &&
-            (await api.getProject(projectName)) !== null;
-          if (hasAccess) {
-            spinner.stop();
-            const confirmation = confirm(
-              `${
-                magenta("?")
-              } Guessing project name '${projectName}': you already own this project. Should I deploy to it?`,
-            );
-            if (confirmation) {
-              return projectName;
-            }
-          }
-          projectName = `${projectName}-${Math.floor(Math.random() * 100)}`;
-          spinner.stop();
-        } else if (e instanceof APIError && e.code == "slugInvalid") {
-          // Fallback to random name given by the API
-          projectName = undefined;
-          spinner.stop();
-        } else {
-          spinner.fail(
-            `Guessing project name '${projectName}': Creating project...`,
+          const confirmation = confirm(
+            `${
+              magenta("?")
+            } Guessing project name '${projectName}': you already own this project. Should I deploy to it?`,
           );
-          error(e.code);
+          if (confirmation) {
+            return projectName;
+          }
         }
+        projectName = `${projectName}-${Math.floor(Math.random() * 100)}`;
+        spinner.stop();
+      } else if (e instanceof APIError && e.code == "slugInvalid") {
+        // Fallback to random name given by the API
+        projectName = undefined;
+        spinner.stop();
+      } else {
+        spinner.fail(
+          `Guessing project name '${projectName}': Creating project...`,
+        );
+        error(e.code);
       }
     }
   }
@@ -117,11 +125,15 @@ function inferProjectFromCWD() {
 
 /** Try getting the origin remote URL using the git command */
 async function getOriginUrlUsingGitCmd(): Promise<string | undefined> {
-  const cmd = await new Deno.Command("git", {
-    args: ["remote", "get-url", "origin"],
-  }).output();
-  if (cmd.stdout) {
-    return new TextDecoder().decode(cmd.stdout).trim();
+  try {
+    const cmd = await new Deno.Command("git", {
+      args: ["remote", "get-url", "origin"],
+    }).output();
+    if (cmd.stdout.length !== 0) {
+      return new TextDecoder().decode(cmd.stdout).trim();
+    }
+  } catch (_) {
+    return;
   }
 }
 
@@ -144,32 +156,29 @@ async function getOriginUrlUsingFS(): Promise<string | undefined> {
   }
 }
 
+const ENTRYPOINT_PATHS = ["main", "index", "src/main", "src/index"];
+const ENTRYPOINT_EXTENSIONS = ["ts", "js", "tsx", "jsx"];
+
 /**
  * Infer the entrypoint of the project
  *
  * The current algorithm infers the entrypoint if one and only one of the following
  * files is found:
- * - main.ts
- * - main.js
- * - index.ts
- * - index.js
- * - src/main.ts
- * - src/main.js
- * - src/index.ts
- * - src/index.js
+ * - main.[tsx|ts|jsx|js]
+ * - index.[tsx|ts|jsx|js]
+ * - src/main.[tsx|ts|jsx|js]
+ * - src/index.[tsx|ts|jsx|js]
  */
 async function inferEntrypoint() {
-  const candidates = await Promise.all([
-    present("main.ts"),
-    present("main.js"),
-    present("index.ts"),
-    present("index.js"),
-    present("src/main.ts"),
-    present("src/main.js"),
-    present("src/index.ts"),
-    present("src/index.js"),
-  ]);
-  const candidatesPresent = candidates.filter((c) => c !== undefined);
+  const candidates = [];
+  for (const path of ENTRYPOINT_PATHS) {
+    for (const extension of ENTRYPOINT_EXTENSIONS) {
+      candidates.push(present(`${path}.${extension}`));
+    }
+  }
+  const candidatesPresent = (await Promise.all(candidates)).filter((c) =>
+    c !== undefined
+  );
   if (candidatesPresent.length === 1) {
     return candidatesPresent[0];
   } else {
@@ -187,13 +196,21 @@ async function present(path: string): Promise<string | undefined> {
 }
 
 export default async function inferMissingConfig(
-  args: InferredArgs & { token?: string },
+  args: InferredArgs & {
+    token?: string;
+    help?: boolean;
+    version?: boolean;
+    "dry-run"?: boolean;
+  },
 ) {
+  if (args.help || args.version) {
+    return;
+  }
   const api = args.token
     ? API.fromToken(args.token)
     : API.withTokenProvisioner(TokenProvisioner);
   if (args.project === undefined) {
-    args.project = await inferProject(api);
+    args.project = await inferProject(api, !!args["dry-run"]);
   }
   if (args.entrypoint === undefined) {
     args.entrypoint = await inferEntrypoint();

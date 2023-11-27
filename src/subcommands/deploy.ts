@@ -89,18 +89,18 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     console.log(help);
     Deno.exit(0);
   }
-
   if (args.entrypoint === null) {
-    console.error(help);
-    error("No entrypoint specifier given.");
+    error(
+      "Unable to guess the entrypoint of this project. Use the --entrypoint argument to provide one.",
+    );
   }
   if (rawArgs._.length > 1) {
-    console.error(help);
     error("Too many positional arguments given.");
   }
   if (args.project === null) {
-    console.error(help);
-    error("Missing project ID.");
+    error(
+      "Unable to guess a project name for this project. Use the --project argument to provide one.",
+    );
   }
 
   const opts = {
