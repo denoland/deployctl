@@ -84,8 +84,6 @@ export default async function (args: Args): Promise<void> {
     console.log(help);
     Deno.exit(0);
   }
-  const token = logSubcommandArgs.token ?? Deno.env.get("DENO_DEPLOY_TOKEN") ??
-    null;
   if (logSubcommandArgs.project === null) {
     console.error(help);
     error("Missing project ID.");
@@ -108,8 +106,8 @@ export default async function (args: Args): Promise<void> {
     error("--since must be earlier than --until");
   }
 
-  const api = token
-    ? API.fromToken(token)
+  const api = logSubcommandArgs.token
+    ? API.fromToken(logSubcommandArgs.token)
     : API.withTokenProvisioner(TokenProvisioner);
   const { regionCodes } = await api.getMetadata();
   if (logSubcommandArgs.regions !== null) {

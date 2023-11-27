@@ -11,6 +11,7 @@ import logsSubcommand from "./src/subcommands/logs.ts";
 import { MINIMUM_DENO_VERSION, VERSION } from "./src/version.ts";
 import { fetchReleases, getConfigPaths } from "./src/utils/info.ts";
 import configFile from "./src/config_file.ts";
+import inferMissingConfig from "./src/config_inference.ts";
 import { wait } from "./src/utils/spinner.ts";
 
 const help = `deployctl ${VERSION}
@@ -82,6 +83,7 @@ const subcommand = args._.shift();
 switch (subcommand) {
   case "deploy":
     await setDefaultsFromConfigFile(args);
+    await inferMissingConfig(args);
     await deploySubcommand(args);
     break;
   case "upgrade":
@@ -115,7 +117,7 @@ async function setDefaultsFromConfigFile(args: Args) {
       error(`Could not find or read the config file '${args.config}'`);
     }
     if (config !== null) {
-      wait("").info(`Using config file '${config.path()}'`);
+      wait("").start().info(`Using config file '${config.path()}'`);
       config.useAsDefaultFor(args);
       // Set the effective config path for the rest of the execution
       args.config = config.path();

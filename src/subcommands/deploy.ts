@@ -89,19 +89,18 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     console.log(help);
     Deno.exit(0);
   }
-  const token = args.token ?? Deno.env.get("DENO_DEPLOY_TOKEN") ?? null;
-
   if (args.entrypoint === null) {
-    console.error(help);
-    error("No entrypoint specifier given.");
+    error(
+      "Unable to guess the entrypoint of this project. Use the --entrypoint argument to provide one.",
+    );
   }
   if (rawArgs._.length > 1) {
-    console.error(help);
     error("Too many positional arguments given.");
   }
   if (args.project === null) {
-    console.error(help);
-    error("Missing project ID.");
+    error(
+      "Unable to guess a project name for this project. Use the --project argument to provide one.",
+    );
   }
 
   const opts = {
@@ -112,7 +111,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
         .catch((e) => error(e)),
     static: args.static,
     prod: args.prod,
-    token,
+    token: args.token,
     project: args.project,
     include: args.include?.map((pattern) => normalize(pattern)),
     exclude: args.exclude?.map((pattern) => normalize(pattern)),
@@ -176,7 +175,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
       Deno.exit(1);
     }
     const [projectDeployments, _pagination] = deploymentsListing!;
-    projectInfoSpinner.succeed(`Project: ${project.name}`);
+    projectInfoSpinner.succeed(`Deploying to project ${project.name}.`);
 
     if (projectDeployments.length === 0) {
       projectIsEmpty = true;
@@ -194,10 +193,10 @@ async function deploy(opts: DeployOpts): Promise<void> {
   if (url.protocol === "file:") {
     const path = fromFileUrl(url);
     if (!path.startsWith(cwd)) {
-      wait("").fail(`Entrypoint: ${path}`);
+      wait("").start().fail(`Entrypoint: ${path}`);
       error("Entrypoint must be in the current working directory.");
     } else {
-      wait("").succeed(`Entrypoint: ${path}`);
+      wait("").start().succeed(`Entrypoint: ${path}`);
     }
     const entrypoint = path.slice(cwd.length);
     url = new URL(`file:///src${entrypoint}`);

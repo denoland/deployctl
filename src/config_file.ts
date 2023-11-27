@@ -179,7 +179,7 @@ export default {
     let config;
     if (existingConfig && existingConfig.hasDeployConfig() && !overwrite) {
       if (!existingConfig.eq(args)) {
-        wait("").info(
+        wait("").start().info(
           `Some of the config used differ from the config found in '${existingConfig.path()}'. Use --save-config to overwrite it.`,
         );
       }
@@ -194,7 +194,7 @@ export default {
       config.path(),
       (config satisfies ConfigFile).toFileContent(),
     );
-    wait("").succeed(
+    wait("").start().succeed(
       `${
         existingConfig ? "Updated" : "Created"
       } config file '${config.path()}'.`,
