@@ -11,10 +11,7 @@ export async function parseEntrypoint(
 ): Promise<URL> {
   let entrypointSpecifier: URL;
   try {
-    if (
-      entrypoint.startsWith("https://") || entrypoint.startsWith("http://") ||
-      entrypoint.startsWith("file://")
-    ) {
+    if (isURL(entrypoint)) {
       entrypointSpecifier = new URL(entrypoint);
     } else {
       entrypointSpecifier = toFileUrl(resolve(root ?? Deno.cwd(), entrypoint));
@@ -32,4 +29,10 @@ export async function parseEntrypoint(
   }
 
   return entrypointSpecifier;
+}
+
+export function isURL(entrypoint: string): boolean {
+  return entrypoint.startsWith("https://") ||
+    entrypoint.startsWith("http://") ||
+    entrypoint.startsWith("file://");
 }

@@ -15,6 +15,7 @@ export function parseArgs(args: string[]) {
       "static",
       "version",
       "dry-run",
+      "save-config",
     ],
     string: [
       "project",
@@ -29,11 +30,14 @@ export function parseArgs(args: string[]) {
       "levels",
       "regions",
       "limit",
+      "config",
+      "entrypoint",
     ],
     collect: ["grep"],
     default: {
       static: true,
       limit: "100",
+      config: Deno.env.get("DEPLOYCTL_CONFIG_FILE"),
     },
   });
   return parsed;

@@ -3,13 +3,15 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
 import { semverGreaterThanOrEquals } from "./deps.ts";
-import { parseArgs } from "./src/args.ts";
+import { Args, parseArgs } from "./src/args.ts";
 import { error } from "./src/error.ts";
 import deploySubcommand from "./src/subcommands/deploy.ts";
 import upgradeSubcommand from "./src/subcommands/upgrade.ts";
 import logsSubcommand from "./src/subcommands/logs.ts";
 import { MINIMUM_DENO_VERSION, VERSION } from "./src/version.ts";
 import { fetchReleases, getConfigPaths } from "./src/utils/info.ts";
+import configFile from "./src/config_file.ts";
+import { wait } from "./src/utils/spinner.ts";
 
 const help = `deployctl ${VERSION}
 Command line tool for Deno Deploy.
@@ -79,12 +81,15 @@ if (Deno.isatty(Deno.stdin.rid)) {
 const subcommand = args._.shift();
 switch (subcommand) {
   case "deploy":
+    await setDefaultsFromConfigFile(args);
     await deploySubcommand(args);
     break;
   case "upgrade":
+    await setDefaultsFromConfigFile(args);
     await upgradeSubcommand(args);
     break;
   case "logs":
+    await setDefaultsFromConfigFile(args);
     await logsSubcommand(args);
     break;
   default:
@@ -98,4 +103,22 @@ switch (subcommand) {
     }
     console.error(help);
     Deno.exit(1);
+}
+
+async function setDefaultsFromConfigFile(args: Args) {
+  const loadFileConfig = !args.version && !args.help;
+  if (loadFileConfig) {
+    const config = await configFile.read(
+      args.config ?? configFile.cwdOrAncestors(),
+    );
+    if (config === null && args.config !== undefined && !args["save-config"]) {
+      error(`Could not find or read the config file '${args.config}'`);
+    }
+    if (config !== null) {
+      wait("").info(`Using config file '${config.path()}'`);
+      config.useAsDefaultFor(args);
+      // Set the effective config path for the rest of the execution
+      args.config = config.path();
+    }
+  }
 }

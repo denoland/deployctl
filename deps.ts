@@ -2,9 +2,11 @@
 
 // std
 export {
+  dirname,
   fromFileUrl,
   join,
   normalize,
+  relative,
   resolve,
   toFileUrl,
 } from "https://deno.land/std@0.170.0/path/mod.ts";
