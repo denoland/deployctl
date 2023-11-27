@@ -34,36 +34,94 @@ import {
   Table,
   TableUnicodeCharacters,
 } from "https://deno.land/x/tui@2.1.6/src/components/table.ts";
+import { bgRed } from "https://deno.land/std@0.97.0/fmt/colors.ts";
+
+type SortKey = "reqs" | "cpu%" | "cpureq" | "rss" | "kv" | "queues";
 
 export default async function topSubcommand(args: Args) {
   const regionTableHeight = new Signal(5);
-  const usesKv = new Signal(false);
-  const usesQueues = new Signal(false);
-  let regionTableWidth = new Signal(0);
+  const sortBy = new Signal<SortKey>("reqs");
+  let regionTableWidth = 0;
+  const statusText = new Signal(`Connecting to ${args.project}...`);
+  const error = new Signal("");
   let tui;
   try {
     tui = new Tui({ refreshRate: 1000 / 60 });
     handleInput(tui);
     handleMouseControls(tui);
     handleKeyboardControls(tui);
-    const headerText = new Signal("Connecting...");
+
+    tui.on("keyPress", ({ key, ctrl, shift, meta }) => {
+      switch (key) {
+        case "r":
+          sortBy.value = "reqs";
+          return;
+        case "%":
+          sortBy.value = "cpu%";
+          return;
+        case "c":
+          sortBy.value = "cpureq";
+          return;
+        case "m":
+          sortBy.value = "rss";
+          return;
+        case "k":
+          sortBy.value = "kv";
+          return;
+        case "q":
+          sortBy.value = "queues";
+          return;
+      }
+    });
     const header = new Box({
       parent: tui,
-      rectangle: {
+      rectangle: new Computed(() => ({
         column: 0,
         row: 0,
         width: tui.rectangle.value.width,
         height: 1,
-      },
+      })),
       zIndex: 0,
-      theme: { base: colors.bgGreen },
+      theme: { base: (text) => colors.bgBrightGreen(colors.black(text)) },
     });
     new Text({
       parent: header,
-      text: headerText,
-      theme: { base: (text) => colors.bgGreen(colors.black(text)) },
+      text: statusText,
+      theme: { base: (text) => colors.bgBrightGreen(colors.black(text)) },
       zIndex: 1,
       rectangle: { column: 1, row: 0 },
+    });
+    const errorLabel = new Label({
+      parent: tui,
+      text: error,
+      align: {
+        vertical: "center",
+        horizontal: "center",
+      },
+      theme: { base: (text) => colors.bgRed(colors.black(text)) },
+      zIndex: 4,
+      overwriteRectangle: true,
+      rectangle: tui.rectangle,
+    });
+    new Box({
+      parent: tui,
+      theme: { base: colors.bgRed },
+      zIndex: 3,
+      rectangle: tui.rectangle,
+      visible: new Computed(() => errorLabel.text.value !== ""),
+    });
+    new Label({
+      parent: header,
+      align: {
+        vertical: "center",
+        horizontal: "right",
+      },
+      text:
+        "Press (key) to sort by: Req/min (r) | CPU% (%) | CPU/req (c) | RSS/5min (m) | KV/min (k) | Qs/min (q)",
+      theme: { base: (text) => colors.bgBrightGreen(colors.black(text)) },
+      zIndex: 2,
+      overwriteRectangle: true,
+      rectangle: header.rectangle,
     });
     const mainBox = new Box({
       parent: tui,
@@ -76,35 +134,34 @@ export default async function topSubcommand(args: Args) {
         height: tui.rectangle.value.height - 3,
       })),
     });
+    const api = args.token
+      ? API.fromToken(args.token)
+      : API.withTokenProvisioner(TokenProvisioner);
+    const meteringItems = await api.stream_metering(args.project!);
+    statusText.value = `Connected to ${args.project}. Waiting for data...`;
     tui.dispatch();
     tui.run();
     let lastUpdate;
     setInterval(() => {
       if (lastUpdate) {
         const secs = ((new Date() - lastUpdate) / 1000).toFixed(0);
-        if (secs > 2) {
-          headerText.value = `Last updated ${secs}s ago`;
+        if (secs > 10) {
+          statusText.value = `Last updated ${secs}s ago`;
         }
       }
     }, 500);
-    const api = API.withTokenProvisioner(TokenProvisioner);
-    const spinner = wait(`fetching metering of ${args.project}`).start();
-    const metering_items = api.stream_metering(args.project!);
-    spinner.succeed(`Metering of ${args.project} ready`);
     const layout = new Signal([], {
       deepObserve: true,
       watchObjectIndex: true,
     });
     const regions: {
       [region: string]: {
-        kvHeadersReady: Signal<boolean>;
-        queuesHeadersReady: Signal<boolean>;
         instances: Signal<{
           [instance: string]: { ts: Date; item: any };
         }>;
       };
     } = {};
-    for await (const item of metering_items) {
+    for await (const item of meteringItems) {
       lastUpdate = new Date();
       let region = regions[item.region];
       if (region) {
@@ -114,10 +171,6 @@ export default async function topSubcommand(args: Args) {
         };
       } else {
         region = regions[item.region] = {
-          kvHeadersReady: new Signal(usesKv.peek()),
-          queuesHeadersReady: new Signal(usesQueues.peek()),
-          kvRectangleReady: new Signal(usesKv.peek()),
-          queuesRectangleReady: new Signal(usesQueues.peek()),
           instances: new Signal({
             [item.runner]: {
               ts: lastUpdate,
@@ -139,55 +192,50 @@ export default async function topSubcommand(args: Args) {
           // (deepObserve in the TableUnicodeCharacters fail with TypeError: Cannot redefine property: Symbol(connected_signal))
           charMap: new Signal(TableUnicodeCharacters.sharp),
           //   charMap: "sharp",
-          headers: new Computed(() => {
-            const headers = [
-              {
-                title: "Req/min".padStart(7, " "),
-              },
-              {
-                title: "CPU%".padStart(7, " "),
-              },
-              {
-                title: "CPU/req".padStart(8, " "),
-              },
-              {
-                title: "RSS/5min".padStart(9, " "),
-              },
-            ];
-            if (region.kvRectangleReady.value && (usesKv.value || region.kvHeadersReady.value)) {
-              headers.push(
-                {
-                  title: "KVr/min".padStart(7, " "),
-                },
-              );
-              headers.push({
-                title: "KVw/min".padStart(7, " "),
-              });
-              region.kvHeadersReady.value = true;
-            } else {
-                region.queuesHeadersReady.value = false;
-            }
-            if (region.queuesRectangleReady.value && (usesQueues.value || region.queuesHeadersReady.value)) {
-              headers.push(
-                {
-                  title: "enqueue/min".padStart(11, " "),
-                },
-              );
-              headers.push({
-                title: "dequeue/min".padStart(11, " "),
-              });
-              region.queuesHeadersReady.value = true;
-            } else {
-                region.queuesHeadersReady.value = false;
-            }
-            return headers;
-          }),
-
+          headers: [
+            {
+              title: "Req/min".padStart(7, " "),
+            },
+            {
+              title: "CPU%".padStart(7, " "),
+            },
+            {
+              title: "CPU/req".padStart(8, " "),
+            },
+            {
+              title: "RSS/5min".padStart(9, " "),
+            },
+            {
+              title: "KV/min".padStart(9, " "),
+            },
+            {
+              title: "Qs/min".padStart(9, " "),
+            },
+          ],
           data: new Computed(() => {
             const data = [];
-            for (const instance in region.instances.value) {
-              const { item } = region.instances.value[instance];
-              const row = [
+            const instances = Object.values(region.instances.value);
+            const sortKey = sortBy.value;
+            instances.sort(({ item: a }, { item: b }) => {
+              switch (sortKey) {
+                case "reqs":
+                  return b.rpm - a.rpm;
+                case "cpu%":
+                  return b.cpuTimePerSecond - a.cpuTimePerSecond;
+                case "cpureq":
+                  return b.cpuTimePerRequest - a.cpuTimePerRequest;
+                case "rss":
+                  return b.maxRssMemory5Minutes - a.maxRssMemory5Minutes;
+                case "kv":
+                  return (b.kvReadUnitsPerMinute + b.kvWriteUnitsPerMinute) -
+                    (a.kvReadUnitsPerMinute + a.kvWriteUnitsPerMinute);
+                case "queues":
+                  return (b.queueEnqueuePerMinute + b.queueDequeuePerMinute) -
+                    (a.queueEnqueuePerMinute + a.queueDequeuePerMinute);
+              }
+            });
+            for (const { item } of instances) {
+              data.push([
                 item.rpm.toFixed(0).padStart(7, " "),
                 `${(item.cpuTimePerSecond / 10).toFixed(2)}%`.padStart(7, " "),
                 `${(item.cpuTimePerRequest || 0).toFixed(2)}ms`.padStart(
@@ -196,33 +244,20 @@ export default async function topSubcommand(args: Args) {
                 ),
                 `${(item.maxRssMemory5Minutes / 1_000_000).toFixed(3)}MB`
                   .padStart(9, " "),
-              ];
-              if (usesKv.value && region.kvHeadersReady.value) {
-                row.push(item.kvReadUnitsPerMinute.toFixed(0).padStart(7, " "));
-                row.push(
-                  item.kvWriteUnitsPerMinute.toFixed(0).padStart(7, " "),
-                );
-              } else {
-                region.kvHeadersReady.value = false;
-              }
-              if (usesQueues.value && region.queuesHeadersReady.value) {
-                row.push(
-                  item.queueEnqueuePerMinute.toFixed(0).padStart(11, " "),
-                );
-                row.push(
-                  item.queueDequeuePerMinute.toFixed(0).padStart(11, " "),
-                );
-              } else {
-                region.queuesHeadersReady.value = false;
-              }
-              data.push(row);
+                `${item.kvReadUnitsPerMinute.toFixed(0)}r ${
+                  item.kvWriteUnitsPerMinute.toFixed(0)
+                }w`.padStart(9, " "),
+                `${item.queueEnqueuePerMinute.toFixed(0)}e ${
+                  item.queueDequeuePerMinute.toFixed(0)
+                }d`.padStart(9, " "),
+              ]);
             }
             return data;
           }),
 
           rectangle: new Computed(() => {
             const numCols = Math.floor(
-              mainBox.rectangle.value.width / regionTableWidth.value,
+              mainBox.rectangle.value.width / regionTableWidth,
             );
             const index = layout.value.indexOf(item.region);
             const row = Math.floor(index / numCols);
@@ -231,9 +266,9 @@ export default async function topSubcommand(args: Args) {
             const extraCol = col === 0 ? 0 : col;
             const remainingWidth = Math.floor(
               mainBox.rectangle.value.width -
-                (numCols * regionTableWidth.value),
+                (numCols * regionTableWidth) - numCols,
             ) - 1;
-            const gap = Math.floor(remainingWidth / numCols);
+            const gap = Math.floor(remainingWidth / (numCols - 1));
             const rowGap = row !== 0 ? row : 0;
             const colGap = col !== 0 ? gap * col : 0;
             return {
@@ -244,15 +279,15 @@ export default async function topSubcommand(args: Args) {
               ),
               column: Math.ceil(
                 mainBox.rectangle.value.column +
-                  (col * regionTableWidth.value) +
+                  (col * regionTableWidth) +
                   extraCol + colGap,
               ),
               height: regionTableHeight.value,
-              width: regionTableWidth.value,
+              width: regionTableWidth,
             };
           }),
         });
-        new Effect(() => regionTableWidth.value = regionTable.rectangle.value.width);
+        regionTableWidth = regionTable.rectangle.value.width;
         const regionTitle = new Label({
           parent: regionTable,
           theme: {},
@@ -282,54 +317,38 @@ export default async function topSubcommand(args: Args) {
         region.table = regionTable;
       }
 
-      headerText.value = "Updated now!";
+      statusText.value = `Connected to ${args.project}.`;
       let maxInstances = 0;
-      let kv = false;
-      let queues = false;
       for (const region in regions) {
-        if (
-          maxInstances < Object.keys(regions[region].instances.value).length
-        ) {
-          maxInstances = Object.keys(regions[region].instances.value).length;
+        const instances = regions[region].instances.value;
+        if (maxInstances < Object.keys(instances).length) {
+          maxInstances = Object.keys(instances).length;
         }
-        for (const instance in regions[region].instances.value) {
-          const i = regions[region].instances.value[instance];
-          if (new Date() - i.ts > 30_000) {
-            delete regions[region].instances.value[instance];
-          } else {
-            if (
-              i.item.kvReadUnitsPerMinute !== 0 ||
-              i.item.kvWriteUnitsPerMinute !== 0
-            ) {
-              kv = true;
-            }
-            if (
-              i.item.queueEnqueuePerMinute !== 0 ||
-              i.item.queueDequeuePerMinute !== 0
-            ) {
-              queues = true;
-            }
+        for (const instance in instances) {
+          if (
+            new Date() - instances[instance].ts > 30_000
+          ) {
+            delete instances[instance];
           }
         }
-        if (Object.keys(regions[region].instances.value).length === 0) {
-          layout.value.splice(layout.value.indexOf(region));
+        if (Object.keys(instances).length === 0) {
           regions[region].table.destroy();
+          layout.value.splice(layout.value.indexOf(region), 1);
           delete regions[region];
         }
       }
       regionTableHeight.value = Math.min(maxInstances, 5) + 4;
-      usesKv.value = kv;
-      usesQueues.value = queues;
     }
+  } catch (e) {
+    error.value = `ERROR: ${e.toString()}`;
+    // throw e;
   } finally {
-    if (tui) {
-      tui.destroy();
-    }
+    // if (tui) {
+    //   tui.destroy();
+    // }
   }
 }
 
-// TODO: table with all the isolates of a region as rows, meters as columns
-// TODO: fix render panics when font size is small
 
 // - RPS
 // - CPU
