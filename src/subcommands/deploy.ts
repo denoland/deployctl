@@ -62,7 +62,6 @@ export interface Args {
   saveConfig: boolean;
 }
 
-// deno-lint-ignore no-explicit-any
 export default async function (rawArgs: RawArgs): Promise<void> {
   const positionalEntrypoint: string | null = typeof rawArgs._[0] === "string"
     ? rawArgs._[0]
