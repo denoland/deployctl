@@ -11,6 +11,8 @@ const DEFAULT_FILENAME = "deno.json";
 interface ConfigArgs {
   project?: string;
   entrypoint?: string;
+  include?: string[];
+  exclude?: string[];
 }
 
 class ConfigFile {
@@ -70,7 +72,15 @@ class ConfigFile {
     // Iterate over the other args as they might include args not yet persisted in the config file
     for (const [key, otherValue] of Object.entries(otherConfigArgs)) {
       // deno-lint-ignore no-explicit-any
-      if ((this.args() as any)[key] !== otherValue) {
+      const thisValue = (this.args() as any)[key];
+      if (otherValue instanceof Array) {
+        const thisArrayValue = thisValue as typeof otherValue;
+        if (thisArrayValue.length !== otherValue.length) {
+          return false;
+        } else if (!thisArrayValue.every((x, i) => otherValue[i] === x)) {
+          return false;
+        }
+      } else if (thisValue !== otherValue) {
         return false;
       }
     }
@@ -81,6 +91,8 @@ class ConfigFile {
     // Copy object as normalization is internal to the config file
     const normalizedArgs = {
       project: args.project,
+      exclude: args.exclude,
+      include: args.include,
       entrypoint: (args.entrypoint && !isURL(args.entrypoint))
         ? resolve(args.entrypoint)
         // Backoff if entrypoint is URL, the user knows what they're doing

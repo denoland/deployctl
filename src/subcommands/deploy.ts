@@ -9,6 +9,7 @@ import { ManifestEntry } from "../utils/api_types.ts";
 import { parseEntrypoint } from "../utils/entrypoint.ts";
 import { walk } from "../utils/walk.ts";
 import TokenProvisioner from "../utils/access_token.ts";
+import { Args as RawArgs } from "../args.ts";
 
 const help = `deployctl deploy
 Deploy a script with static files to Deno Deploy.
@@ -50,8 +51,8 @@ export interface Args {
   help: boolean;
   static: boolean;
   prod: boolean;
-  exclude?: string[];
-  include?: string[];
+  exclude: string[];
+  include: string[];
   token: string | null;
   project: string | null;
   entrypoint: string | null;
@@ -62,7 +63,7 @@ export interface Args {
 }
 
 // deno-lint-ignore no-explicit-any
-export default async function (rawArgs: Record<string, any>): Promise<void> {
+export default async function (rawArgs: RawArgs): Promise<void> {
   const positionalEntrypoint: string | null = typeof rawArgs._[0] === "string"
     ? rawArgs._[0]
     : null;
@@ -78,8 +79,8 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
       ? String(rawArgs["entrypoint"])
       : null,
     importMap: rawArgs["import-map"] ? String(rawArgs["import-map"]) : null,
-    exclude: rawArgs.exclude?.split(","),
-    include: rawArgs.include?.split(","),
+    exclude: rawArgs.exclude.flatMap((e) => e.split(",")),
+    include: rawArgs.include.flatMap((i) => i.split(",")),
     dryRun: !!rawArgs["dry-run"],
     config: rawArgs.config ? String(rawArgs.config) : null,
     saveConfig: !!rawArgs["save-config"],
@@ -128,8 +129,8 @@ interface DeployOpts {
   importMapUrl: URL | null;
   static: boolean;
   prod: boolean;
-  exclude?: string[];
-  include?: string[];
+  exclude: string[];
+  include: string[];
   token: string | null;
   project: string;
   dryRun: boolean;
