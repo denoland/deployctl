@@ -4,6 +4,7 @@
 export {
   basename,
   dirname,
+  extname,
   fromFileUrl,
   join,
   normalize,
@@ -13,6 +14,7 @@ export {
 } from "https://deno.land/std@0.170.0/path/mod.ts";
 export {
   bold,
+  cyan,
   green,
   magenta,
   red,
@@ -20,6 +22,7 @@ export {
 } from "https://deno.land/std@0.170.0/fmt/colors.ts";
 export { parse } from "https://deno.land/std@0.195.0/flags/mod.ts";
 export { TextLineStream } from "https://deno.land/std@0.170.0/streams/text_line_stream.ts";
+export * as JSONC from "https://deno.land/std@0.170.0/encoding/jsonc.ts";
 
 // x/semver
 export {

@@ -114,7 +114,9 @@ async function setDefaultsFromConfigFile(args: Args) {
       args.config ?? configFile.cwdOrAncestors(),
     );
     if (config === null && args.config !== undefined && !args["save-config"]) {
-      error(`Could not find or read the config file '${args.config}'`);
+      error(
+        `Could not find or read the config file '${args.config}'. Use --save-config to create it.`,
+      );
     }
     if (config !== null) {
       wait("").start().info(`Using config file '${config.path()}'`);
