@@ -1,11 +1,10 @@
-import { error } from "../../error.ts";
 import { getConfigPaths } from "../info.ts";
 
 export async function get(): Promise<string | null> {
   const { credentialsPath } = getConfigPaths();
   try {
     const info = await Deno.lstat(credentialsPath);
-    if (!info.isFile || (info.mode & 0o777) !== 0o600) {
+    if (!info.isFile || (info.mode !== null && (info.mode & 0o777) !== 0o600)) {
       throw new Error("The credentials file have have been tampered with.");
     }
   } catch (e) {
