@@ -17,15 +17,19 @@ export async function calculateGitSha1(bytes: Uint8Array) {
 
 function include(
   path: string,
-  include?: string[],
-  exclude?: string[],
+  include: string[],
+  exclude: string[],
 ): boolean {
   if (
-    include && !include.some((pattern): boolean => path.startsWith(pattern))
+    include.length &&
+    !include.some((pattern): boolean => path.startsWith(pattern))
   ) {
     return false;
   }
-  if (exclude && exclude.some((pattern): boolean => path.startsWith(pattern))) {
+  if (
+    exclude.length &&
+    exclude.some((pattern): boolean => path.startsWith(pattern))
+  ) {
     return false;
   }
   return true;
@@ -35,7 +39,7 @@ export async function walk(
   cwd: string,
   dir: string,
   files: Map<string, string>,
-  options: { include?: string[]; exclude?: string[] },
+  options: { include: string[]; exclude: string[] },
 ): Promise<Record<string, ManifestEntry>> {
   const entries: Record<string, ManifestEntry> = {};
   for await (const file of Deno.readDir(dir)) {
