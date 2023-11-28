@@ -2584,10 +2584,10 @@ async function calculateGitSha1(bytes) {
     return hashHex;
 }
 function include(path, include, exclude) {
-    if (include && !include.some((pattern)=>path.startsWith(pattern))) {
+    if (include.length && !include.some((pattern)=>path.startsWith(pattern))) {
         return false;
     }
-    if (exclude && exclude.some((pattern)=>path.startsWith(pattern))) {
+    if (exclude.length && exclude.some((pattern)=>path.startsWith(pattern))) {
         return false;
     }
     return true;

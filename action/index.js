@@ -18,8 +18,8 @@ async function main() {
   const projectId = core.getInput("project", { required: true });
   const entrypoint = core.getInput("entrypoint", { required: true });
   const importMap = core.getInput("import-map", {});
-  const include = core.getInput("include", {});
-  const exclude = core.getInput("exclude", {});
+  const include = core.getMultilineInput("include", {});
+  const exclude = core.getMultilineInput("exclude", {});
   const cwd = resolve(process.cwd(), core.getInput("root", {}));
 
   if (github.context.eventName === "pull_request") {
@@ -75,8 +75,8 @@ async function main() {
   core.debug(`Discovering assets in "${cwd}"`);
   const assets = new Map();
   const entries = await walk(cwd, cwd, assets, {
-    include: include ? include.split(",").map(pattern => normalize(pattern)): undefined,
-    exclude: exclude ? exclude.split(",").map(pattern => normalize(pattern)): undefined,
+    include: include.split(",").map(pattern => normalize(pattern)),
+    exclude: exclude.split(",").map(pattern => normalize(pattern)),
   });
   core.debug(`Discovered ${assets.size} assets`);
 
