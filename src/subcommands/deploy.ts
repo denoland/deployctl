@@ -160,9 +160,6 @@ async function deploy(opts: DeployOpts): Promise<void> {
     } catch (e) {
       error(e.message);
     }
-    // opts.project is persisted in deno.json. We want to store the project id even if user provided
-    // project name to facilitate project renaming.
-    opts.project = project.id;
     projectCreationSpinner.succeed(`Created new project '${opts.project}'.`);
     wait({ text: "", indent: 3 }).start().info(
       `You can configure the name, env vars, custom domains and more in https://dash.deno.com/projects/${project.name}/settings`,
@@ -298,6 +295,10 @@ async function deploy(opts: DeployOpts): Promise<void> {
         case "success": {
           const deploymentKind = opts.prod ? "Production" : "Preview";
           deploySpinner!.succeed(`${deploymentKind} deployment complete.`);
+
+          // We want to store the project id even if user provided project name 
+          // to facilitate project renaming.
+          opts.project = project.id;
           await configFile.maybeWrite(opts.config, opts, opts.saveConfig);
           console.log("\nView at:");
           for (const { domain } of event.domainMappings) {
