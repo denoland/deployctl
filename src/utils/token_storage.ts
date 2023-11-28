@@ -30,7 +30,25 @@ if (Deno.build.os === "darwin") {
     ),
   };
 } else {
-  module = await import("./token_storage/memory.ts");
+  const fs = await import("./token_storage/fs.ts");
+  const memory = await import("./token_storage/memory.ts");
+  module = {
+    get: defaultOnError(
+      "Failed to get token from credentials file",
+      memory.get,
+      fs.get,
+    ),
+    store: defaultOnError(
+      "Failed to store token in credentials file",
+      memory.store,
+      fs.store,
+    ),
+    remove: defaultOnError(
+      "Failed to remove token from credentials file",
+      memory.remove,
+      fs.remove,
+    ),
+  };
 }
 export default module;
 
@@ -50,7 +68,7 @@ function defaultOnError<
         .catch((err) => {
           const spinnerInterrupt = interruptSpinner();
           wait("").start().warn(notification);
-          let errStr = err.toString();
+          let errStr = err.message;
           if (errStr.length > 80) {
             errStr = errStr.slice(0, 80) + "...";
           }
