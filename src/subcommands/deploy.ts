@@ -296,7 +296,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
           const deploymentKind = opts.prod ? "Production" : "Preview";
           deploySpinner!.succeed(`${deploymentKind} deployment complete.`);
 
-          // We want to store the project id even if user provided project name 
+          // We want to store the project id even if user provided project name
           // to facilitate project renaming.
           opts.project = project.id;
           await configFile.maybeWrite(opts.config, opts, opts.saveConfig);
