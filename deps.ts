@@ -18,6 +18,8 @@ export {
   red,
   yellow,
 } from "https://deno.land/std@0.170.0/fmt/colors.ts";
+export { LineStream } from "https://deno.land/std@0.148.0/streams/delimiter.ts";
+export { config } from "https://deno.land/std@0.148.0/dotenv/mod.ts";
 export { parse } from "https://deno.land/std@0.195.0/flags/mod.ts";
 export { TextLineStream } from "https://deno.land/std@0.170.0/streams/text_line_stream.ts";
 

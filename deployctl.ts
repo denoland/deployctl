@@ -7,6 +7,7 @@ import { Args, parseArgs } from "./src/args.ts";
 import { error } from "./src/error.ts";
 import deploySubcommand from "./src/subcommands/deploy.ts";
 import upgradeSubcommand from "./src/subcommands/upgrade.ts";
+import syncEnvSubcommand from "./src/subcommands/sync_env.ts";
 import logsSubcommand from "./src/subcommands/logs.ts";
 import { MINIMUM_DENO_VERSION, VERSION } from "./src/version.ts";
 import { fetchReleases, getConfigPaths } from "./src/utils/info.ts";
@@ -23,10 +24,14 @@ To deploy a local script:
 To deploy a remote script:
   deployctl deploy --project=helloworld https://deno.land/x/deploy/examples/hello.js
 
+To send local env vars a project:
+  deployctl env --project=helloworld ./.env
+
 SUBCOMMANDS:
     deploy    Deploy a script with static files to Deno Deploy
     upgrade   Upgrade deployctl to the given version (defaults to latest)
     logs      View logs for the given project
+    env       Send environment variables defined in a file to a project
 `;
 
 if (!semverGreaterThanOrEquals(Deno.version.deno, MINIMUM_DENO_VERSION)) {
@@ -90,6 +95,8 @@ switch (subcommand) {
     await setDefaultsFromConfigFile(args);
     await upgradeSubcommand(args);
     break;
+  case "env":
+    await syncEnvSubcommand(args);
   case "logs":
     await setDefaultsFromConfigFile(args);
     await logsSubcommand(args);

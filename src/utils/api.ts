@@ -252,4 +252,14 @@ export class API {
   getMetadata(): Promise<Metadata> {
     return this.#requestJson("/meta");
   }
+
+  async sendEnv(
+    projectId: string,
+    body: Record<string, string>,
+  ): Promise<Response> {
+    return await this.#requestJson(
+      `/projects/${projectId}/env`,
+      { method: "POST", body },
+    );
+  }
 }
