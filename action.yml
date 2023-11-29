@@ -17,10 +17,10 @@ inputs:
     description: The path or URL to an import map file
     required: false
   include:
-    description: Only upload files that match this pattern (comma-separated)
+    description: Only upload files that match this pattern (multiline and/or comma-separated)
     required: false
   exclude:
-    description: Exclude files that match this pattern (comma-separated)
+    description: Exclude files that match this pattern (multiline and/or comma-separated)
     required: false
   root:
     description: The path to the directory containing the code and assets to upload
