@@ -4006,10 +4006,10 @@ async function calculateGitSha1(bytes) {
     return hashHex;
 }
 function include(path, include, exclude) {
-    if (include && !include.some((pattern)=>path.startsWith(pattern))) {
+    if (include.length && !include.some((pattern)=>path.startsWith(pattern))) {
         return false;
     }
-    if (exclude && exclude.some((pattern)=>path.startsWith(pattern))) {
+    if (exclude.length && exclude.some((pattern)=>path.startsWith(pattern))) {
         return false;
     }
     return true;
@@ -4054,5 +4054,5 @@ async function walk(cwd, dir, files, options) {
 export { parseEntrypoint as parseEntrypoint };
 export { API as API, APIError as APIError };
 export { walk as walk };
-export { fromFileUrl2 as fromFileUrl, resolve2 as resolve };
+export { fromFileUrl2 as fromFileUrl, resolve2 as resolve, normalize3 as normalize };
 

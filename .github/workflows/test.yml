@@ -20,6 +20,29 @@ jobs:
         uses: ./
         with:
           project: happy-rat-64
-          root: examples
+          root: action/tests
           entrypoint: hello.ts
           import-map: ./import_map.json
+      - name: Deploy with single include
+        uses: ./
+        with:
+          project: happy-rat-64
+          root: action/tests
+          entrypoint: include_exclude.ts
+          include: include_exclude.ts
+      - name: Deploy with comma-separated exclude 
+        uses: ./
+        with:
+          project: happy-rat-64
+          root: action/tests
+          entrypoint: include_exclude.ts
+          exclude: import_bomb1,import_bomb2
+      - name: Deploy with multiline exclude 
+        uses: ./
+        with:
+          project: happy-rat-64
+          root: action/tests
+          entrypoint: include_exclude.ts
+          exclude: |
+            import_bomb1
+            import_bomb2
