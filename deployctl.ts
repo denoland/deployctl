@@ -22,7 +22,9 @@ SUBCOMMANDS:
     upgrade   Upgrade deployctl to the given version (defaults to latest)
     logs      View logs for the given project
 
-Use 'deployctl <SUBCOMMAND> -h' for detailed help on each subcommand.
+For more detailed help on each subcommand, use:
+
+    deployctl <SUBCOMMAND> -h
 `;
 
 if (!semverGreaterThanOrEquals(Deno.version.deno, MINIMUM_DENO_VERSION)) {

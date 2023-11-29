@@ -15,7 +15,8 @@ const help = `deployctl deploy
 Deploy a script with static files to Deno Deploy.
 
 Basic usage:
-  deployctl deploy
+
+    deployctl deploy
 
 By default, deployctl will guess the project name based on the Git repo or directory it is in.
 Similarly, it will guess the entrypoint by looking for files with common entrypoint names (main.ts, src/main.ts, etc).
@@ -23,7 +24,7 @@ After the first deployment, the settings used will be stored in a config file (b
 
 You can specify the project name and/or the entrypoint using the --project and --entrypoint arguments respectively:
 
-  deployctl deploy --project=helloworld --entrypoint=src/entrypoint.ts
+    deployctl deploy --project=helloworld --entrypoint=src/entrypoint.ts
 
 By default, deployctl deploys all the files in the current directory (recursively). You can
 customize this behaviour using the --include and --exclude arguments (also supported in the config
@@ -31,21 +32,21 @@ file). Here are some examples:
 
 - Include only source and static files:
 
-  deployctl deploy --include=./src --include=./static
+    deployctl deploy --include=./src --include=./static
 
 - Ignore the node_modules directory:
 
-  deployctl deploy --exclude=./node_modules
+    deployctl deploy --exclude=./node_modules
 
 A common pitfall is to not include the source code modules that need to be run (entrypoint and dependencies).
 The following example will fail because main.ts is not included:
 
-  deployctl deploy --include=./static --entrypoint=./main.ts
+    deployctl deploy --include=./static --entrypoint=./main.ts
 
 The entrypoint can also be a remote script. A common use case for this is to deploy an static site
 using std/http/file_server.ts (more details in https://docs.deno.com/deploy/tutorials/static-site ):
 
-  deployctl deploy --entrypoint=https://deno.land/std@0.208.0/http/file_server.ts
+    deployctl deploy --entrypoint=https://deno.land/std@0.208.0/http/file_server.ts
 
 
 USAGE:
