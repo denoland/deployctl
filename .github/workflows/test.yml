@@ -36,7 +36,7 @@ jobs:
           project: happy-rat-64
           root: action/tests
           entrypoint: include_exclude.ts
-          exclude: import_bomb1.ts, import_bomb2.ts
+          exclude: import_bomb1,import_bomb2
       - name: Deploy with multiline exclude 
         uses: ./
         with:
@@ -44,5 +44,5 @@ jobs:
           root: action/tests
           entrypoint: include_exclude.ts
           exclude: |
-            import_bomb1.ts
-            import_bomb2.ts
+            import_bomb1
+            import_bomb2

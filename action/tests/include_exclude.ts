@@ -1,12 +1,14 @@
 try {
-  const q = await import("./import_bomb1.ts");
+  await Deno.lstat("import_bomb1");
+  throw new Error("BOOM!");
 } catch (e) {
   if (!(e instanceof Deno.errors.NotFound)) {
     throw e;
   }
 }
 try {
-  const q = await import("./import_bomb2.ts");
+  await Deno.lstat("import_bomb2");
+  throw new Error("BOOM!");
 } catch (e) {
   if (!(e instanceof Deno.errors.NotFound)) {
     throw e;

@@ -5,10 +5,10 @@ import {
   API,
   APIError,
   fromFileUrl,
+  normalize,
   parseEntrypoint,
   resolve,
   walk,
-  normalize,
 } from "./deps.js";
 
 // The origin of the server to make Deploy requests to.
@@ -75,8 +75,12 @@ async function main() {
   core.debug(`Discovering assets in "${cwd}"`);
   const assets = new Map();
   const entries = await walk(cwd, cwd, assets, {
-    include: include.split(",").map(pattern => normalize(pattern)),
-    exclude: exclude.split(",").map(pattern => normalize(pattern)),
+    include: include.flatMap((i) => i.split(",")).map((pattern) =>
+      normalize(pattern)
+    ),
+    exclude: exclude.flatMap((e) => e.split(",")).map((pattern) =>
+      normalize(pattern)
+    ),
   });
   core.debug(`Discovered ${assets.size} assets`);
 
