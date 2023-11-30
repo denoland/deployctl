@@ -23,6 +23,8 @@ const CANDIDATE_FILENAMES = [DEFAULT_FILENAME, "deno.jsonc"];
 interface ConfigArgs {
   project?: string;
   entrypoint?: string;
+  include?: string[];
+  exclude?: string[];
 }
 
 class ConfigFile {
@@ -88,7 +90,15 @@ class ConfigFile {
     // Iterate over the other args as they might include args not yet persisted in the config file
     for (const [key, otherValue] of Object.entries(otherConfigOutput)) {
       const thisValue = thisConfigOutput[key];
-      if (thisValue !== otherValue) {
+      if (otherValue instanceof Array) {
+        const thisArrayValue = thisValue as typeof otherValue;
+        if (
+          thisArrayValue.length !== otherValue.length ||
+          !thisArrayValue.every((x, i) => otherValue[i] === x)
+        ) {
+          changes.push({ key, removal: thisValue, addition: otherValue });
+        }
+      } else if (thisValue !== otherValue) {
         changes.push({ key, removal: thisValue, addition: otherValue });
       }
     }
@@ -99,6 +109,8 @@ class ConfigFile {
     // Copy object as normalization is internal to the config file
     const normalizedArgs = {
       project: args.project,
+      exclude: args.exclude,
+      include: args.include,
       entrypoint: (args.entrypoint && !isURL(args.entrypoint))
         ? resolve(args.entrypoint)
         // Backoff if entrypoint is URL, the user knows what they're doing

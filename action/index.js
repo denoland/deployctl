@@ -5,6 +5,7 @@ import {
   API,
   APIError,
   fromFileUrl,
+  normalize,
   parseEntrypoint,
   resolve,
   walk,
@@ -17,6 +18,8 @@ async function main() {
   const projectId = core.getInput("project", { required: true });
   const entrypoint = core.getInput("entrypoint", { required: true });
   const importMap = core.getInput("import-map", {});
+  const include = core.getMultilineInput("include", {});
+  const exclude = core.getMultilineInput("exclude", {});
   const cwd = resolve(process.cwd(), core.getInput("root", {}));
 
   if (github.context.eventName === "pull_request") {
@@ -72,8 +75,12 @@ async function main() {
   core.debug(`Discovering assets in "${cwd}"`);
   const assets = new Map();
   const entries = await walk(cwd, cwd, assets, {
-    include: undefined,
-    exclude: undefined,
+    include: include.flatMap((i) => i.split(",")).map((pattern) =>
+      normalize(pattern)
+    ),
+    exclude: exclude.flatMap((e) => e.split(",")).map((pattern) =>
+      normalize(pattern)
+    ),
   });
   core.debug(`Discovered ${assets.size} assets`);
 

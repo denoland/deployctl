@@ -109,11 +109,11 @@ function base64url(binary: Uint8Array): string {
   return urlSafeOutput;
 }
 
-async function sha256(random_string: string): Promise<Uint8Array> {
+async function sha256(randomString: string): Promise<Uint8Array> {
   return new Uint8Array(
     await crypto.subtle.digest(
       "SHA-256",
-      new TextEncoder().encode(random_string),
+      new TextEncoder().encode(randomString),
     ),
   );
 }

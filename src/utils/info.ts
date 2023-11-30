@@ -10,6 +10,7 @@ export function getConfigPaths() {
   return {
     configDir,
     updatePath: join(configDir, "update.json"),
+    credentialsPath: join(configDir, "credentials.json"),
   };
 }
 

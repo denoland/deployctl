@@ -32,7 +32,7 @@ export function parseArgs(args: string[]) {
       "config",
       "entrypoint",
     ],
-    collect: ["grep"],
+    collect: ["grep", "include", "exclude"],
     default: {
       static: true,
       limit: "100",
