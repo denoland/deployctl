@@ -113,9 +113,7 @@ class ConfigFile {
   }
 
   static fromFileContent(filepath: string, content: string) {
-    const parsedContent = extname(filepath) === ".jsonc"
-      ? new Object(JSONC.parse(content))
-      : JSON.parse(content);
+    const parsedContent = JSONC.parse(content) as { deploy?: ConfigArgs };
     const configContent = {
       ...parsedContent,
       deploy: parsedContent.deploy && {
