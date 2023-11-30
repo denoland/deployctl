@@ -5,7 +5,9 @@ export async function get(): Promise<string | null> {
   try {
     const info = await Deno.lstat(credentialsPath);
     if (!info.isFile || (info.mode !== null && (info.mode & 0o777) !== 0o600)) {
-      throw new Error("The credentials file has been tampered with and will be ignored. Please delete it.");
+      throw new Error(
+        "The credentials file has been tampered with and will be ignored. Please delete it.",
+      );
     }
   } catch (e) {
     if (e instanceof Deno.errors.NotFound) {
@@ -18,7 +20,9 @@ export async function get(): Promise<string | null> {
     const token = JSON.parse(await Deno.readTextFile(credentialsPath)).token;
     return token || null;
   } catch (_) {
-    throw new Error(`The credentials file has been tampered with and will be ignored. Please delete it.`);
+    throw new Error(
+      `The credentials file has been tampered with and will be ignored. Please delete it.`,
+    );
   }
 }
 
