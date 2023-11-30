@@ -90,11 +90,10 @@ class ConfigFile {
     // Iterate over the other args as they might include args not yet persisted in the config file
     for (const [key, otherValue] of Object.entries(otherConfigOutput)) {
       const thisValue = thisConfigOutput[key];
-      if (otherValue instanceof Array) {
-        const thisArrayValue = thisValue as typeof otherValue;
+      if (otherValue instanceof Array && thisValue instanceof Array) {
         if (
-          thisArrayValue.length !== otherValue.length ||
-          !thisArrayValue.every((x, i) => otherValue[i] === x)
+          thisValue.length !== otherValue.length ||
+          !thisValue.every((x, i) => otherValue[i] === x)
         ) {
           changes.push({ key, removal: thisValue, addition: otherValue });
         }
