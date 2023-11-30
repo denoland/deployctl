@@ -1,4 +1,5 @@
 import { TextLineStream } from "../../deps.ts";
+import { VERSION } from "../version.ts";
 
 import {
   Deployment,
@@ -13,6 +14,8 @@ import {
   Project,
   PushDeploymentRequest,
 } from "./api_types.ts";
+
+const USER_AGENT = `DeployCTL/${VERSION} (${Deno.build.os} ${Deno.osRelease()}; ${Deno.build.arch})`
 
 export interface RequestOptions {
   method?: string;
@@ -95,6 +98,7 @@ export class API {
         await this.#authorization.get() ?? await this.#authorization.provision()
       }`;
     const headers = {
+      "User-Agent": USER_AGENT,
       "Accept": opts.accept ?? "application/json",
       "Authorization": authorization,
       ...(opts.body !== undefined
