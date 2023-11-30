@@ -197,9 +197,9 @@ export default {
     const pathOrDefault = path ?? DEFAULT_FILENAME;
     const isJsonc = extname(pathOrDefault) === ".jsonc";
     const existingConfig = await this.read(pathOrDefault);
-    const changes = existingConfig?.diff(args);
+    const changes = existingConfig?.diff(args) ?? [];
     let config;
-    if (existingConfig && changes!.length === 0) {
+    if (existingConfig && changes.length === 0) {
       // There are no changes to write
       return;
     } else if (
@@ -220,7 +220,7 @@ export default {
         if (!confirmation) {
           const formattedChanges = existingConfig.hasDeployConfig()
             ? cyan(
-              `  "deploy": {\n     ...\n${formatChanges(changes!, 2, 2)}\n  }`,
+              `  "deploy": {\n     ...\n${formatChanges(changes, 2, 2)}\n  }`,
             )
             : green(
               ConfigFile.create(pathOrDefault, args).toFileContent().slice(
