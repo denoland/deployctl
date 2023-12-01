@@ -4,6 +4,7 @@ export interface Permissions {
   write: boolean;
   env: boolean;
   run: boolean;
+  sys: boolean;
 }
 
 export function deployctl(
@@ -14,6 +15,7 @@ export function deployctl(
     write: true,
     env: true,
     run: true,
+    sys: true,
   },
 ): Deno.ChildProcess {
   const deno = [
@@ -26,6 +28,7 @@ export function deployctl(
   if (permissions?.write) deno.push("--allow-write");
   if (permissions?.env) deno.push("--allow-env");
   if (permissions?.run) deno.push("--allow-run");
+  if (permissions?.sys) deno.push("--allow-sys");
 
   deno.push(new URL("../deployctl.ts", import.meta.url).toString());
 
