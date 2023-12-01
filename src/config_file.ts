@@ -1,11 +1,23 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { dirname, join, relative, resolve } from "../deps.ts";
+import {
+  cyan,
+  dirname,
+  extname,
+  green,
+  join,
+  JSONC,
+  magenta,
+  red,
+  relative,
+  resolve,
+} from "../deps.ts";
 import { error } from "./error.ts";
 import { isURL } from "./utils/entrypoint.ts";
 import { wait } from "./utils/spinner.ts";
 
 const DEFAULT_FILENAME = "deno.json";
+const CANDIDATE_FILENAMES = [DEFAULT_FILENAME, "deno.jsonc"];
 
 /** Arguments persisted in the deno.json config file */
 interface ConfigArgs {
@@ -63,28 +75,33 @@ class ConfigFile {
     }
   }
 
-  /** Check if the `ConfigArgs` in this `ConfigFile` match `args`
+  /** Returns all the differences between this `ConfigArgs` and the one provided as argument.
    *
-   * Ignores any property in `args` not meant to be persisted.
+   * The comparison is performed against the JSON output of each config. The "other" args are
+   * sematically considered additions in the return value.  Ignores any property in `args` not meant
+   * to be persisted.
    */
-  eq(args: ConfigArgs) {
-    const otherConfigArgs = this.normalize(args);
+  diff(args: ConfigArgs): Change[] {
+    const changes = [];
+    const otherConfigOutput =
+      JSON.parse(ConfigFile.create(this.path(), args).toFileContent()).deploy ??
+        {};
+    const thisConfigOutput = JSON.parse(this.toFileContent()).deploy ?? {};
     // Iterate over the other args as they might include args not yet persisted in the config file
-    for (const [key, otherValue] of Object.entries(otherConfigArgs)) {
-      // deno-lint-ignore no-explicit-any
-      const thisValue = (this.args() as any)[key];
-      if (otherValue instanceof Array) {
-        const thisArrayValue = thisValue as typeof otherValue;
-        if (thisArrayValue.length !== otherValue.length) {
-          return false;
-        } else if (!thisArrayValue.every((x, i) => otherValue[i] === x)) {
-          return false;
+    for (const [key, otherValue] of Object.entries(otherConfigOutput)) {
+      const thisValue = thisConfigOutput[key];
+      if (Array.isArray(otherValue) && Array.isArray(thisValue)) {
+        if (
+          thisValue.length !== otherValue.length ||
+          !thisValue.every((x, i) => otherValue[i] === x)
+        ) {
+          changes.push({ key, removal: thisValue, addition: otherValue });
         }
       } else if (thisValue !== otherValue) {
-        return false;
+        changes.push({ key, removal: thisValue, addition: otherValue });
       }
     }
-    return true;
+    return changes;
   }
 
   normalize(args: ConfigArgs): ConfigArgs {
@@ -107,7 +124,7 @@ class ConfigFile {
   }
 
   static fromFileContent(filepath: string, content: string) {
-    const parsedContent = JSON.parse(content);
+    const parsedContent = JSONC.parse(content) as { deploy?: ConfigArgs };
     const configContent = {
       ...parsedContent,
       deploy: parsedContent.deploy && {
@@ -187,19 +204,49 @@ export default {
     overwrite: boolean,
   ): Promise<void> {
     const pathOrDefault = path ?? DEFAULT_FILENAME;
+    const isJsonc = extname(pathOrDefault) === ".jsonc";
     const existingConfig = await this.read(pathOrDefault);
+    const changes = existingConfig?.diff(args) ?? [];
     let config;
-    if (existingConfig && existingConfig.hasDeployConfig() && !overwrite) {
-      if (!existingConfig.eq(args)) {
-        wait("").start().info(
-          `Some of the config used differ from the config found in '${existingConfig.path()}'. Use --save-config to overwrite it.`,
-        );
-      }
+    if (existingConfig && changes.length === 0) {
+      // There are no changes to write
+      return;
+    } else if (
+      existingConfig && existingConfig.hasDeployConfig() && !overwrite
+    ) {
+      // There are changes to write and there's already some deploy config, we require the --save-config flag
+      wait("").start().info(
+        `Some of the config used differ from the config found in '${existingConfig.path()}'. Use --save-config to overwrite it.`,
+      );
       return;
     } else if (existingConfig) {
+      // Either there is no deploy config in the config file or the user is using --save-config flag
+      if (isJsonc) {
+        const msg = overwrite
+          ? `Writing to the config file '${pathOrDefault}' will remove any existing comment and format it as a plain JSON file. Is that ok?`
+          : `I want to store some configuration in '${pathOrDefault}' config file but this will remove any existing comment from it. Is that ok?`;
+        const confirmation = confirm(`${magenta("?")} ${msg}`);
+        if (!confirmation) {
+          const formattedChanges = existingConfig.hasDeployConfig()
+            ? cyan(
+              `  "deploy": {\n     ...\n${formatChanges(changes, 2, 2)}\n  }`,
+            )
+            : green(
+              ConfigFile.create(pathOrDefault, args).toFileContent().slice(
+                2,
+                -2,
+              ),
+            );
+          wait({ text: "", indent: 3 }).start().info(
+            `I understand. Here's the config I wanted to write:\n${formattedChanges}`,
+          );
+          return;
+        }
+      }
       existingConfig.override(args);
       config = existingConfig;
     } else {
+      // The config file does not exist. Create a new one.
       config = ConfigFile.create(pathOrDefault, args);
     }
     await Deno.writeTextFile(
@@ -216,7 +263,9 @@ export default {
   cwdOrAncestors: function* () {
     let wd = Deno.cwd();
     while (wd) {
-      yield join(wd, DEFAULT_FILENAME);
+      for (const filename of CANDIDATE_FILENAMES) {
+        yield join(wd, filename);
+      }
       const newWd = dirname(wd);
       if (newWd === wd) {
         return;
@@ -226,3 +275,34 @@ export default {
     }
   },
 };
+
+function formatChanges(
+  changes: Change[],
+  indent?: number,
+  gap?: number,
+): string {
+  const removals = [];
+  const additions = [];
+  const padding = " ".repeat(indent ?? 0);
+  const innerPadding = " ".repeat(gap ?? 0);
+  for (const { key, removal, addition } of changes) {
+    if (removal !== undefined) {
+      removals.push(red(
+        `${padding}-${innerPadding}"${key}": ${JSON.stringify(removal)}`,
+      ));
+    }
+    if (addition !== undefined) {
+      additions.push(green(
+        `${padding}+${innerPadding}"${key}": ${JSON.stringify(addition)}`,
+      ));
+    }
+  }
+  return [removals.join(red(",\n")), additions.join(green(",\n"))].join("\n")
+    .trim();
+}
+
+interface Change {
+  key: string;
+  removal?: unknown;
+  addition?: unknown;
+}
