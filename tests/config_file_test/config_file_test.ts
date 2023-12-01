@@ -31,3 +31,21 @@ Deno.test("ConfigFile.diff returns array with additions and removals", async () 
     },
   ]);
 });
+
+Deno.test("ConfigFile.diff reports inculde and exclude changes when one of the entries changed", async () => {
+  const config = await configFile.read(
+    fromFileUrl(new URL(import.meta.resolve("./config.json"))),
+  );
+  assert(!!config);
+
+  config.override({ include: ["foo", "bar"], exclude: ["fuzz", "bazz"] });
+
+  const changes = config.diff({
+    include: ["fuzz", "bazz"],
+    exclude: ["foo", "bar"],
+  });
+  assertEquals(changes, [
+    { key: "exclude", addition: ["foo", "bar"], removal: ["fuzz", "bazz"] },
+    { key: "include", removal: ["foo", "bar"], addition: ["fuzz", "bazz"] },
+  ]);
+});
