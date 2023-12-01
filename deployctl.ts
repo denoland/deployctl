@@ -17,16 +17,14 @@ import { wait } from "./src/utils/spinner.ts";
 const help = `deployctl ${VERSION}
 Command line tool for Deno Deploy.
 
-To deploy a local script:
-  deployctl deploy --project=helloworld ./main.ts
-
-To deploy a remote script:
-  deployctl deploy --project=helloworld https://deno.land/x/deploy/examples/hello.js
-
 SUBCOMMANDS:
     deploy    Deploy a script with static files to Deno Deploy
     upgrade   Upgrade deployctl to the given version (defaults to latest)
     logs      View logs for the given project
+
+For more detailed help on each subcommand, use:
+
+    deployctl <SUBCOMMAND> -h
 `;
 
 if (!semverGreaterThanOrEquals(Deno.version.deno, MINIMUM_DENO_VERSION)) {

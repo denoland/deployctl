@@ -15,35 +15,54 @@ const help = `deployctl deploy
 Deploy a script with static files to Deno Deploy.
 
 Basic usage:
-  deployctl deploy
 
-To deploy a local script:
-  deployctl deploy --project=helloworld --entrypoint=main.ts
+    deployctl deploy
 
-To deploy a remote script:
-  deployctl deploy --project=helloworld --entrypoint=https://deno.com/examples/hello.js
+By default, deployctl will guess the project name based on the Git repo or directory it is in.
+Similarly, it will guess the entrypoint by looking for files with common entrypoint names (main.ts, src/main.ts, etc).
+After the first deployment, the settings used will be stored in a config file (by default deno.json). 
 
-To deploy a remote script without static files:
-  deployctl deploy --project=helloworld --entrypoint=https://deno.com/examples/hello.js --no-static
+You can specify the project name and/or the entrypoint using the --project and --entrypoint arguments respectively:
 
-To ignore the node_modules directory while deploying:
-  deployctl deploy --project=helloworld --entrypoint=main.tsx --exclude=node_modules
+    deployctl deploy --project=helloworld --entrypoint=src/entrypoint.ts
+
+By default, deployctl deploys all the files in the current directory (recursively). You can
+customize this behaviour using the --include and --exclude arguments (also supported in the config
+file). Here are some examples:
+
+- Include only source and static files:
+
+    deployctl deploy --include=./src --include=./static
+
+- Ignore the node_modules directory:
+
+    deployctl deploy --exclude=./node_modules
+
+A common pitfall is to not include the source code modules that need to be run (entrypoint and dependencies).
+The following example will fail because main.ts is not included:
+
+    deployctl deploy --include=./static --entrypoint=./main.ts
+
+The entrypoint can also be a remote script. A common use case for this is to deploy an static site
+using std/http/file_server.ts (more details in https://docs.deno.com/deploy/tutorials/static-site ):
+
+    deployctl deploy --entrypoint=https://deno.land/std@0.208.0/http/file_server.ts
+
 
 USAGE:
     deployctl deploy [OPTIONS] [<ENTRYPOINT>]
 
 OPTIONS:
-        --exclude=<PATTERNS>    Exclude files that match this pattern
-        --include=<PATTERNS>    Only upload files that match this pattern
-        --import-map=<FILE>     Use import map file
-    -h, --help                  Prints help information
-        --no-static             Don't include the files in the CWD as static files
-        --prod                  Create a production deployment (default is preview deployment)
-        --project=<NAME|ID>     The project to deploy to
+        --exclude=<PATH[,PATH]> Prevent the upload of these comma-separated paths. Can be used multiple times
+        --include=<PATH[,PATH]> Only upload files in these comma-separated paths. Can be used multiple times
+        --import-map=<PATH>     Path to the import map file to use.
+    -h, --help                  Prints this help information
+        --prod                  Create a production deployment (default is preview deployment except the first deployment)
+    -p, --project=<NAME|ID>     The project to deploy to
         --entrypoint=<PATH|URL> The file that Deno Deploy will run. Also available as positional argument, which takes precedence
-        --token=TOKEN           The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
+        --token=<TOKEN>         The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
         --dry-run               Dry run the deployment process.
-        --config                Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
+        --config=<PATH>         Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
         --save-config           Persist the arguments used into the DeployCTL config file
 `;
 
@@ -113,8 +132,8 @@ export default async function (rawArgs: RawArgs): Promise<void> {
     prod: args.prod,
     token: args.token,
     project: args.project,
-    include: args.include?.map((pattern) => normalize(pattern)),
-    exclude: args.exclude?.map((pattern) => normalize(pattern)),
+    include: args.include.map((pattern) => normalize(pattern)),
+    exclude: args.exclude.map((pattern) => normalize(pattern)),
     dryRun: args.dryRun,
     config: args.config,
     saveConfig: args.saveConfig,
