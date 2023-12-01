@@ -15,7 +15,8 @@ import {
   PushDeploymentRequest,
 } from "./api_types.ts";
 
-const USER_AGENT = `DeployCTL/${VERSION} (${Deno.build.os} ${Deno.osRelease()}; ${Deno.build.arch})`
+const USER_AGENT =
+  `DeployCTL/${VERSION} (${Deno.build.os} ${Deno.osRelease()}; ${Deno.build.arch})`;
 
 export interface RequestOptions {
   method?: string;
