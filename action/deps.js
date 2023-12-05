@@ -4019,7 +4019,9 @@ async function walk(cwd, dir, files, options) {
     for await (const file of Deno.readDir(dir)){
         const path = join3(dir, file.name);
         const relative = path.slice(cwd.length);
-        if (!include(path.slice(cwd.length + 1), options.include, options.exclude)) {
+        // Do not test directories, because --include=foo/bar must include the directory foo
+        if (!file.isDirectory && 
+            !include(path.slice(cwd.length + 1), options.include, options.exclude)) {
             continue;
         }
         let entry;
