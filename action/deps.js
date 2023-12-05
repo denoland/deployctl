@@ -4019,7 +4019,9 @@ async function walk(cwd, dir, files, options) {
     for await (const file of Deno.readDir(dir)){
         const path = join3(dir, file.name);
         const relative = path.slice(cwd.length);
-        if (!include(path.slice(cwd.length + 1), options.include, options.exclude)) {
+        // Do not test directories, because --include=foo/bar must include the directory foo
+        if (!file.isDirectory && 
+            !include(path.slice(cwd.length + 1), options.include, options.exclude)) {
             continue;
         }
         let entry;
@@ -4033,7 +4035,7 @@ async function walk(cwd, dir, files, options) {
             };
             files.set(gitSha1, path);
         } else if (file.isDirectory) {
-            if (relative === "/.git") continue;
+            if (relative === "/.git" || relative === "/node_modules") continue;
             entry = {
                 kind: "directory",
                 entries: await walk(cwd, path, files, options)
