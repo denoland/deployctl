@@ -1,4 +1,4 @@
-import { join } from "../../deps.ts";
+import { join, normalize } from "../../deps.ts";
 import { ManifestEntry } from "./api_types.ts";
 
 /** Calculate git object hash, like `git hash-object` does. */
@@ -17,18 +17,18 @@ export async function calculateGitSha1(bytes: Uint8Array) {
 
 function include(
   path: string,
-  include: string[],
-  exclude: string[],
+  include: RegExp[],
+  exclude: RegExp[],
 ): boolean {
   if (
     include.length &&
-    !include.some((pattern): boolean => path.startsWith(pattern))
+    !include.some((pattern): boolean => pattern.test(normalize(path)))
   ) {
     return false;
   }
   if (
     exclude.length &&
-    exclude.some((pattern): boolean => path.startsWith(pattern))
+    exclude.some((pattern): boolean => pattern.test(normalize(path)))
   ) {
     return false;
   }
@@ -39,13 +39,15 @@ export async function walk(
   cwd: string,
   dir: string,
   files: Map<string, string>,
-  options: { include: string[]; exclude: string[] },
+  options: { include: RegExp[]; exclude: RegExp[] },
 ): Promise<Record<string, ManifestEntry>> {
   const entries: Record<string, ManifestEntry> = {};
   for await (const file of Deno.readDir(dir)) {
     const path = join(dir, file.name);
     const relative = path.slice(cwd.length);
     if (
+      // Do not test directories, because --include=foo/bar must include the directory foo (same goes with --include=*/bar)
+      !file.isDirectory &&
       !include(
         path.slice(cwd.length + 1),
         options.include,

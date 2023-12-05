@@ -11,7 +11,7 @@ import logsSubcommand from "./src/subcommands/logs.ts";
 import { MINIMUM_DENO_VERSION, VERSION } from "./src/version.ts";
 import { fetchReleases, getConfigPaths } from "./src/utils/info.ts";
 import configFile from "./src/config_file.ts";
-import inferMissingConfig from "./src/config_inference.ts";
+import inferConfig from "./src/config_inference.ts";
 import { wait } from "./src/utils/spinner.ts";
 
 const help = `deployctl ${VERSION}
@@ -81,7 +81,7 @@ const subcommand = args._.shift();
 switch (subcommand) {
   case "deploy":
     await setDefaultsFromConfigFile(args);
-    await inferMissingConfig(args);
+    await inferConfig(args);
     await deploySubcommand(args);
     break;
   case "upgrade":
