@@ -6,6 +6,8 @@ export {
   dirname,
   extname,
   fromFileUrl,
+  globToRegExp,
+  isGlob,
   join,
   normalize,
   relative,

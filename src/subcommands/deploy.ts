@@ -1,6 +1,12 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { fromFileUrl, normalize, Spinner } from "../../deps.ts";
+import {
+  fromFileUrl,
+  globToRegExp,
+  isGlob,
+  normalize,
+  Spinner,
+} from "../../deps.ts";
 import { wait } from "../utils/spinner.ts";
 import configFile from "../config_file.ts";
 import { error } from "../error.ts";
@@ -26,17 +32,21 @@ You can specify the project name and/or the entrypoint using the --project and -
 
     deployctl deploy --project=helloworld --entrypoint=src/entrypoint.ts
 
-By default, deployctl deploys all the files in the current directory (recursively). You can
-customize this behaviour using the --include and --exclude arguments (also supported in the config
-file). Here are some examples:
+By default, deployctl deploys all the files in the current directory (recursively, except node_modules directories).
+You can customize this behaviour using the --include and --exclude arguments (also supported in the
+config file). Here are some examples:
 
 - Include only source and static files:
 
     deployctl deploy --include=./src --include=./static
 
-- Ignore the node_modules directory:
+- Include only Typescript files:
 
-    deployctl deploy --exclude=./node_modules
+    deployctl deploy --include=**/*.ts
+
+- Exclude local tooling and artifacts
+
+    deployctl deploy --exclude=./tools --exclude=./benches
 
 A common pitfall is to not include the source code modules that need to be run (entrypoint and dependencies).
 The following example will fail because main.ts is not included:
@@ -53,8 +63,8 @@ USAGE:
     deployctl deploy [OPTIONS] [<ENTRYPOINT>]
 
 OPTIONS:
-        --exclude=<PATH[,PATH]> Prevent the upload of these comma-separated paths. Can be used multiple times
-        --include=<PATH[,PATH]> Only upload files in these comma-separated paths. Can be used multiple times
+        --exclude=<PATH[,PATH]> Prevent the upload of these comma-separated paths. Can be used multiple times. Globs are supported
+        --include=<PATH[,PATH]> Only upload files in these comma-separated paths. Can be used multiple times. Globs are supported
         --import-map=<PATH>     Path to the import map file to use.
     -h, --help                  Prints this help information
         --prod                  Create a production deployment (default is preview deployment except the first deployment)
@@ -132,8 +142,8 @@ export default async function (rawArgs: RawArgs): Promise<void> {
     prod: args.prod,
     token: args.token,
     project: args.project,
-    include: args.include.map((pattern) => normalize(pattern)),
-    exclude: args.exclude.map((pattern) => normalize(pattern)),
+    include: args.include,
+    exclude: args.exclude,
     dryRun: args.dryRun,
     config: args.config,
     saveConfig: args.saveConfig,
@@ -236,10 +246,19 @@ async function deploy(opts: DeployOpts): Promise<void> {
     wait("").start().info(`Uploading all files from the current dir (${cwd})`);
     const assetSpinner = wait("Finding static assets...").start();
     const assets = new Map<string, string>();
-    const entries = await walk(cwd, cwd, assets, {
-      include: opts.include,
-      exclude: opts.exclude,
-    });
+    const include = opts.include.map((pattern) =>
+      isGlob(pattern)
+        // slice is used to remove the end-of-string anchor '$'
+        ? RegExp(globToRegExp(normalize(pattern)).toString().slice(1, -2))
+        : RegExp(`^${normalize(pattern)}`)
+    );
+    const exclude = opts.exclude.map((pattern) =>
+      isGlob(pattern)
+        // slice is used to remove the end-of-string anchor '$'
+        ? RegExp(globToRegExp(normalize(pattern)).toString().slice(1, -2))
+        : RegExp(`^${normalize(pattern)}`)
+    );
+    const entries = await walk(cwd, cwd, assets, { include, exclude });
     assetSpinner.succeed(
       `Found ${assets.size} asset${assets.size === 1 ? "" : "s"}.`,
     );
