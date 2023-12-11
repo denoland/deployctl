@@ -4021,7 +4021,8 @@ async function walk(cwd, dir, files, options) {
         const relative = path.slice(cwd.length);
         // Do not test directories, because --include=foo/bar must include the directory foo
         if (!file.isDirectory && 
-            !include(path.slice(cwd.length + 1), options.include, options.exclude)) {
+            // .slice(1) removes the leading slash
+            !include(relative.slice(1), options.include, options.exclude)) {
             continue;
         }
         let entry;
@@ -4035,7 +4036,7 @@ async function walk(cwd, dir, files, options) {
             };
             files.set(gitSha1, path);
         } else if (file.isDirectory) {
-            if (relative === "/.git" || relative === "/node_modules") continue;
+            if (relative === "/.git" || relative.includes("/node_modules/")) continue;
             entry = {
                 kind: "directory",
                 entries: await walk(cwd, path, files, options)
