@@ -4036,7 +4036,7 @@ async function walk(cwd, dir, files, options) {
             };
             files.set(gitSha1, path);
         } else if (file.isDirectory) {
-            if (relative === "/.git" || relative.includes("/node_modules/")) continue;
+            if (relative === "/.git" || relative.endsWith("/node_modules")) continue;
             entry = {
                 kind: "directory",
                 entries: await walk(cwd, path, files, options)

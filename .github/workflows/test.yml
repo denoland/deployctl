@@ -50,5 +50,11 @@ jobs:
         uses: ./
         with:
           project: happy-rat-64
+          root: action/tests/always_exclude_node_modules
+          entrypoint: main.ts
+      - name: Always exclude nested node_modules directory
+        uses: ./
+        with:
+          project: happy-rat-64
           root: action/tests
           entrypoint: always_exclude_node_modules/main.ts
