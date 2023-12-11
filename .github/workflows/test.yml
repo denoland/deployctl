@@ -46,3 +46,9 @@ jobs:
           exclude: |
             import_bomb1
             import_bomb2
+      - name: Always exclude node_modules directory
+        uses: ./
+        with:
+          project: happy-rat-64
+          root: action/tests
+          entrypoint: always_exclude_node_modules/main.ts
