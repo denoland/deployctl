@@ -12,6 +12,8 @@ const NONAMES = ["src", "lib", "code", "dist", "build", "shared", "public"];
 interface InferredArgs {
   project?: string;
   entrypoint?: string;
+  exclude: string[];
+  include: string[];
 }
 
 /**
@@ -195,7 +197,7 @@ async function present(path: string): Promise<string | undefined> {
   }
 }
 
-export default async function inferMissingConfig(
+export default async function inferConfig(
   args: InferredArgs & {
     token?: string;
     help?: boolean;
@@ -212,6 +214,7 @@ export default async function inferMissingConfig(
   if (args.project === undefined) {
     args.project = await inferProject(api, !!args["dry-run"]);
   }
+
   if (args.entrypoint === undefined) {
     args.entrypoint = await inferEntrypoint();
     if (args.entrypoint) {
@@ -222,5 +225,9 @@ export default async function inferMissingConfig(
         "Is this wrong? Please let us know in https://github.com/denoland/deployctl/issues/new",
       );
     }
+  }
+
+  if (!args.include.some((i) => i.includes("node_modules"))) {
+    args.exclude.push("**/node_modules");
   }
 }
