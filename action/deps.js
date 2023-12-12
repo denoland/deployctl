@@ -4006,10 +4006,10 @@ async function calculateGitSha1(bytes) {
     return hashHex;
 }
 function include(path, include, exclude) {
-    if (include && !include.some((pattern)=>path.startsWith(pattern))) {
+    if (include.length && !include.some((pattern)=>path.startsWith(pattern))) {
         return false;
     }
-    if (exclude && exclude.some((pattern)=>path.startsWith(pattern))) {
+    if (exclude.length && exclude.some((pattern)=>path.startsWith(pattern))) {
         return false;
     }
     return true;
@@ -4019,7 +4019,10 @@ async function walk(cwd, dir, files, options) {
     for await (const file of Deno.readDir(dir)){
         const path = join3(dir, file.name);
         const relative = path.slice(cwd.length);
-        if (!include(path.slice(cwd.length + 1), options.include, options.exclude)) {
+        // Do not test directories, because --include=foo/bar must include the directory foo
+        if (!file.isDirectory && 
+            // .slice(1) removes the leading slash
+            !include(relative.slice(1), options.include, options.exclude)) {
             continue;
         }
         let entry;
@@ -4033,7 +4036,7 @@ async function walk(cwd, dir, files, options) {
             };
             files.set(gitSha1, path);
         } else if (file.isDirectory) {
-            if (relative === "/.git") continue;
+            if (relative === "/.git" || relative.endsWith("/node_modules")) continue;
             entry = {
                 kind: "directory",
                 entries: await walk(cwd, path, files, options)
@@ -4054,5 +4057,5 @@ async function walk(cwd, dir, files, options) {
 export { parseEntrypoint as parseEntrypoint };
 export { API as API, APIError as APIError };
 export { walk as walk };
-export { fromFileUrl2 as fromFileUrl, resolve2 as resolve };
+export { fromFileUrl2 as fromFileUrl, resolve2 as resolve, normalize3 as normalize };
 

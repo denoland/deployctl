@@ -3,7 +3,7 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
 import { semverGreaterThanOrEquals } from "./deps.ts";
-import { parseArgs } from "./src/args.ts";
+import { Args, parseArgs } from "./src/args.ts";
 import { error } from "./src/error.ts";
 import deploySubcommand from "./src/subcommands/deploy.ts";
 import upgradeSubcommand from "./src/subcommands/upgrade.ts";
@@ -11,20 +11,21 @@ import logsSubcommand from "./src/subcommands/logs.ts";
 import topSubcommand from "./src/subcommands/top.ts";
 import { MINIMUM_DENO_VERSION, VERSION } from "./src/version.ts";
 import { fetchReleases, getConfigPaths } from "./src/utils/info.ts";
+import configFile from "./src/config_file.ts";
+import inferConfig from "./src/config_inference.ts";
+import { wait } from "./src/utils/spinner.ts";
 
 const help = `deployctl ${VERSION}
 Command line tool for Deno Deploy.
-
-To deploy a local script:
-  deployctl deploy --project=helloworld ./main.ts
-
-To deploy a remote script:
-  deployctl deploy --project=helloworld https://deno.land/x/deploy/examples/hello.js
 
 SUBCOMMANDS:
     deploy    Deploy a script with static files to Deno Deploy
     upgrade   Upgrade deployctl to the given version (defaults to latest)
     logs      View logs for the given project
+
+For more detailed help on each subcommand, use:
+
+    deployctl <SUBCOMMAND> -h
 `;
 
 if (!semverGreaterThanOrEquals(Deno.version.deno, MINIMUM_DENO_VERSION)) {
@@ -80,12 +81,16 @@ if (Deno.isatty(Deno.stdin.rid)) {
 const subcommand = args._.shift();
 switch (subcommand) {
   case "deploy":
+    await setDefaultsFromConfigFile(args);
+    await inferConfig(args);
     await deploySubcommand(args);
     break;
   case "upgrade":
+    await setDefaultsFromConfigFile(args);
     await upgradeSubcommand(args);
     break;
   case "logs":
+    await setDefaultsFromConfigFile(args);
     await logsSubcommand(args);
     break;
   case "top":
@@ -102,4 +107,24 @@ switch (subcommand) {
     }
     console.error(help);
     Deno.exit(1);
+}
+
+async function setDefaultsFromConfigFile(args: Args) {
+  const loadFileConfig = !args.version && !args.help;
+  if (loadFileConfig) {
+    const config = await configFile.read(
+      args.config ?? configFile.cwdOrAncestors(),
+    );
+    if (config === null && args.config !== undefined && !args["save-config"]) {
+      error(
+        `Could not find or read the config file '${args.config}'. Use --save-config to create it.`,
+      );
+    }
+    if (config !== null) {
+      wait("").start().info(`Using config file '${config.path()}'`);
+      config.useAsDefaultFor(args);
+      // Set the effective config path for the rest of the execution
+      args.config = config.path();
+    }
+  }
 }
