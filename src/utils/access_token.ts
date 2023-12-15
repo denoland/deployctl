@@ -1,6 +1,6 @@
 import { interruptSpinner, wait } from "./spinner.ts";
 import { error } from "../error.ts";
-import { endpoint } from "./api.ts";
+import { endpoint, USER_AGENT } from "./api.ts";
 import tokenStorage from "./token_storage.ts";
 
 export default {
@@ -28,7 +28,11 @@ async function provision(): Promise<string> {
 
   const tokenStream = await fetch(
     `${endpoint()}/api/signin/cli/access_token`,
-    { method: "POST", body: claimVerifier },
+    {
+      method: "POST",
+      headers: { "User-Agent": USER_AGENT },
+      body: claimVerifier,
+    },
   );
   if (!tokenStream.ok) {
     error(
