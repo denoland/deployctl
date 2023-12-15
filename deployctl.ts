@@ -94,6 +94,8 @@ switch (subcommand) {
     await logsSubcommand(args);
     break;
   case "top":
+    await setDefaultsFromConfigFile(args);
+    await inferConfig(args);
     await topSubcommand(args);
     break;
   default:

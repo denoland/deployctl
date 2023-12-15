@@ -261,6 +261,6 @@ export class API {
 
   stream_metering(project: string) {
     // deno-lint-ignore no-explicit-any
-    return this.#requestStream<any>(`/projects/${project}/metering`);
+    return this.#requestStream<any>(`/projects/${project}/stats`);
   }
 }

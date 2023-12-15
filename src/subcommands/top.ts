@@ -39,6 +39,24 @@ import { bgRed } from "https://deno.land/std@0.97.0/fmt/colors.ts";
 type SortKey = "reqs" | "cpu%" | "cpureq" | "rss" | "kv" | "queues";
 
 export default async function topSubcommand(args: Args) {
+  if (args.tui) {
+    return await tui(args);
+  } else {
+    return await json(args);
+  }
+}
+
+async function json(args: Args) {
+  const api = args.token
+    ? API.fromToken(args.token)
+    : API.withTokenProvisioner(TokenProvisioner);
+  const stats = await api.stream_metering(args.project!);
+  for await (const stat of stats) {
+    console.log(stat);
+  }
+}
+
+async function tui(args: Args) {
   const regionTableHeight = new Signal(5);
   const sortBy = new Signal<SortKey>("reqs");
   let regionTableWidth = 0;
@@ -348,7 +366,6 @@ export default async function topSubcommand(args: Args) {
     // }
   }
 }
-
 
 // - RPS
 // - CPU
