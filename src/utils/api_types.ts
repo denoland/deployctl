@@ -21,9 +21,22 @@ export interface Project {
   productionDeployment?: Deployment | null;
   hasProductionDeployment: boolean;
   organizationId: string;
+  organization: Organization;
   createdAt: string;
   updatedAt: string;
   envVars: string[];
+}
+
+export type Organization = UserOrganization | NormalOrganization;
+
+export interface UserOrganization {
+  id: string;
+  name: null;
+}
+
+export interface NormalOrganization {
+  id: string;
+  name: string;
 }
 
 export interface DeploymentsSummary {

@@ -32,6 +32,7 @@ export function parseArgs(args: string[]) {
       "limit",
       "config",
       "entrypoint",
+      "org",
     ],
     collect: ["grep", "include", "exclude"],
     default: {
@@ -39,6 +40,7 @@ export function parseArgs(args: string[]) {
       limit: "100",
       config: Deno.env.get("DEPLOYCTL_CONFIG_FILE"),
       token: Deno.env.get("DENO_DEPLOY_TOKEN"),
+      org: Deno.env.get("DEPLOYCTL_ORGANIZATION"),
     },
   });
   return parsed;

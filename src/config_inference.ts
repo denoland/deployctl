@@ -5,6 +5,7 @@ import { API, APIError } from "./utils/api.ts";
 import TokenProvisioner from "./utils/access_token.ts";
 import { wait } from "./utils/spinner.ts";
 import { error } from "./error.ts";
+import organization from "./utils/organization.ts";
 
 const NONAMES = ["src", "lib", "code", "dist", "build", "shared", "public"];
 
@@ -24,7 +25,7 @@ interface InferredArgs {
  * - Otherwise, use the directory name from where DeployCTL is being executed,
  *   unless the name is useless like "src" or "dist".
  */
-async function inferProject(api: API, dryRun: boolean) {
+async function inferProject(api: API, dryRun: boolean, orgName?: string) {
   wait("").start().warn(
     "No project name or ID provided with either the --project arg or a config file.",
   );
@@ -41,6 +42,9 @@ async function inferProject(api: API, dryRun: boolean) {
     );
     return projectName;
   }
+  const org = orgName
+    ? await organization.getByNameOrCreate(api, orgName)
+    : null;
   for (;;) {
     let spinner;
     if (projectName) {
@@ -51,7 +55,7 @@ async function inferProject(api: API, dryRun: boolean) {
       spinner = wait("Creating new project with a random name...").start();
     }
     try {
-      const project = await api.createProject(projectName);
+      const project = await api.createProject(projectName, org?.id);
       if (projectName) {
         spinner.succeed(
           `Guessed project name '${project.name}'.`,
@@ -203,6 +207,7 @@ export default async function inferConfig(
     help?: boolean;
     version?: boolean;
     "dry-run"?: boolean;
+    org?: string;
   },
 ) {
   if (args.help || args.version) {
@@ -212,7 +217,7 @@ export default async function inferConfig(
     ? API.fromToken(args.token)
     : API.withTokenProvisioner(TokenProvisioner);
   if (args.project === undefined) {
-    args.project = await inferProject(api, !!args["dry-run"]);
+    args.project = await inferProject(api, !!args["dry-run"], args.org);
   }
 
   if (args.entrypoint === undefined) {

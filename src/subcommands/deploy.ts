@@ -16,6 +16,7 @@ import { parseEntrypoint } from "../utils/entrypoint.ts";
 import { walk } from "../utils/walk.ts";
 import TokenProvisioner from "../utils/access_token.ts";
 import { Args as RawArgs } from "../args.ts";
+import organization from "../utils/organization.ts";
 
 const help = `deployctl deploy
 Deploy a script with static files to Deno Deploy.
@@ -68,7 +69,8 @@ OPTIONS:
         --import-map=<PATH>     Path to the import map file to use.
     -h, --help                  Prints this help information
         --prod                  Create a production deployment (default is preview deployment except the first deployment)
-    -p, --project=<NAME|ID>     The project to deploy to
+    -p, --project=<NAME|ID>     The project in which to deploy. If it does not exist yet, it will be created (see --org).
+        --org=<ORG>             The organization in which to create the project. Defaults to the user's personal organization
         --entrypoint=<PATH|URL> The file that Deno Deploy will run. Also available as positional argument, which takes precedence
         --token=<TOKEN>         The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
         --dry-run               Dry run the deployment process.
@@ -84,6 +86,7 @@ export interface Args {
   include: string[];
   token: string | null;
   project: string | null;
+  org?: string;
   entrypoint: string | null;
   importMap: string | null;
   dryRun: boolean;
@@ -101,6 +104,7 @@ export default async function (rawArgs: RawArgs): Promise<void> {
     prod: !!rawArgs.prod,
     token: rawArgs.token ? String(rawArgs.token) : null,
     project: rawArgs.project ? String(rawArgs.project) : null,
+    org: rawArgs.org,
     entrypoint: positionalEntrypoint !== null
       ? positionalEntrypoint
       : rawArgs["entrypoint"]
@@ -142,6 +146,7 @@ export default async function (rawArgs: RawArgs): Promise<void> {
     prod: args.prod,
     token: args.token,
     project: args.project,
+    org: args.org,
     include: args.include,
     exclude: args.exclude,
     dryRun: args.dryRun,
@@ -161,6 +166,7 @@ interface DeployOpts {
   include: string[];
   token: string | null;
   project: string;
+  org?: string;
   dryRun: boolean;
   config: string | null;
   saveConfig: boolean;
@@ -180,12 +186,15 @@ async function deploy(opts: DeployOpts): Promise<void> {
   let projectIsEmpty = false;
   let project = await api.getProject(opts.project);
   if (project === null) {
+    const org = opts.org
+      ? await organization.getByNameOrCreate(api, opts.org)
+      : null;
     projectInfoSpinner.stop();
     const projectCreationSpinner = wait(
-      `Project '${opts.project}' not found in any of the user's organizations. Creating...`,
+      `Project '${opts.project}' not found. Creating...`,
     ).start();
     try {
-      project = await api.createProject(opts.project);
+      project = await api.createProject(opts.project, org?.id);
     } catch (e) {
       error(e.message);
     }
@@ -195,6 +204,17 @@ async function deploy(opts: DeployOpts): Promise<void> {
     );
     projectIsEmpty = true;
   } else {
+    if (opts.org && project.organization.name === null) {
+      projectInfoSpinner.fail(
+        `The project is in your personal organization and you requested the org '${opts.org}' in the args`,
+      );
+      Deno.exit(1);
+    } else if (opts.org && project.organization.name !== opts.org) {
+      projectInfoSpinner.fail(
+        `The project is in the organization '${project.organization.name}' and you requested the org '${opts.org}' in the args`,
+      );
+      Deno.exit(1);
+    }
     const deploymentsListing = await api.getDeployments(project.id);
     if (deploymentsListing === null) {
       projectInfoSpinner.fail("Project deployments details not found.");

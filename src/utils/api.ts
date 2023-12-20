@@ -10,6 +10,7 @@ import {
   LogQueryRequestParams,
   ManifestEntry,
   Metadata,
+  Organization,
   PersistedLog,
   Project,
   PushDeploymentRequest,
@@ -152,6 +153,25 @@ export class API {
       if (line === "") return;
       yield JSON.parse(line);
     }
+  }
+
+  async getOrganizationByName(name: string): Promise<Organization | undefined> {
+    const organizations: Organization[] = await this.#requestJson(
+      `/organizations`,
+    );
+    for (const org of organizations) {
+      if (org.name === name) {
+        return org;
+      }
+    }
+  }
+
+  async createOrganization(name: string): Promise<Organization> {
+    const body = { name };
+    return await this.#requestJson(
+      `/organizations`,
+      { method: "POST", body },
+    );
   }
 
   async getProject(id: string): Promise<Project | null> {
