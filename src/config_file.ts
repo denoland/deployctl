@@ -69,7 +69,10 @@ class ConfigFile {
     for (const [key, thisValue] of Object.entries(this.args())) {
       // deno-lint-ignore no-explicit-any
       const argValue = (args as any)[key];
-      if ((argValue === undefined || Array.isArray(argValue) && argValue.length === 0) && thisValue) {
+      if (
+        (argValue === undefined ||
+          Array.isArray(argValue) && argValue.length === 0) && thisValue
+      ) {
         // deno-lint-ignore no-explicit-any
         (args as any)[key] = thisValue;
       }
