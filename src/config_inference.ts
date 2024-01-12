@@ -1,7 +1,7 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
 import { basename, magenta } from "../deps.ts";
-import { API, APIError } from "./utils/api.ts";
+import { API, APIError, endpoint } from "./utils/api.ts";
 import TokenProvisioner from "./utils/access_token.ts";
 import { wait } from "./utils/spinner.ts";
 import { error } from "./error.ts";
@@ -64,7 +64,7 @@ async function inferProject(api: API, dryRun: boolean, orgName?: string) {
         spinner.succeed(`Created new project '${project.name}'`);
       }
       wait({ text: "", indent: 3 }).start().info(
-        `You can always change the project name in https://dash.deno.com/projects/${project.name}/settings`,
+        `You can always change the project name in ${endpoint()}/projects/${project.name}/settings`,
       );
       return project.name;
     } catch (e) {
