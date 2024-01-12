@@ -6,7 +6,6 @@ import { Organization, Project } from "../utils/api_types.ts";
 import { bold, green, magenta, red } from "../../deps.ts";
 import { error } from "../error.ts";
 import organization from "../utils/organization.ts";
-import { CHAR_EXCLAMATION_MARK } from "https://deno.land/std@0.170.0/path/_constants.ts";
 
 const help = `Manage projects in Deno Deploy
 
