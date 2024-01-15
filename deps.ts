@@ -1,7 +1,5 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { colors } from "https://deno.land/x/wait@0.1.12/deps.ts";
-
 // std
 export {
   basename,

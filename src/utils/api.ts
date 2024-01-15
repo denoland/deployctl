@@ -13,6 +13,7 @@ import {
   Organization,
   PersistedLog,
   Project,
+  ProjectStats,
   PushDeploymentRequest,
 } from "./api_types.ts";
 
@@ -145,7 +146,6 @@ export class API {
     if (res.body === null) {
       throw new Error("Stream ended unexpectedly");
     }
-
 
     const lines = res.body
       .pipeThrough(new TextDecoderStream())
@@ -280,7 +280,6 @@ export class API {
   }
 
   stream_metering(project: string) {
-    // deno-lint-ignore no-explicit-any
-    return this.#requestStream<any>(`/projects/${project}/stats`);
+    return this.#requestStream<ProjectStats>(`/projects/${project}/stats`);
   }
 }

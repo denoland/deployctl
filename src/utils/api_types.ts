@@ -161,3 +161,21 @@ export interface PersistedLog {
 export interface Metadata {
   regionCodes: string[];
 }
+
+export interface ProjectStats {
+  id: string;
+  region: string;
+  project_id: string;
+  deployment_id: string;
+  uptime: number;
+  requests_per_minute: number;
+  cpu_time_per_second: number;
+  cpu_time_per_request: number;
+  max_rss_5_minutes: number;
+  ingress_bytes_per_minute: number;
+  egress_bytes_per_minute: number;
+  kv_read_units_per_minute: number;
+  kv_write_units_per_minute: number;
+  enqueue_per_minute: number;
+  dequeue_per_minute: number;
+}
