@@ -49,3 +49,18 @@ Deno.test("ConfigFile.diff reports inculde and exclude changes when one of the e
     { key: "include", removal: ["foo", "bar"], addition: ["fuzz", "bazz"] },
   ]);
 });
+
+Deno.test("ConfigFile.useAsDefaultFor can handle empty array defaults", async () => {
+  const config = await configFile.read(
+    fromFileUrl(new URL(import.meta.resolve("./config_with_include.json"))),
+  );
+  assert(!!config);
+  assertEquals(config.args().include?.[0], "**");
+
+  const args = {
+    include: [],
+  };
+  config.useAsDefaultFor(args);
+
+  assertEquals(args.include[0], "**");
+});

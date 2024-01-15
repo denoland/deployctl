@@ -10,12 +10,13 @@ import {
   LogQueryRequestParams,
   ManifestEntry,
   Metadata,
+  Organization,
   PersistedLog,
   Project,
   PushDeploymentRequest,
 } from "./api_types.ts";
 
-const USER_AGENT =
+export const USER_AGENT =
   `DeployCTL/${VERSION} (${Deno.build.os} ${Deno.osRelease()}; ${Deno.build.arch})`;
 
 export interface RequestOptions {
@@ -153,6 +154,25 @@ export class API {
       if (line === "") return;
       yield JSON.parse(line);
     }
+  }
+
+  async getOrganizationByName(name: string): Promise<Organization | undefined> {
+    const organizations: Organization[] = await this.#requestJson(
+      `/organizations`,
+    );
+    for (const org of organizations) {
+      if (org.name === name) {
+        return org;
+      }
+    }
+  }
+
+  async createOrganization(name: string): Promise<Organization> {
+    const body = { name };
+    return await this.#requestJson(
+      `/organizations`,
+      { method: "POST", body },
+    );
   }
 
   async getProject(id: string): Promise<Project | null> {

@@ -1,0 +1,8 @@
+{
+  "deploy": {
+    "project": "example-hello-world",
+    "exclude": [],
+    "include": [],
+    "entrypoint": "main.ts"
+  }
+}
