@@ -169,7 +169,7 @@ async function showProject(args: Args): Promise<void> {
 async function deleteProject(args: Args): Promise<void> {
   if (!args.project) {
     error(
-      "No project specified. Use --project to specify the project of which to show the details",
+      "No project specified. Use --project to specify the project to delete",
     );
   }
   const fetchSpinner = wait(`Fetching project '${args.project}' details...`)
@@ -208,7 +208,7 @@ async function deleteProject(args: Args): Promise<void> {
 async function createProject(args: Args): Promise<void> {
   if (!args.project) {
     error(
-      "No project specified. Use --project to specify the project of which to show the details",
+      "No project specified. Use --project to specify the project to create",
     );
   }
   const spinner = wait(`Creating project '${args.project}'...`).start();
@@ -235,7 +235,7 @@ async function createProject(args: Args): Promise<void> {
 async function renameProject(args: Args): Promise<void> {
   if (!args.project) {
     error(
-      "no project specified. Use --project to specify the project of which to show the details",
+      "no project specified. Use --project to specify the project to rename",
     );
   }
   const fetchSpinner = wait(`Fetching project '${args.project}' details...`)
