@@ -9,7 +9,22 @@ import { error } from "../error.ts";
 import { ProjectStats } from "../utils/api_types.ts";
 import { sha256 } from "../utils/hashing_encoding.ts";
 
-const help = `Project monitoring
+const help = `
+Project monitoring (ALPHA)
+
+Definition of the table columns:
+
+    idx         Instance discriminator. Opaque id to discriminate different executions running in the same region.
+    Req/min     Requests per minute received by the project.
+    CPU%        Percentage of CPU used by the project.
+    CPU/req     CPU time per request, in milliseconds. 
+    RSS/5min    Max RSS used by the project during the last 5 minutes, in MB. 
+    Ingress/min Data received by the project per minute, in KB.
+    Egress/min  Data outputed by the project per minute, in KB.
+    KVr/min     KV reads performed by the project per minute.
+    KVw/min     KV writes performed by the project per minute.
+    QSenq/min   Queues enqueues performed by the project per minute.
+    QSdeq/min   Queues dequeues performed by the project per minute.
 
 USAGE:
     deployctl top [OPTIONS]
@@ -74,7 +89,7 @@ export default async function topSubcommand(args: Args) {
   }
 }
 
-async function tabbed(stats: AsyncGenerator<ProjectStats>) {
+async function tabbed(stats: AsyncGenerator<ProjectStats, void>) {
   const table: { [id: string]: unknown } = {};
   const timeouts: { [id: string]: number } = {};
   const toDelete: string[] = [];
@@ -87,20 +102,30 @@ async function tabbed(stats: AsyncGenerator<ProjectStats>) {
       if (result) {
         next = stats.next();
         const stat = result.value;
+        if (!stat) {
+          spinner.succeed("Stream ended");
+          return;
+        }
         const id = encodeHex(await sha256(stat.id + stat.region))
           .slice(0, 6);
         table[id] = {
           "region": stat.region,
           "Req/min": Math.ceil(stat.requestsPerMinute),
           "CPU%": parseFloat((stat.cpuTimePerSecond / 10).toFixed(2)),
-          "CPU(ms)/req": parseFloat((stat.cpuTimePerRequest || 0).toFixed(2)),
-          "RSS(MB)/5min": parseFloat(
+          "CPU/req": parseFloat((stat.cpuTimePerRequest || 0).toFixed(2)),
+          "RSS/5min": parseFloat(
             (stat.maxRss5Minutes / 1_000_000).toFixed(3),
           ),
-          "KV reads/min": Math.ceil(stat.kvReadUnitsPerMinute),
-          "KV writes/min": Math.ceil(stat.kvWriteUnitsPerMinute),
-          "QS enqueues/min": Math.ceil(stat.enqueuePerMinute),
-          "QS dequeues/min": Math.ceil(stat.dequeuePerMinute),
+          "Ingress/min": parseFloat(
+            (stat.ingressBytesPerMinute / 1_000).toFixed(3),
+          ),
+          "Egress/min": parseFloat(
+            (stat.egressBytesPerMinute / 1_000).toFixed(3),
+          ),
+          "KVr/min": Math.ceil(stat.kvReadUnitsPerMinute),
+          "KVw/min": Math.ceil(stat.kvWriteUnitsPerMinute),
+          "QSenq/min": Math.ceil(stat.enqueuePerMinute),
+          "QSdeq/min": Math.ceil(stat.dequeuePerMinute),
         };
 
         clearTimeout(timeouts[id]);

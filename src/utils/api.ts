@@ -136,7 +136,7 @@ export class API {
   async #requestStream<T>(
     path: string,
     opts?: RequestOptions,
-  ): Promise<AsyncGenerator<T>> {
+  ): Promise<AsyncGenerator<T, void>> {
     const res = await this.#request(path, opts);
     if (res.status !== 200) {
       const json = await res.json();
@@ -281,7 +281,7 @@ export class API {
     return this.#requestJson("/meta");
   }
 
-  stream_metering(project: string): Promise<AsyncGenerator<ProjectStats>> {
+  stream_metering(project: string): Promise<AsyncGenerator<ProjectStats, void>> {
     return this.#requestStream(`/projects/${project}/stats`);
   }
 }
