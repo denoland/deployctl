@@ -9,14 +9,45 @@ import { error } from "../error.ts";
 import { ProjectStats } from "../utils/api_types.ts";
 import { sha256 } from "../utils/hashing_encoding.ts";
 
-type SortKey = "reqs" | "cpu%" | "cpureq" | "rss" | "kv" | "queues";
+const help = `Project monitoring
+
+USAGE:
+    deployctl top [OPTIONS]
+
+OPTIONS:
+    -h, --help                    Prints this help information
+    -p, --project=<NAME|ID>       The project to monitor.
+        --token=<TOKEN>           The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
+        --config=<PATH>           Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
+        --color=<auto|always|off> Enable colored output. Defaults to 'auto' (colored when stdout is a tty)
+        --format=<table|json>     Output the project stats in a table or JSON-encoded. Defaults to 'table' when stdout is a tty, 'json' otherwise.
+`;
 
 export default async function topSubcommand(args: Args) {
+  if (args.help) {
+    console.log(help);
+    Deno.exit(0);
+  }
   if (!args.project) {
     error(
       "No project specified. Use --project to specify the project of which to stream the stats",
     );
   }
+  let format: Format;
+  switch (args.format) {
+    case "table":
+    case "json":
+      format = args.format;
+      break;
+    case undefined:
+      format = Deno.isatty(Deno.stdout.rid) ? "table" : "json";
+      break;
+    default:
+      error(
+        `Invalid format '${args.format}'. Supported values for the --format option are 'table' or 'json'`,
+      );
+  }
+
   const spinner = wait(
     `Connecting to the stats stream of project '${args.project}'...`,
   ).start();
@@ -35,13 +66,8 @@ export default async function topSubcommand(args: Args) {
   spinner.succeed(
     `Connected to the stats stream of project '${args.project}'`,
   );
-  const format = args.format
-    ? args.format
-    : Deno.isatty(Deno.stdout.rid)
-    ? "tabbed"
-    : "json";
   switch (format) {
-    case "tabbed":
+    case "table":
       return await tabbed(stats);
     case "json":
       return await json(stats);
@@ -113,3 +139,5 @@ async function json(stats: AsyncGenerator<ProjectStats>) {
     console.log(JSON.stringify(stat));
   }
 }
+
+type Format = "table" | "json";
