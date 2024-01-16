@@ -281,7 +281,7 @@ export class API {
     return this.#requestJson("/meta");
   }
 
-  stream_metering(project: string) {
-    return this.#requestStream<ProjectStats>(`/projects/${project}/stats`);
+  stream_metering(project: string): Promise<AsyncGenerator<ProjectStats>> {
+    return this.#requestStream(`/projects/${project}/stats`);
   }
 }
