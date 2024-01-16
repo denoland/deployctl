@@ -75,7 +75,6 @@ async function tabbed(stats: AsyncGenerator<ProjectStats>) {
           "KV writes/min": Math.ceil(stat.kvWriteUnitsPerMinute),
           "QS enqueues/min": Math.ceil(stat.enqueuePerMinute),
           "QS dequeues/min": Math.ceil(stat.dequeuePerMinute),
-          "updated": new Date(),
         };
 
         clearTimeout(timeouts[id]);
