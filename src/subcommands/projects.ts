@@ -22,14 +22,14 @@ SUBCOMMANDS:
 
 
 OPTIONS:
-    -h, --help                    Prints this help information
-    -p, --project=<NAME|ID>       The project selected. 
-        --org=<ORG>               Specify an organization. When creating a project, defaults to the user's personal organization.
-                                  When listing projects, use "personal" to filter by the personal organization.
-        --token=<TOKEN>           The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
-        --config=<PATH>           Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
-        --color=<auto|always|off> Enable colored output. Defaults to 'auto' (colored when stdout is a tty)
-        --force                   Automatically execute the command without waiting for confirmation.
+    -h, --help                      Prints this help information
+    -p, --project=<NAME|ID>         The project selected. 
+        --org=<ORG>                 Specify an organization. When creating a project, defaults to the user's personal organization.
+                                    When listing projects, use "personal" to filter by the personal organization.
+        --token=<TOKEN>             The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
+        --config=<PATH>             Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
+        --color=<auto|always|never> Enable or disable colored output. Defaults to 'auto' (colored when stdout is a tty)
+        --force                     Automatically execute the command without waiting for confirmation.
 `;
 
 export default async function (args: Args): Promise<void> {

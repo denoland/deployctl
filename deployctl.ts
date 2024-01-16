@@ -140,12 +140,12 @@ function setColoring(args: Args) {
     case "always":
       setColorEnabled(true);
       break;
-    case "off":
+    case "never":
       setColorEnabled(false);
       break;
     default:
       wait("").start().warn(
-        `'${args.color}' value for the --color option is not valid. Valid values are 'auto', 'always' and 'off'. Defaulting to 'auto'`,
+        `'${args.color}' value for the --color option is not valid. Valid values are 'auto', 'always' and 'never'. Defaulting to 'auto'`,
       );
       setAutoColoring();
   }

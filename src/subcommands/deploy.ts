@@ -64,19 +64,19 @@ USAGE:
     deployctl deploy [OPTIONS] [<ENTRYPOINT>]
 
 OPTIONS:
-        --exclude=<PATH[,PATH]>   Prevent the upload of these comma-separated paths. Can be used multiple times. Globs are supported
-        --include=<PATH[,PATH]>   Only upload files in these comma-separated paths. Can be used multiple times. Globs are supported
-        --import-map=<PATH>       Path to the import map file to use.
-    -h, --help                    Prints this help information
-        --prod                    Create a production deployment (default is preview deployment except the first deployment)
-    -p, --project=<NAME|ID>       The project in which to deploy. If it does not exist yet, it will be created (see --org).
-        --org=<ORG>               The organization in which to create the project. Defaults to the user's personal organization
-        --entrypoint=<PATH|URL>   The file that Deno Deploy will run. Also available as positional argument, which takes precedence
-        --token=<TOKEN>           The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
-        --dry-run                 Dry run the deployment process.
-        --config=<PATH>           Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
-        --save-config             Persist the arguments used into the DeployCTL config file
-        --color=<auto|always|off> Enable colored output. Defaults to 'auto' (colored when stdout is a tty)
+        --exclude=<PATH[,PATH]>     Prevent the upload of these comma-separated paths. Can be used multiple times. Globs are supported
+        --include=<PATH[,PATH]>     Only upload files in these comma-separated paths. Can be used multiple times. Globs are supported
+        --import-map=<PATH>         Path to the import map file to use.
+    -h, --help                      Prints this help information
+        --prod                      Create a production deployment (default is preview deployment except the first deployment)
+    -p, --project=<NAME|ID>         The project in which to deploy. If it does not exist yet, it will be created (see --org).
+        --org=<ORG>                 The organization in which to create the project. Defaults to the user's personal organization
+        --entrypoint=<PATH|URL>     The file that Deno Deploy will run. Also available as positional argument, which takes precedence
+        --token=<TOKEN>             The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
+        --dry-run                   Dry run the deployment process.
+        --config=<PATH>             Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
+        --save-config               Persist the arguments used into the DeployCTL config file
+        --color=<auto|always|never> Enable or disable colored output. Defaults to 'auto' (colored when stdout is a tty)
 `;
 
 export interface Args {
