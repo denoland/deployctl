@@ -210,11 +210,11 @@ export class API {
     }
   }
 
-  async getLogs(
+  getLogs(
     projectId: string,
     deploymentId: string,
-  ): Promise<AsyncIterable<LiveLog>> {
-    return await this.#requestStream(
+  ): Promise<AsyncGenerator<LiveLog>> {
+    return this.#requestStream(
       `/projects/${projectId}/deployments/${deploymentId}/logs/`,
       {
         accept: "application/x-ndjson",
@@ -245,33 +245,33 @@ export class API {
     });
   }
 
-  async pushDeploy(
+  pushDeploy(
     projectId: string,
     request: PushDeploymentRequest,
     files: Uint8Array[],
-  ): Promise<AsyncIterable<DeploymentProgress>> {
+  ): Promise<AsyncGenerator<DeploymentProgress>> {
     const form = new FormData();
     form.append("request", JSON.stringify(request));
     for (const bytes of files) {
       form.append("file", new Blob([bytes]));
     }
-    return await this.#requestStream(
+    return this.#requestStream(
       `/projects/${projectId}/deployment_with_assets`,
       { method: "POST", body: form },
     );
   }
 
-  async gitHubActionsDeploy(
+  gitHubActionsDeploy(
     projectId: string,
     request: GitHubActionsDeploymentRequest,
     files: Uint8Array[],
-  ): Promise<AsyncIterable<DeploymentProgress>> {
+  ): Promise<AsyncGenerator<DeploymentProgress>> {
     const form = new FormData();
     form.append("request", JSON.stringify(request));
     for (const bytes of files) {
       form.append("file", new Blob([bytes]));
     }
-    return await this.#requestStream(
+    return this.#requestStream(
       `/projects/${projectId}/deployment_github_actions`,
       { method: "POST", body: form },
     );
