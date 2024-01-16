@@ -133,10 +133,10 @@ export class API {
     return json;
   }
 
-  async *#requestStream<T>(
+  async #requestStream<T>(
     path: string,
     opts?: RequestOptions,
-  ): AsyncIterable<T> {
+  ): Promise<AsyncGenerator<T>> {
     const res = await this.#request(path, opts);
     if (res.status !== 200) {
       const json = await res.json();
@@ -150,10 +150,12 @@ export class API {
     const lines = res.body
       .pipeThrough(new TextDecoderStream())
       .pipeThrough(new TextLineStream());
-    for await (const line of lines) {
-      if (line === "") return;
-      yield JSON.parse(line);
-    }
+    return async function* () {
+      for await (const line of lines) {
+        if (line === "") return;
+        yield JSON.parse(line);
+      }
+    }();
   }
 
   async getOrganizationByName(name: string): Promise<Organization | undefined> {
@@ -208,11 +210,11 @@ export class API {
     }
   }
 
-  getLogs(
+  async getLogs(
     projectId: string,
     deploymentId: string,
-  ): AsyncIterable<LiveLog> {
-    return this.#requestStream(
+  ): Promise<AsyncIterable<LiveLog>> {
+    return await this.#requestStream(
       `/projects/${projectId}/deployments/${deploymentId}/logs/`,
       {
         accept: "application/x-ndjson",
@@ -243,33 +245,33 @@ export class API {
     });
   }
 
-  pushDeploy(
+  async pushDeploy(
     projectId: string,
     request: PushDeploymentRequest,
     files: Uint8Array[],
-  ): AsyncIterable<DeploymentProgress> {
+  ): Promise<AsyncIterable<DeploymentProgress>> {
     const form = new FormData();
     form.append("request", JSON.stringify(request));
     for (const bytes of files) {
       form.append("file", new Blob([bytes]));
     }
-    return this.#requestStream(
+    return await this.#requestStream(
       `/projects/${projectId}/deployment_with_assets`,
       { method: "POST", body: form },
     );
   }
 
-  gitHubActionsDeploy(
+  async gitHubActionsDeploy(
     projectId: string,
     request: GitHubActionsDeploymentRequest,
     files: Uint8Array[],
-  ): AsyncIterable<DeploymentProgress> {
+  ): Promise<AsyncIterable<DeploymentProgress>> {
     const form = new FormData();
     form.append("request", JSON.stringify(request));
     for (const bytes of files) {
       form.append("file", new Blob([bytes]));
     }
-    return this.#requestStream(
+    return await this.#requestStream(
       `/projects/${projectId}/deployment_github_actions`,
       { method: "POST", body: form },
     );

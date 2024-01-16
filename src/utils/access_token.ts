@@ -2,6 +2,7 @@ import { interruptSpinner, wait } from "./spinner.ts";
 import { error } from "../error.ts";
 import { endpoint, USER_AGENT } from "./api.ts";
 import tokenStorage from "./token_storage.ts";
+import { base64url, sha256 } from "./hashing_encoding.ts";
 
 export default {
   get: tokenStorage.get,
@@ -100,24 +101,4 @@ async function provision(): Promise<string> {
   spinner.succeed("Token obtained successfully");
   spinnerInterrupted.resume();
   return tokenOrError.token;
-}
-
-function base64url(binary: Uint8Array): string {
-  const binaryString = Array.from(binary).map((b) => String.fromCharCode(b))
-    .join("");
-  const output = btoa(binaryString);
-  const urlSafeOutput = output
-    .replaceAll("=", "")
-    .replaceAll("+", "-")
-    .replaceAll("/", "_");
-  return urlSafeOutput;
-}
-
-async function sha256(randomString: string): Promise<Uint8Array> {
-  return new Uint8Array(
-    await crypto.subtle.digest(
-      "SHA-256",
-      new TextEncoder().encode(randomString),
-    ),
-  );
 }

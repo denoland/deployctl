@@ -33,6 +33,7 @@ export function parseArgs(args: string[]) {
       "config",
       "entrypoint",
       "org",
+      "format",
     ],
     collect: ["grep", "include", "exclude"],
     default: {
