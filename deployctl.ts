@@ -20,8 +20,9 @@ Command line tool for Deno Deploy.
 
 SUBCOMMANDS:
     deploy    Deploy a script with static files to Deno Deploy
-    upgrade   Upgrade deployctl to the given version (defaults to latest)
+    projects  Manage projects
     logs      View logs for the given project
+    upgrade   Upgrade deployctl to the given version (defaults to latest)
 
 For more detailed help on each subcommand, use:
 
