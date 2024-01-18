@@ -67,7 +67,7 @@ if (Deno.isatty(Deno.stdin.rid)) {
     latestVersion &&
     !(semverGreaterThanOrEquals(VERSION, latestVersion.toString()))
   ) {
-    console.log(
+    console.error(
       [
         `A new release of deployctl is available: ${VERSION} -> ${latestVersion}`,
         "To upgrade, run `deployctl upgrade`",

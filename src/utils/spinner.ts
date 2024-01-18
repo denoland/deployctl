@@ -1,9 +1,12 @@
-import { Spinner, wait as innerWait } from "../../deps.ts";
+import { Spinner, SpinnerOptions, wait as innerWait } from "../../deps.ts";
 
 let current: Spinner | null = null;
 
-export function wait(...params: Parameters<typeof innerWait>) {
-  current = innerWait(...params);
+export function wait(param: string | SpinnerOptions) {
+  if (typeof param === "string") {
+    param = { text: param };
+  }
+  current = innerWait({ stream: Deno.stderr, ...param });
   return current;
 }
 
