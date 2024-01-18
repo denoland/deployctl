@@ -22,6 +22,7 @@ SUBCOMMANDS:
     deploy    Deploy a script with static files to Deno Deploy
     upgrade   Upgrade deployctl to the given version (defaults to latest)
     logs      View logs for the given project
+    top       Monitor projects resource usage in real time
 
 For more detailed help on each subcommand, use:
 
