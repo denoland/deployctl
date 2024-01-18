@@ -71,7 +71,7 @@ export default async function topSubcommand(args: Args) {
     : API.withTokenProvisioner(TokenProvisioner);
   let stats;
   try {
-    stats = await api.stream_metering(args.project!);
+    stats = await api.streamMetering(args.project!);
   } catch (err) {
     spinner.fail(
       `Failed to connect to the stats stream of project '${args.project}': ${err.message}`,
