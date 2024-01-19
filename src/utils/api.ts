@@ -2,15 +2,16 @@ import { delay, TextLineStream } from "../../deps.ts";
 import { VERSION } from "../version.ts";
 
 import {
-  Deployment,
+  Build,
   DeploymentProgress,
-  DeploymentsSummary,
+  Domain,
   GitHubActionsDeploymentRequest,
   LiveLog,
   LogQueryRequestParams,
   ManifestEntry,
   Metadata,
   Organization,
+  PagingInfo,
   PersistedLog,
   Project,
   ProjectStats,
@@ -50,7 +51,7 @@ export class APIError extends Error {
   }
 }
 
-export function endpoint() {
+export function endpoint(): string {
   return Deno.env.get("DEPLOY_API_ENDPOINT") ?? "https://dash.deno.com";
 }
 
@@ -190,6 +191,10 @@ export class API {
     );
   }
 
+  async listOrganizations(): Promise<Organization[]> {
+    return await this.#requestJson(`/organizations`);
+  }
+
   async getProject(id: string): Promise<Project | null> {
     try {
       return await this.#requestJson(`/projects/${id}`);
@@ -210,9 +215,44 @@ export class API {
     return await this.#requestJson(`/projects/`, { method: "POST", body });
   }
 
+  async renameProject(
+    id: string,
+    newName: string,
+  ): Promise<void> {
+    const body = { name: newName };
+    await this.#requestJson(`/projects/${id}`, { method: "PATCH", body });
+  }
+
+  async deleteProject(
+    id: string,
+  ): Promise<boolean> {
+    try {
+      await this.#requestJson(`/projects/${id}`, { method: "DELETE" });
+      return true;
+    } catch (err) {
+      if (err instanceof APIError && err.code === "projectNotFound") {
+        return false;
+      }
+      throw err;
+    }
+  }
+
+  async listProjects(
+    orgId: string,
+  ): Promise<Project[]> {
+    const org: { projects: Project[] } = await this.#requestJson(
+      `/organizations/${orgId}`,
+    );
+    return org.projects;
+  }
+
+  async getDomains(projectId: string): Promise<Domain[]> {
+    return await this.#requestJson(`/projects/${projectId}/domains`);
+  }
+
   async getDeployments(
     projectId: string,
-  ): Promise<[Deployment[], DeploymentsSummary] | null> {
+  ): Promise<[Build[], PagingInfo] | null> {
     try {
       return await this.#requestJson(`/projects/${projectId}/deployments/`);
     } catch (err) {

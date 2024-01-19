@@ -4,6 +4,18 @@ export interface DomainMapping {
   updatedAt: string;
 }
 
+export interface Build {
+  id: string;
+  relatedCommit: {
+    hash: string;
+    message: string;
+    authorName: string;
+    authorEmail: string;
+    url: string;
+  };
+  deployment?: Deployment;
+}
+
 export interface Deployment {
   id: string;
   url: string;
@@ -18,7 +30,9 @@ export interface Deployment {
 export interface Project {
   id: string;
   name: string;
-  productionDeployment?: Deployment | null;
+  type: "git" | "playground";
+  git?: { repository: { owner: string; name: string } };
+  productionDeployment?: Build | null;
   hasProductionDeployment: boolean;
   organizationId: string;
   organization: Organization;
@@ -39,7 +53,7 @@ export interface NormalOrganization {
   name: string;
 }
 
-export interface DeploymentsSummary {
+export interface PagingInfo {
   page: number;
   count: number;
   limit: number;
@@ -160,6 +174,11 @@ export interface PersistedLog {
 
 export interface Metadata {
   regionCodes: string[];
+}
+
+export interface Domain {
+  domain: string;
+  isValidated: boolean;
 }
 
 export interface ProjectStats {
