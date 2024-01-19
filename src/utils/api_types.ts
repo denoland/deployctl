@@ -180,3 +180,21 @@ export interface Domain {
   domain: string;
   isValidated: boolean;
 }
+
+export interface ProjectStats {
+  id: string;
+  region: string;
+  projectId: string;
+  deploymentId: string;
+  uptime: number;
+  requestsPerMinute: number;
+  cpuTimePerSecond: number;
+  cpuTimePerRequest: number;
+  maxRss5Minutes: number;
+  ingressBytesPerMinute: number;
+  egressBytesPerMinute: number;
+  kvReadUnitsPerMinute: number;
+  kvWriteUnitsPerMinute: number;
+  enqueuePerMinute: number;
+  dequeuePerMinute: number;
+}

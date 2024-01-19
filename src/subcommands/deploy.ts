@@ -321,7 +321,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
     production: opts.prod,
     manifest,
   };
-  const progress = api.pushDeploy(project.id, req, files);
+  const progress = await api.pushDeploy(project.id, req, files);
   try {
     for await (const event of progress) {
       switch (event.type) {

@@ -34,9 +34,11 @@ export function parseArgs(args: string[]) {
       "config",
       "entrypoint",
       "org",
+      "format",
       "color",
+      "region",
     ],
-    collect: ["grep", "include", "exclude"],
+    collect: ["grep", "include", "exclude", "region"],
     default: {
       static: true,
       limit: "100",
