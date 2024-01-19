@@ -1,4 +1,4 @@
-import { TextLineStream } from "../../deps.ts";
+import { delay, TextLineStream } from "../../deps.ts";
 import { VERSION } from "../version.ts";
 
 import {
@@ -16,6 +16,7 @@ import {
   ProjectStats,
   PushDeploymentRequest,
 } from "./api_types.ts";
+import { interruptSpinner, wait } from "./spinner.ts";
 
 export const USER_AGENT =
   `DeployCTL/${VERSION} (${Deno.build.os} ${Deno.osRelease()}; ${Deno.build.arch})`;
@@ -133,10 +134,10 @@ export class API {
     return json;
   }
 
-  async #requestStream<T>(
+  async #requestStream(
     path: string,
     opts?: RequestOptions,
-  ): Promise<AsyncGenerator<T, void>> {
+  ): Promise<AsyncGenerator<string, void>> {
     const res = await this.#request(path, opts);
     if (res.status !== 200) {
       const json = await res.json();
@@ -153,6 +154,18 @@ export class API {
     return async function* () {
       for await (const line of lines) {
         if (line === "") return;
+        yield line;
+      }
+    }();
+  }
+
+  async #requestJsonStream<T>(
+    path: string,
+    opts?: RequestOptions,
+  ): Promise<AsyncGenerator<T, void>> {
+    const stream = await this.#requestStream(path, opts);
+    return async function* () {
+      for await (const line of stream) {
         yield JSON.parse(line);
       }
     }();
@@ -214,7 +227,7 @@ export class API {
     projectId: string,
     deploymentId: string,
   ): Promise<AsyncGenerator<LiveLog>> {
-    return this.#requestStream(
+    return this.#requestJsonStream(
       `/projects/${projectId}/deployments/${deploymentId}/logs/`,
       {
         accept: "application/x-ndjson",
@@ -255,7 +268,7 @@ export class API {
     for (const bytes of files) {
       form.append("file", new Blob([bytes]));
     }
-    return this.#requestStream(
+    return this.#requestJsonStream(
       `/projects/${projectId}/deployment_with_assets`,
       { method: "POST", body: form },
     );
@@ -271,7 +284,7 @@ export class API {
     for (const bytes of files) {
       form.append("file", new Blob([bytes]));
     }
-    return this.#requestStream(
+    return this.#requestJsonStream(
       `/projects/${projectId}/deployment_github_actions`,
       { method: "POST", body: form },
     );
@@ -281,9 +294,31 @@ export class API {
     return this.#requestJson("/meta");
   }
 
-  streamMetering(
+  async streamMetering(
     project: string,
   ): Promise<AsyncGenerator<ProjectStats, void>> {
-    return this.#requestStream(`/projects/${project}/stats`);
+    const streamGen = () => this.#requestStream(`/projects/${project}/stats`);
+    let stream = await streamGen();
+    return async function* () {
+      for (;;) {
+        try {
+          for await (const line of stream) {
+            try {
+              yield JSON.parse(line);
+            } catch {
+              // Stopgap while the streaming errors are fixed
+            }
+          }
+        } catch (error) {
+          // Stopgap while the streaming errors are fixed
+          const interrupt = interruptSpinner();
+          const spinner = wait(`Error: ${error}. Reconnecting...`).start();
+          await delay(5_000);
+          stream = await streamGen();
+          spinner.stop();
+          interrupt.resume();
+        }
+      }
+    }();
   }
 }

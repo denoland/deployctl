@@ -90,22 +90,34 @@ export default async function topSubcommand(args: Args) {
 }
 
 async function tabbed(stats: AsyncGenerator<ProjectStats, void>) {
-  const table: { [id: string]: unknown } = {};
+  const table: { [id: string]: { region: string; [other: string]: unknown } } =
+    {};
   const timeouts: { [id: string]: number } = {};
   const toDelete: string[] = [];
   const spinner = wait("Streaming...").start();
+  let previousLength = 0;
+  const renderStream = async function* () {
+    // First render after 1 sec in case there's already data
+    await delay(1_000);
+    yield true;
+    while (true) {
+      await delay(5_000);
+      yield true;
+    }
+  }();
   try {
     let next = stats.next();
+    let render = renderStream.next();
     while (true) {
-      const result = await Promise.race([next, delay(10_000)]);
-      const previousLength = Object.keys(table).length;
-      if (result) {
+      const result = await Promise.race([next, render]);
+      const stat = result.value;
+      if (stat === undefined) {
+        // Only stats stream can end, returning undefined
+        spinner.succeed("Stream ended");
+        return;
+      }
+      if (typeof stat === "object") {
         next = stats.next();
-        const stat = result.value;
-        if (!stat) {
-          spinner.succeed("Stream ended");
-          return;
-        }
         const id = encodeHex(await sha256(stat.id + stat.region))
           .slice(0, 6);
         table[id] = {
@@ -136,22 +148,28 @@ async function tabbed(stats: AsyncGenerator<ProjectStats, void>) {
           30_000,
           id,
         );
-      }
-
-      while (toDelete.length > 0) {
-        const idToDelete = toDelete.pop();
-        if (idToDelete) {
-          delete table[idToDelete];
+      } else {
+        render = renderStream.next();
+        while (toDelete.length > 0) {
+          const idToDelete = toDelete.pop();
+          if (idToDelete) {
+            delete table[idToDelete];
+          }
         }
+        const linesToClear = previousLength ? previousLength + 5 : 1;
+        previousLength = Object.keys(table).length;
+        tty.goUpSync(linesToClear, Deno.stdout);
+        tty.clearDownSync(Deno.stdout);
+        const entries = Object.entries(table);
+        // Kinda sort the table
+        entries.sort(([_aid, a], [_bid, b]) =>
+          a.region.localeCompare(b.region)
+        );
+        if (Object.keys(table).length > 0) {
+          console.table(Object.fromEntries(entries));
+        }
+        console.log();
       }
-
-      const linesToClear = previousLength ? previousLength + 5 : 1;
-      tty.goUpSync(linesToClear, Deno.stdout);
-      tty.clearDownSync(Deno.stdout);
-      if (Object.keys(table).length > 0) {
-        console.table(table);
-      }
-      console.log();
     }
   } catch (error) {
     spinner.fail(`Stream disconnected: ${error}`);
