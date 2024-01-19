@@ -10,7 +10,7 @@ import {
 import { wait } from "../utils/spinner.ts";
 import configFile from "../config_file.ts";
 import { error } from "../error.ts";
-import { API, APIError } from "../utils/api.ts";
+import { API, APIError, endpoint } from "../utils/api.ts";
 import { ManifestEntry } from "../utils/api_types.ts";
 import { parseEntrypoint } from "../utils/entrypoint.ts";
 import { walk } from "../utils/walk.ts";
@@ -64,18 +64,19 @@ USAGE:
     deployctl deploy [OPTIONS] [<ENTRYPOINT>]
 
 OPTIONS:
-        --exclude=<PATH[,PATH]> Prevent the upload of these comma-separated paths. Can be used multiple times. Globs are supported
-        --include=<PATH[,PATH]> Only upload files in these comma-separated paths. Can be used multiple times. Globs are supported
-        --import-map=<PATH>     Path to the import map file to use.
-    -h, --help                  Prints this help information
-        --prod                  Create a production deployment (default is preview deployment except the first deployment)
-    -p, --project=<NAME|ID>     The project in which to deploy. If it does not exist yet, it will be created (see --org).
-        --org=<ORG>             The organization in which to create the project. Defaults to the user's personal organization
-        --entrypoint=<PATH|URL> The file that Deno Deploy will run. Also available as positional argument, which takes precedence
-        --token=<TOKEN>         The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
-        --dry-run               Dry run the deployment process.
-        --config=<PATH>         Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
-        --save-config           Persist the arguments used into the DeployCTL config file
+        --exclude=<PATH[,PATH]>     Prevent the upload of these comma-separated paths. Can be used multiple times. Globs are supported
+        --include=<PATH[,PATH]>     Only upload files in these comma-separated paths. Can be used multiple times. Globs are supported
+        --import-map=<PATH>         Path to the import map file to use.
+    -h, --help                      Prints this help information
+        --prod                      Create a production deployment (default is preview deployment except the first deployment)
+    -p, --project=<NAME|ID>         The project in which to deploy. If it does not exist yet, it will be created (see --org).
+        --org=<ORG>                 The organization in which to create the project. Defaults to the user's personal organization
+        --entrypoint=<PATH|URL>     The file that Deno Deploy will run. Also available as positional argument, which takes precedence
+        --token=<TOKEN>             The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
+        --dry-run                   Dry run the deployment process.
+        --config=<PATH>             Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
+        --save-config               Persist the arguments used into the DeployCTL config file
+        --color=<auto|always|never> Enable or disable colored output. Defaults to 'auto' (colored when stdout is a tty)
 `;
 
 export interface Args {
@@ -200,7 +201,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
     }
     projectCreationSpinner.succeed(`Created new project '${opts.project}'.`);
     wait({ text: "", indent: 3 }).start().info(
-      `You can configure the name, env vars, custom domains and more in https://dash.deno.com/projects/${project.name}/settings`,
+      `You can configure the name, env vars, custom domains and more in ${endpoint()}/projects/${project.name}/settings`,
     );
     projectIsEmpty = true;
   } else {
