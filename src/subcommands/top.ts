@@ -36,6 +36,8 @@ OPTIONS:
         --config=<PATH>           Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
         --color=<auto|always|off> Enable colored output. Defaults to 'auto' (colored when stdout is a tty)
         --format=<table|json>     Output the project stats in a table or JSON-encoded. Defaults to 'table' when stdout is a tty, 'json' otherwise.
+        --region=<REGION>         Show stats from only specific regions. Can be used multiple times (--region=us-east4 --region=us-west2).
+                                  Can also be a substring (--region=us)
 `;
 
 export default async function topSubcommand(args: Args) {
@@ -81,6 +83,22 @@ export default async function topSubcommand(args: Args) {
   spinner.succeed(
     `Connected to the stats stream of project '${args.project}'`,
   );
+  if (args.region.length !== 0) {
+    const allStats = stats;
+    const filter = args.region.flatMap((r) => r.split(",")).map((r) =>
+      r.trim()
+    );
+    stats = async function* () {
+      for await (const line of allStats) {
+        for (const region of filter) {
+          if (line.region.includes(region)) {
+            yield line;
+            break;
+          }
+        }
+      }
+    }();
+  }
   switch (format) {
     case "table":
       return await tabbed(stats);
