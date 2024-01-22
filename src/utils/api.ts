@@ -102,6 +102,7 @@ export class API {
       : `Bearer ${
         await this.#authorization.get() ?? await this.#authorization.provision()
       }`;
+    const sudo = Deno.env.get("SUDO");
     const headers = {
       "User-Agent": USER_AGENT,
       "Accept": opts.accept ?? "application/json",
@@ -111,6 +112,7 @@ export class API {
           ? {}
           : { "Content-Type": "application/json" }
         : {}),
+      ...(sudo ? { ["x-deploy-sudo"]: sudo } : {}),
     };
     let res = await fetch(url, { method, headers, body });
     if (res.status === 401 && typeof this.#authorization === "object") {
