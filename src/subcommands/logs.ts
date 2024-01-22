@@ -259,8 +259,8 @@ async function liveLogs(api: API, opts: LiveLogOpts): Promise<void> {
   }
   projectSpinner.succeed(`Project: ${project.name}`);
   const logs = opts.deploymentId
-    ? api.getLogs(opts.projectId, opts.deploymentId)
-    : api.getLogs(opts.projectId, "latest");
+    ? await api.getLogs(opts.projectId, opts.deploymentId)
+    : await api.getLogs(opts.projectId, "latest");
   if (logs === null) {
     projectSpinner.fail("Project not found.");
     Deno.exit(1);

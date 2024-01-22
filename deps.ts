@@ -20,11 +20,14 @@ export {
   green,
   magenta,
   red,
+  setColorEnabled,
   yellow,
 } from "https://deno.land/std@0.170.0/fmt/colors.ts";
 export { parse } from "https://deno.land/std@0.195.0/flags/mod.ts";
 export { TextLineStream } from "https://deno.land/std@0.170.0/streams/text_line_stream.ts";
 export * as JSONC from "https://deno.land/std@0.170.0/encoding/jsonc.ts";
+export { encodeHex } from "https://deno.land/std@0.212.0/encoding/hex.ts";
+export { delay } from "https://deno.land/std@0.212.0/async/mod.ts";
 
 // x/semver
 export {
@@ -34,3 +37,5 @@ export {
 
 // x/wait
 export { Spinner, type SpinnerOptions, wait } from "https://deno.land/x/wait@0.1.12/mod.ts";
+
+export * as tty from "https://deno.land/x/tty@0.1.4/mod.ts";

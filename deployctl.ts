@@ -2,12 +2,14 @@
 
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { semverGreaterThanOrEquals } from "./deps.ts";
+import { semverGreaterThanOrEquals, setColorEnabled } from "./deps.ts";
 import { Args, parseArgs } from "./src/args.ts";
 import { error } from "./src/error.ts";
 import deploySubcommand from "./src/subcommands/deploy.ts";
 import upgradeSubcommand from "./src/subcommands/upgrade.ts";
 import logsSubcommand from "./src/subcommands/logs.ts";
+import topSubcommand from "./src/subcommands/top.ts";
+import projectsSubcommand from "./src/subcommands/projects.ts";
 import { MINIMUM_DENO_VERSION, VERSION } from "./src/version.ts";
 import { fetchReleases, getConfigPaths } from "./src/utils/info.ts";
 import configFile from "./src/config_file.ts";
@@ -19,8 +21,10 @@ Command line tool for Deno Deploy.
 
 SUBCOMMANDS:
     deploy    Deploy a script with static files to Deno Deploy
-    upgrade   Upgrade deployctl to the given version (defaults to latest)
+    projects  Manage projects
     logs      View logs for the given project
+    top       Monitor projects resource usage in real time
+    upgrade   Upgrade deployctl to the given version (defaults to latest)
 
 For more detailed help on each subcommand, use:
 
@@ -34,6 +38,8 @@ if (!semverGreaterThanOrEquals(Deno.version.deno, MINIMUM_DENO_VERSION)) {
 }
 
 const args = parseArgs(Deno.args);
+
+setColoring(args);
 
 if (Deno.isatty(Deno.stdin.rid)) {
   let latestVersion;
@@ -92,6 +98,14 @@ switch (subcommand) {
     await setDefaultsFromConfigFile(args);
     await logsSubcommand(args);
     break;
+  case "top":
+    await setDefaultsFromConfigFile(args);
+    await topSubcommand(args);
+    break;
+  case "projects":
+    await setDefaultsFromConfigFile(args);
+    await projectsSubcommand(args);
+    break;
   default:
     if (args.version) {
       console.log(`deployctl ${VERSION}`);
@@ -122,5 +136,32 @@ async function setDefaultsFromConfigFile(args: Args) {
       // Set the effective config path for the rest of the execution
       args.config = config.path();
     }
+  }
+}
+
+function setColoring(args: Args) {
+  switch (args.color) {
+    case "auto":
+      setAutoColoring();
+      break;
+    case "always":
+      setColorEnabled(true);
+      break;
+    case "never":
+      setColorEnabled(false);
+      break;
+    default:
+      wait("").start().warn(
+        `'${args.color}' value for the --color option is not valid. Valid values are 'auto', 'always' and 'never'. Defaulting to 'auto'`,
+      );
+      setAutoColoring();
+  }
+}
+
+function setAutoColoring() {
+  if (Deno.isatty(Deno.stdout.rid)) {
+    setColorEnabled(true);
+  } else {
+    setColorEnabled(false);
   }
 }

@@ -1,20 +1,23 @@
-import { TextLineStream } from "../../deps.ts";
+import { delay, TextLineStream } from "../../deps.ts";
 import { VERSION } from "../version.ts";
 
 import {
-  Deployment,
+  Build,
   DeploymentProgress,
-  DeploymentsSummary,
+  Domain,
   GitHubActionsDeploymentRequest,
   LiveLog,
   LogQueryRequestParams,
   ManifestEntry,
   Metadata,
   Organization,
+  PagingInfo,
   PersistedLog,
   Project,
+  ProjectStats,
   PushDeploymentRequest,
 } from "./api_types.ts";
+import { interruptSpinner, wait } from "./spinner.ts";
 
 export const USER_AGENT =
   `DeployCTL/${VERSION} (${Deno.build.os} ${Deno.osRelease()}; ${Deno.build.arch})`;
@@ -48,7 +51,7 @@ export class APIError extends Error {
   }
 }
 
-export function endpoint() {
+export function endpoint(): string {
   return Deno.env.get("DEPLOY_API_ENDPOINT") ?? "https://dash.deno.com";
 }
 
@@ -132,10 +135,10 @@ export class API {
     return json;
   }
 
-  async *#requestStream<T>(
+  async #requestStream(
     path: string,
     opts?: RequestOptions,
-  ): AsyncIterable<T> {
+  ): Promise<AsyncGenerator<string, void>> {
     const res = await this.#request(path, opts);
     if (res.status !== 200) {
       const json = await res.json();
@@ -149,10 +152,24 @@ export class API {
     const lines = res.body
       .pipeThrough(new TextDecoderStream())
       .pipeThrough(new TextLineStream());
-    for await (const line of lines) {
-      if (line === "") return;
-      yield JSON.parse(line);
-    }
+    return async function* () {
+      for await (const line of lines) {
+        if (line === "") return;
+        yield line;
+      }
+    }();
+  }
+
+  async #requestJsonStream<T>(
+    path: string,
+    opts?: RequestOptions,
+  ): Promise<AsyncGenerator<T, void>> {
+    const stream = await this.#requestStream(path, opts);
+    return async function* () {
+      for await (const line of stream) {
+        yield JSON.parse(line);
+      }
+    }();
   }
 
   async getOrganizationByName(name: string): Promise<Organization | undefined> {
@@ -172,6 +189,10 @@ export class API {
       `/organizations`,
       { method: "POST", body },
     );
+  }
+
+  async listOrganizations(): Promise<Organization[]> {
+    return await this.#requestJson(`/organizations`);
   }
 
   async getProject(id: string): Promise<Project | null> {
@@ -194,9 +215,44 @@ export class API {
     return await this.#requestJson(`/projects/`, { method: "POST", body });
   }
 
+  async renameProject(
+    id: string,
+    newName: string,
+  ): Promise<void> {
+    const body = { name: newName };
+    await this.#requestJson(`/projects/${id}`, { method: "PATCH", body });
+  }
+
+  async deleteProject(
+    id: string,
+  ): Promise<boolean> {
+    try {
+      await this.#requestJson(`/projects/${id}`, { method: "DELETE" });
+      return true;
+    } catch (err) {
+      if (err instanceof APIError && err.code === "projectNotFound") {
+        return false;
+      }
+      throw err;
+    }
+  }
+
+  async listProjects(
+    orgId: string,
+  ): Promise<Project[]> {
+    const org: { projects: Project[] } = await this.#requestJson(
+      `/organizations/${orgId}`,
+    );
+    return org.projects;
+  }
+
+  async getDomains(projectId: string): Promise<Domain[]> {
+    return await this.#requestJson(`/projects/${projectId}/domains`);
+  }
+
   async getDeployments(
     projectId: string,
-  ): Promise<[Deployment[], DeploymentsSummary] | null> {
+  ): Promise<[Build[], PagingInfo] | null> {
     try {
       return await this.#requestJson(`/projects/${projectId}/deployments/`);
     } catch (err) {
@@ -210,8 +266,8 @@ export class API {
   getLogs(
     projectId: string,
     deploymentId: string,
-  ): AsyncIterable<LiveLog> {
-    return this.#requestStream(
+  ): Promise<AsyncGenerator<LiveLog>> {
+    return this.#requestJsonStream(
       `/projects/${projectId}/deployments/${deploymentId}/logs/`,
       {
         accept: "application/x-ndjson",
@@ -246,13 +302,13 @@ export class API {
     projectId: string,
     request: PushDeploymentRequest,
     files: Uint8Array[],
-  ): AsyncIterable<DeploymentProgress> {
+  ): Promise<AsyncGenerator<DeploymentProgress>> {
     const form = new FormData();
     form.append("request", JSON.stringify(request));
     for (const bytes of files) {
       form.append("file", new Blob([bytes]));
     }
-    return this.#requestStream(
+    return this.#requestJsonStream(
       `/projects/${projectId}/deployment_with_assets`,
       { method: "POST", body: form },
     );
@@ -262,13 +318,13 @@ export class API {
     projectId: string,
     request: GitHubActionsDeploymentRequest,
     files: Uint8Array[],
-  ): AsyncIterable<DeploymentProgress> {
+  ): Promise<AsyncGenerator<DeploymentProgress>> {
     const form = new FormData();
     form.append("request", JSON.stringify(request));
     for (const bytes of files) {
       form.append("file", new Blob([bytes]));
     }
-    return this.#requestStream(
+    return this.#requestJsonStream(
       `/projects/${projectId}/deployment_github_actions`,
       { method: "POST", body: form },
     );
@@ -276,5 +332,33 @@ export class API {
 
   getMetadata(): Promise<Metadata> {
     return this.#requestJson("/meta");
+  }
+
+  async streamMetering(
+    project: string,
+  ): Promise<AsyncGenerator<ProjectStats, void>> {
+    const streamGen = () => this.#requestStream(`/projects/${project}/stats`);
+    let stream = await streamGen();
+    return async function* () {
+      for (;;) {
+        try {
+          for await (const line of stream) {
+            try {
+              yield JSON.parse(line);
+            } catch {
+              // Stopgap while the streaming errors are fixed
+            }
+          }
+        } catch (error) {
+          // Stopgap while the streaming errors are fixed
+          const interrupt = interruptSpinner();
+          const spinner = wait(`Error: ${error}. Reconnecting...`).start();
+          await delay(5_000);
+          stream = await streamGen();
+          spinner.stop();
+          interrupt.resume();
+        }
+      }
+    }();
   }
 }

@@ -16,6 +16,7 @@ export function parseArgs(args: string[]) {
       "version",
       "dry-run",
       "save-config",
+      "force",
     ],
     string: [
       "project",
@@ -33,14 +34,18 @@ export function parseArgs(args: string[]) {
       "config",
       "entrypoint",
       "org",
+      "format",
+      "color",
+      "region",
     ],
-    collect: ["grep", "include", "exclude"],
+    collect: ["grep", "include", "exclude", "region"],
     default: {
       static: true,
       limit: "100",
       config: Deno.env.get("DEPLOYCTL_CONFIG_FILE"),
       token: Deno.env.get("DENO_DEPLOY_TOKEN"),
       org: Deno.env.get("DEPLOYCTL_ORGANIZATION"),
+      color: "auto",
     },
   });
   return parsed;
