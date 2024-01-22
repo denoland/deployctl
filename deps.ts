@@ -36,6 +36,10 @@ export {
 } from "https://deno.land/std@0.170.0/semver/mod.ts";
 
 // x/wait
-export { Spinner, wait } from "https://deno.land/x/wait@0.1.12/mod.ts";
+export {
+  Spinner,
+  type SpinnerOptions,
+  wait,
+} from "https://raw.githubusercontent.com/denosaurs/wait/9471d5cb37f31065fd867c85a8b1511091a24ee7/mod.ts";
 
 export * as tty from "https://deno.land/x/tty@0.1.4/mod.ts";
