@@ -64,7 +64,7 @@ async function inferProject(api: API, dryRun: boolean, orgName?: string) {
         spinner.succeed(`Created new project '${project.name}'`);
       }
       wait({ text: "", indent: 3 }).start().info(
-        `You can always change the project name in ${endpoint()}/projects/${project.name}/settings`,
+        `You can always change the project name with 'deployctl projects rename new-name' or in ${endpoint()}/projects/${project.name}/settings`,
       );
       return project.name;
     } catch (e) {
