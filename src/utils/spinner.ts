@@ -6,6 +6,7 @@ export function wait(param: string | SpinnerOptions) {
   if (typeof param === "string") {
     param = { text: param };
   }
+  param.interceptConsole = false;
   current = innerWait({ stream: Deno.stderr, ...param });
   return current;
 }
