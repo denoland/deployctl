@@ -57,7 +57,7 @@ export default async function topSubcommand(args: Args) {
       format = args.format;
       break;
     case undefined:
-      format = Deno.stdout.isTerminal ? "table" : "json";
+      format = Deno.isatty(Deno.stdout.rid) ? "table" : "json";
       break;
     default:
       error(

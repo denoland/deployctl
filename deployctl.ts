@@ -41,7 +41,7 @@ const args = parseArgs(Deno.args);
 
 setColoring(args);
 
-if (Deno.stdin.isTerminal) {
+if (Deno.isatty(Deno.stdin.rid)) {
   let latestVersion;
   // Get the path to the update information json file.
   const { updatePath } = getConfigPaths();
@@ -159,7 +159,7 @@ function setColoring(args: Args) {
 }
 
 function setAutoColoring() {
-  if (Deno.stdout.isTerminal) {
+  if (Deno.isatty(Deno.stdout.rid)) {
     setColorEnabled(true);
   } else {
     setColorEnabled(false);
