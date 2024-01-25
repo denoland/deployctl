@@ -6,7 +6,7 @@ contains the `denoland/deployctl` GitHub Action.
 ## Install
 
 ```shell
-deno install -Arf https://deno.land/x/deploy/deployctl.ts
+deno install -qArf https://deno.land/x/deploy/deployctl.ts
 ```
 
 ## Usage

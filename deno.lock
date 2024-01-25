@@ -57,6 +57,10 @@
     "https://deno.land/x/wait@0.1.12/deps.ts": "5e26f3a59058cd8870ff0168340a1808c13fef289940ecc8c96e46a89a17514d",
     "https://deno.land/x/wait@0.1.12/log_symbols.ts": "cdf2d0aa44754d10fddd55999e933886a4d753f2acfc1219f629427ccc776ac7",
     "https://deno.land/x/wait@0.1.12/mod.ts": "83211441439cd0f794f4e95fbb6c766929dd6886169100d3bdf2ea1ea5e3adfe",
-    "https://deno.land/x/wait@0.1.12/spinners.ts": "289346d54f8d6152a5dcd67b67e47784cf9b7a8a8f6f0b6dc041ebc2ef6bb76c"
+    "https://deno.land/x/wait@0.1.12/spinners.ts": "289346d54f8d6152a5dcd67b67e47784cf9b7a8a8f6f0b6dc041ebc2ef6bb76c",
+    "https://raw.githubusercontent.com/denosaurs/wait/9471d5cb37f31065fd867c85a8b1511091a24ee7/deps.ts": "df762b698a00cd71463cf24cea0737d5ae49f50957c9cfcc15f7e15a5a5cad9f",
+    "https://raw.githubusercontent.com/denosaurs/wait/9471d5cb37f31065fd867c85a8b1511091a24ee7/log_symbols.ts": "cdf2d0aa44754d10fddd55999e933886a4d753f2acfc1219f629427ccc776ac7",
+    "https://raw.githubusercontent.com/denosaurs/wait/9471d5cb37f31065fd867c85a8b1511091a24ee7/mod.ts": "1d19509d580d794b779193e05b4fc3a09552cf18c9f50217782e9cc485fefb4f",
+    "https://raw.githubusercontent.com/denosaurs/wait/9471d5cb37f31065fd867c85a8b1511091a24ee7/spinners.ts": "289346d54f8d6152a5dcd67b67e47784cf9b7a8a8f6f0b6dc041ebc2ef6bb76c"
   }
 }

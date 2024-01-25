@@ -70,7 +70,8 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
         "--allow-run",
         "--allow-sys",
         "--no-check",
-        "-f",
+        "--force",
+        "--quiet",
         `https://deno.land/x/deploy@${version ? version : latest}/deployctl.ts`,
       ],
     }).spawn();
