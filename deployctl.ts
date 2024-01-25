@@ -2,6 +2,7 @@
 
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
+// deno-lint-ignore-file no-deprecated-deno-api
 import { semverGreaterThanOrEquals, setColorEnabled } from "./deps.ts";
 import { Args, parseArgs } from "./src/args.ts";
 import { error } from "./src/error.ts";
