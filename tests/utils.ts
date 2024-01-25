@@ -30,6 +30,8 @@ export function deployctl(
   if (permissions?.run) deno.push("--allow-run");
   if (permissions?.sys) deno.push("--allow-sys");
 
+  deno.push("--quiet");
+
   deno.push(new URL("../deployctl.ts", import.meta.url).toString());
 
   const cmd = Deno.build.os == "linux"
