@@ -1,5 +1,6 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
+// deno-lint-ignore-file no-deprecated-deno-api
 import { Args } from "../args.ts";
 import { API } from "../utils/api.ts";
 import TokenProvisioner from "../utils/access_token.ts";
