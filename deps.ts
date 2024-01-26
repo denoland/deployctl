@@ -40,6 +40,7 @@ export {
   Spinner,
   type SpinnerOptions,
   wait,
-} from "https://raw.githubusercontent.com/denosaurs/wait/9471d5cb37f31065fd867c85a8b1511091a24ee7/mod.ts";
+
+} from "https://raw.githubusercontent.com/denosaurs/wait/453df8babdd72c59d865c5a616c5b04ee1154b9f/mod.ts";
 
 export * as tty from "https://deno.land/x/tty@0.1.4/mod.ts";

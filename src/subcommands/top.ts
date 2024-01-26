@@ -1,6 +1,5 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-// deno-lint-ignore-file no-deprecated-deno-api
 import { Args } from "../args.ts";
 import { API } from "../utils/api.ts";
 import TokenProvisioner from "../utils/access_token.ts";
@@ -9,6 +8,7 @@ import { delay, encodeHex, tty } from "../../deps.ts";
 import { error } from "../error.ts";
 import { ProjectStats } from "../utils/api_types.ts";
 import { sha256 } from "../utils/hashing_encoding.ts";
+import { isTerminal } from "../utils/mod.ts";
 
 const help = `
 Project monitoring (ALPHA)
@@ -58,7 +58,7 @@ export default async function topSubcommand(args: Args) {
       format = args.format;
       break;
     case undefined:
-      format = Deno.isatty(Deno.stdout.rid) ? "table" : "json";
+      format = isTerminal(Deno.stdout) ? "table" : "json";
       break;
     default:
       error(

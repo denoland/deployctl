@@ -2,7 +2,6 @@
 
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-// deno-lint-ignore-file no-deprecated-deno-api
 import { semverGreaterThanOrEquals, setColorEnabled } from "./deps.ts";
 import { Args, parseArgs } from "./src/args.ts";
 import { error } from "./src/error.ts";
@@ -16,6 +15,7 @@ import { fetchReleases, getConfigPaths } from "./src/utils/info.ts";
 import configFile from "./src/config_file.ts";
 import inferConfig from "./src/config_inference.ts";
 import { wait } from "./src/utils/spinner.ts";
+import { isTerminal } from "./src/utils/mod.ts";
 
 const help = `deployctl ${VERSION}
 Command line tool for Deno Deploy.
@@ -42,7 +42,7 @@ const args = parseArgs(Deno.args);
 
 setColoring(args);
 
-if (Deno.isatty(Deno.stdin.rid)) {
+if (isTerminal(Deno.stdin)) {
   let latestVersion;
   // Get the path to the update information json file.
   const { updatePath } = getConfigPaths();
@@ -160,7 +160,7 @@ function setColoring(args: Args) {
 }
 
 function setAutoColoring() {
-  if (Deno.isatty(Deno.stdout.rid)) {
+  if (isTerminal(Deno.stdout)) {
     setColorEnabled(true);
   } else {
     setColorEnabled(false);
