@@ -33,5 +33,5 @@ outputs:
     description: The URL where the deployment is reachable
 
 runs:
-  using: node16
+  using: node20
   main: action/index.js
