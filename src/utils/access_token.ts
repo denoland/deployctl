@@ -59,15 +59,22 @@ async function provision(): Promise<string> {
       break;
     }
   }
-  const open = openCmd !== undefined
-    ? new Deno.Command(openCmd, {
-      args: [url],
-      stderr: "piped",
-      stdout: "piped",
-    })
-      .spawn()
-    : undefined;
-
+  let open;
+  if (openCmd !== undefined) {
+    try {
+      open = new Deno.Command(openCmd, {
+        args: [url],
+        stderr: "piped",
+        stdout: "piped",
+      })
+        .spawn();
+    } catch (error) {
+      wait("").start().warn(
+        "Unexpected error while trying to open the authorization URL in your default browser. Please report it at https://github.com/denoland/deployctl/issues/new.",
+      );
+      wait({ text: "", indent: 3 }).start().fail(error.toString());
+    }
+  }
   if (open == undefined) {
     const warn =
       "Cannot open the authorization URL automatically. Please navigate to it manually using your usual browser";
@@ -76,17 +83,15 @@ async function provision(): Promise<string> {
     const warn =
       "Failed to open the authorization URL in your default browser. Please navigate to it manually";
     wait("").start().warn(warn);
-    if (open !== undefined) {
-      let error = new TextDecoder().decode((await open.output()).stderr);
-      const errIndent = 2;
-      const elipsis = "...";
-      const maxErrLength = warn.length - errIndent;
-      if (error.length > maxErrLength) {
-        error = error.slice(0, maxErrLength - elipsis.length) + elipsis;
-      }
-      // resulting indentation is 1 less than configured
-      wait({ text: "", indent: errIndent + 1 }).start().fail(error);
+    let error = new TextDecoder().decode((await open.output()).stderr);
+    const errIndent = 2;
+    const elipsis = "...";
+    const maxErrLength = warn.length - errIndent;
+    if (error.length > maxErrLength) {
+      error = error.slice(0, maxErrLength - elipsis.length) + elipsis;
     }
+    // resulting indentation is 1 less than configured
+    wait({ text: "", indent: errIndent + 1 }).start().fail(error);
   }
 
   const spinner = wait("Waiting for authorization...").start();
