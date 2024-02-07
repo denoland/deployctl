@@ -44,6 +44,7 @@ async function provision(): Promise<string> {
 
   wait("").start().info(`Authorization URL: ${url}`);
   let openCmd;
+  const args = [];
   // TODO(arnauorriols): use npm:open or deno.land/x/open when either is compatible
   switch (Deno.build.os) {
     case "darwin": {
@@ -55,15 +56,18 @@ async function provision(): Promise<string> {
       break;
     }
     case "windows": {
-      openCmd = "start";
+      // Windows Start-Process is a cmdlet of PowerShell
+      openCmd = "PowerShell.exe";
+      args.push("Start-Process");
       break;
     }
   }
+  args.push(url);
   let open;
   if (openCmd !== undefined) {
     try {
       open = new Deno.Command(openCmd, {
-        args: [url],
+        args,
         stderr: "piped",
         stdout: "piped",
       })
