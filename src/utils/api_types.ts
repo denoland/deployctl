@@ -41,15 +41,28 @@ export interface Project {
   envVars: string[];
 }
 
-export type Organization = UserOrganization | NormalOrganization;
+export type Organization =
+  & (UserOrganization | NormalOrganization)
+  & CommonOrganization;
 
 export interface UserOrganization {
-  id: string;
   name: null;
 }
 
 export interface NormalOrganization {
+  name: string;
+}
+
+export interface CommonOrganization {
   id: string;
+  members: OrganizationMember[];
+}
+
+export interface OrganizationMember {
+  user: User;
+}
+
+export interface User {
   name: string;
 }
 

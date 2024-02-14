@@ -118,13 +118,20 @@ async function showProject(args: Args): Promise<void> {
     );
     return Deno.exit(1);
   }
+  const organizationName = project.organization.name
+    ? magenta(project.organization.name)
+    : `${
+      magenta(
+        (await api.getOrganizationById(project.organization.id))!.members[0]
+          .user
+          .name,
+      )
+    } [personal]`;
   spinner.succeed(`Project '${args.project}' found`);
   console.log();
   console.log(bold(green(project.name)));
   console.log(new Array(project.name.length).fill("-").join(""));
-  if (project.organization.name) {
-    console.log(`Organization:\t${magenta(project.organization.name)}`);
-  }
+  console.log(`Organization:\t${organizationName} (${project.organizationId})`);
   const ingress_root = new URL(endpoint()).hostname.split(".").at(-2);
   domains.push({
     domain: `${project.name}.${ingress_root}.dev`,
