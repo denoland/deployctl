@@ -91,11 +91,15 @@ export class API {
     return new API(provisioner, endpoint());
   }
 
-  async #request(path: string, opts: RequestOptions = {}): Promise<Response> {
+  async request(path: string, opts: RequestOptions = {}): Promise<Response> {
     const url = `${this.#endpoint}/api${path}`;
     const method = opts.method ?? "GET";
     const body = opts.body !== undefined
-      ? opts.body instanceof FormData ? opts.body : JSON.stringify(opts.body)
+      ? opts.body instanceof FormData
+        ? opts.body
+        : typeof opts.body !== "string"
+        ? JSON.stringify(opts.body)
+        : opts.body
       : undefined;
     const authorization = typeof this.#authorization === "string"
       ? this.#authorization
@@ -124,7 +128,7 @@ export class API {
   }
 
   async #requestJson<T>(path: string, opts?: RequestOptions): Promise<T> {
-    const res = await this.#request(path, opts);
+    const res = await this.request(path, opts);
     if (res.headers.get("Content-Type") !== "application/json") {
       const text = await res.text();
       throw new Error(`Expected JSON, got '${text}'`);
@@ -141,7 +145,7 @@ export class API {
     path: string,
     opts?: RequestOptions,
   ): Promise<AsyncGenerator<string, void>> {
-    const res = await this.#request(path, opts);
+    const res = await this.request(path, opts);
     if (res.status !== 200) {
       const json = await res.json();
       const xDenoRay = res.headers.get("x-deno-ray");
