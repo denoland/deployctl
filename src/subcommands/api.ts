@@ -60,10 +60,9 @@ export default async function (args: Args): Promise<void> {
       body: args.body,
     });
     spinner.succeed(`Received response from the API`);
-    const body =
-      response.headers.get("Content-Type") === "application/json"
-        ? await response.json()
-        : await response.text();
+    const body = response.headers.get("Content-Type") === "application/json"
+      ? await response.json()
+      : await response.text();
     const headers = response.headers;
     console.log("-----[ HEADERS ]-----");
     console.log(method, response.url);
