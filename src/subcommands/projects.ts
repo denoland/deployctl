@@ -122,6 +122,7 @@ async function showProject(args: Args): Promise<void> {
     ? magenta(project.organization.name)
     : `${
       magenta(
+        // If project exists, organization must also exist 
         (await api.getOrganizationById(project.organization.id))!.members[0]
           .user
           .name,
