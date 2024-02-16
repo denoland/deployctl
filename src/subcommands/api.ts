@@ -1,4 +1,3 @@
-import { parse } from "../../deps.ts";
 import { Args } from "../args.ts";
 import { API } from "../utils/mod.ts";
 import TokenProvisioner from "../utils/access_token.ts";
