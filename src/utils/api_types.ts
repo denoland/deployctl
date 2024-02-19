@@ -6,14 +6,17 @@ export interface DomainMapping {
 
 export interface Build {
   id: string;
-  relatedCommit: {
+  relatedCommit?: {
     hash: string;
     message: string;
     authorName: string;
     authorEmail: string;
+    authorGithubUsername: string;
     url: string;
   };
   deployment?: Deployment;
+  project: Project;
+  createdAt: string;
 }
 
 export interface Deployment {
@@ -25,13 +28,17 @@ export interface Deployment {
   createdAt: string;
   updatedAt: string;
   envVars: string[];
+  kvDatabases: Record<string, string>;
 }
 
 export interface Project {
   id: string;
   name: string;
   type: "git" | "playground";
-  git?: { repository: { owner: string; name: string } };
+  git?: {
+    repository: { owner: string; name: string };
+    productionBranch: string;
+  };
   productionDeployment?: Build | null;
   hasProductionDeployment: boolean;
   organizationId: string;
@@ -208,4 +215,15 @@ export interface ProjectStats {
   kvWriteUnitsPerMinute: number;
   enqueuePerMinute: number;
   dequeuePerMinute: number;
+}
+
+export interface Database {
+  branch: string;
+  databaseId: string;
+  bindingName: string;
+  description: string;
+  sizeBytes?: number;
+  availableRegions: string[];
+  createdAt: string;
+  updatedAt: string;
 }

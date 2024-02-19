@@ -104,7 +104,7 @@ async function showProject(args: Args): Promise<void> {
   const [project, domains, pagedBuilds] = await Promise.all([
     api.getProject(args.project),
     api.getDomains(args.project),
-    api.getDeployments(args.project),
+    api.listDeployments(args.project),
   ]).catch((err) => {
     if (err instanceof APIError && err.code === "projectNotFound") {
       return [null, null, null];
@@ -133,9 +133,9 @@ async function showProject(args: Args): Promise<void> {
   console.log(bold(green(project.name)));
   console.log(new Array(project.name.length).fill("-").join(""));
   console.log(`Organization:\t${organizationName} (${project.organizationId})`);
-  const ingress_root = new URL(endpoint()).hostname.split(".").at(-2);
+  const ingressRoot = new URL(endpoint()).hostname.split(".").at(-2);
   domains.push({
-    domain: `${project.name}.${ingress_root}.dev`,
+    domain: `${project.name}.${ingressRoot}.dev`,
     isValidated: true,
   });
   const validatedDomains = domains.filter((domain) => domain.isValidated);

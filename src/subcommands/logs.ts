@@ -236,7 +236,7 @@ async function fetchProjectInfo(
     onFailure("Project not found.");
   }
 
-  const projectDeployments = await api.getDeployments(projectId);
+  const projectDeployments = await api.listDeployments(projectId);
   if (projectDeployments === null) {
     onFailure("Project not found.");
   }

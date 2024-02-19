@@ -216,7 +216,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
       );
       Deno.exit(1);
     }
-    const deploymentsListing = await api.getDeployments(project.id);
+    const deploymentsListing = await api.listDeployments(project.id);
     if (deploymentsListing === null) {
       projectInfoSpinner.fail("Project deployments details not found.");
       Deno.exit(1);

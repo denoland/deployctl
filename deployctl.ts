@@ -10,6 +10,7 @@ import upgradeSubcommand from "./src/subcommands/upgrade.ts";
 import logsSubcommand from "./src/subcommands/logs.ts";
 import topSubcommand from "./src/subcommands/top.ts";
 import projectsSubcommand from "./src/subcommands/projects.ts";
+import deploymentsSubcommand from "./src/subcommands/deployments.ts";
 import { MINIMUM_DENO_VERSION, VERSION } from "./src/version.ts";
 import { fetchReleases, getConfigPaths } from "./src/utils/info.ts";
 import configFile from "./src/config_file.ts";
@@ -21,11 +22,12 @@ const help = `deployctl ${VERSION}
 Command line tool for Deno Deploy.
 
 SUBCOMMANDS:
-    deploy    Deploy a script with static files to Deno Deploy
-    projects  Manage projects
-    logs      View logs for the given project
-    top       Monitor projects resource usage in real time
-    upgrade   Upgrade deployctl to the given version (defaults to latest)
+    deploy      Deploy a script with static files to Deno Deploy
+    projects    Manage projects
+    deployments Manage deployments
+    logs        View logs for the given project
+    top         Monitor projects resource usage in real time
+    upgrade     Upgrade deployctl to the given version (defaults to latest)
 
 For more detailed help on each subcommand, use:
 
@@ -106,6 +108,10 @@ switch (subcommand) {
   case "projects":
     await setDefaultsFromConfigFile(args);
     await projectsSubcommand(args);
+    break;
+  case "deployments":
+    await setDefaultsFromConfigFile(args);
+    await deploymentsSubcommand(args);
     break;
   default:
     if (args.version) {
