@@ -38,7 +38,6 @@ export default async function (args: Args): Promise<void> {
     error(
       "Missing endpoint positional argument. USAGE: deployctl api <endpoint>",
     );
-    return Deno.exit(1);
   }
   if (!endpoint.startsWith("/")) {
     endpoint = `/${endpoint}`;
