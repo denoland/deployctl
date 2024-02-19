@@ -55,7 +55,7 @@ export default async function (args: Args): Promise<void> {
     : API.withTokenProvisioner(TokenProvisioner);
   try {
     const response = await api.request(endpoint, {
-      method: args.method || "GET",
+      method,
       body: args.body,
     });
     spinner.succeed(`Received response from the API`);
