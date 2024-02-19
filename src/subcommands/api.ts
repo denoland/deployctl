@@ -42,10 +42,9 @@ export default async function (args: Args): Promise<void> {
   if (!endpoint.startsWith("/")) {
     endpoint = `/${endpoint}`;
   }
-  if (!args["api-version"]) {
-    endpoint = `/v1${endpoint}`;
-  } else if (args["api-version"] !== "0") {
-    endpoint = `/${args["api-version"]}${endpoint}`;
+  const apiVersion = args["api-version"] || "v1";
+  if (!endpoint.startsWith(`/${apiVersion}`)) {
+    endpoint = `/${apiVersion}${endpoint}`;
   }
   const method = (args.method || "GET").toUpperCase();
   const spinner = wait(`Requesting API endpoint '${endpoint}'...`).start();
