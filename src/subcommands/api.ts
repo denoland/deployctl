@@ -1,5 +1,5 @@
 import { Args } from "../args.ts";
-import { API } from "../utils/mod.ts";
+import { API, isTerminal } from "../utils/mod.ts";
 import TokenProvisioner from "../utils/access_token.ts";
 import { error } from "../error.ts";
 import { wait } from "../utils/spinner.ts";
@@ -22,10 +22,12 @@ USAGE:
     deployctl api [OPTIONS] <ENDPOINT>
 
 OPTIONS:
-    -h, --help                 Prints this help information
-        --method=<HTTP-METHOD> HTTP method to use (defaults to GET)
-        --body=<JSON>          Body of the request. The provided string is sent as is to the API
-        --token=<TOKEN>        The API token to use (defaults to auto-provisioned token)
+    -h, --help                   Prints this help information
+        --method=<HTTP-METHOD>   HTTP method to use (defaults to GET)
+        --body=<JSON>            Body of the request. The provided string is sent as is to the API
+        --format=<overview|body> Output an overview of the response with the headers and the (possibly truncated) body, or just the body (verbatim). 
+                                 Defaults to 'overview' when stdout is a tty, and 'body' otherwise.  
+        --token=<TOKEN>          The API token to use (defaults to auto-provisioned token)
 `;
 
 export default async function (args: Args): Promise<void> {
@@ -39,6 +41,22 @@ export default async function (args: Args): Promise<void> {
       "Missing endpoint positional argument. USAGE: deployctl api <endpoint>",
     );
   }
+
+  let format: "overview" | "body";
+  switch (args.format) {
+    case "overview":
+    case "body":
+      format = args.format;
+      break;
+    case undefined:
+      format = isTerminal(Deno.stdout) ? "overview" : "body";
+      break;
+    default:
+      error(
+        `Invalid format '${args.format}'. Supported values for the --format option are 'overview' or 'body'`,
+      );
+  }
+
   if (!endpoint.startsWith("/")) {
     endpoint = `/${endpoint}`;
   }
@@ -57,16 +75,25 @@ export default async function (args: Args): Promise<void> {
       body: args.body,
     });
     spinner.succeed(`Received response from the API`);
-    const body = response.headers.get("Content-Type") === "application/json"
-      ? await response.json()
-      : await response.text();
-    const headers = response.headers;
-    console.log("-----[ HEADERS ]-----");
-    console.log(method, response.url);
-    console.log("Status:", response.status);
-    console.log(headers);
-    console.log("-----[ BODY ]--------");
-    console.log(body);
+    switch (format) {
+      case "overview": {
+        const body = response.headers.get("Content-Type") === "application/json"
+          ? await response.json()
+          : await response.text();
+        const headers = response.headers;
+        console.log("-----[ HEADERS ]-----");
+        console.log(method, response.url);
+        console.log("Status:", response.status);
+        console.log(headers);
+        console.log("-----[ BODY ]--------");
+        console.log(body);
+        break;
+      }
+      case "body": {
+        console.log(await response.text());
+        break;
+      }
+    }
   } catch (err) {
     error(err);
   }
