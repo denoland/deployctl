@@ -9,6 +9,30 @@ import { isTerminal } from "../utils/mod.ts";
 
 const help = `Manage deployments in Deno Deploy
 
+## SHOW
+
+Fetch the all the details of a deployment using deployctl deployments show. You can fetch the details of the production deployment of
+the project you are currently in (project will be picked up from the config file):
+
+    deployctl deployments show
+
+And you can also navigate the list of deployments using --prev and --next. --prev will show you 1 deployment before the current production
+deployment:
+
+    deployctl deployments show --prev
+
+To see the deployment before that, you can either add another --prev, or use --prev=2:
+
+    deployctl deployments show --prev --prev
+
+You can also see the production deployment of any project using --project:
+
+    deployctl deployments show --project=my-other-project
+
+Or just show the details of an specific deployment, of any project, using --id. This can also be combined with --prev and --next too:
+
+    deployctl deployments show --id=p63c39ck5feg --next
+
 USAGE:
     deployctl deployments <SUBCOMMAND> [OPTIONS]
 
@@ -25,8 +49,8 @@ OPTIONS:
                                     Can be used multiple times (--next --next is the same as --next=2)
         --prev[=pos]                Show the details of a deployment deployed before the specified deployment.
                                     Can be used multiple times (--prev --prev is the same as --prev=2)
-    -p, --project=<NAME|ID>         The project selected. 
-        --format=<overview|json>    Output the deployment details in an overview or JSON-encoded. Defaults to 'overview' when stdout is a tty, 'json' otherwise.
+    -p, --project=<NAME|ID>         The project the production deployment of which to show the details. Ignored if combined with --id
+        --format=<overview|json>    Output the deployment details in an overview or JSON-encoded. Defaults to 'overview' when stdout is a tty, and 'json' otherwise.
         --token=<TOKEN>             The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
         --config=<PATH>             Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
         --color=<auto|always|never> Enable or disable colored output. Defaults to 'auto' (colored when stdout is a tty)
@@ -175,7 +199,7 @@ async function showDeployment(args: Args): Promise<void> {
     `The details of the deployment '${build.deployment!.id}' are ready:`,
   );
 
-  let format: Format;
+  let format: "overview" | "json";
   switch (args.format) {
     case "overview":
     case "json":
@@ -237,26 +261,28 @@ function renderOverview(
   const organizationName = organization.name && cyan(organization.name) ||
     `${cyan(organization.members[0].user.name)} [personal]`;
   const createdAt = new Date(build.createdAt);
-  const sinces = [new Date() - createdAt];
+  const sinces = [new Date().getTime() - createdAt.getTime()];
   const sinceUnits = ["milliseconds ago"];
-  if (sinces[0] > 1000) {
+  if (sinces[0] >= 1000) {
+    // Remove milis
     sinces[0] = Math.floor(sinces[0] / 1000);
     sinceUnits[0] = "second";
   }
-  if (sinces[0] > 60) {
+  if (sinces[0] >= 60) {
     sinces.push(Math.floor(sinces[0] / 60));
     sinces[0] = sinces[0] % 60;
     sinceUnits.push("minute");
   }
 
-  if (sinces[1] > 60) {
+  if (sinces[1] >= 60) {
     sinces.push(Math.floor(sinces[1] / 60));
     sinces[1] = sinces[1] % 60;
     sinceUnits.push("hour");
   }
 
-  if (sinces[2] > 24) {
+  if (sinces[2] >= 24) {
     sinces.push(Math.floor(sinces[2] / 24));
+    sinces[2] = sinces[2] % 24;
     sinceUnits.push("day");
   }
 
@@ -264,11 +290,12 @@ function renderOverview(
   sinceUnits.reverse();
   let sinceStr = "";
   for (let x = 0; x < sinces.length; x++) {
+    const since = sinces[x];
+    let sinceUnit = sinceUnits[x];
+    if (since === 0) continue;
     if (sinceStr) {
       sinceStr += ", ";
     }
-    const since = sinces[x];
-    let sinceUnit = sinceUnits[x];
     if (sinces[x] > 1) {
       sinceUnit += "s";
     }
@@ -340,5 +367,3 @@ function renderJson(
 ) {
   console.log(JSON.stringify({ build, project, organization, databases }));
 }
-
-type Format = "overview" | "json";
