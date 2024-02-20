@@ -94,13 +94,9 @@ export class API {
   async request(path: string, opts: RequestOptions = {}): Promise<Response> {
     const url = `${this.#endpoint}/api${path}`;
     const method = opts.method ?? "GET";
-    const body = opts.body !== undefined
-      ? opts.body instanceof FormData
-        ? opts.body
-        : typeof opts.body !== "string"
-        ? JSON.stringify(opts.body)
-        : opts.body
-      : undefined;
+    const body = typeof opts.body === "string" || opts.body instanceof FormData
+      ? opts.body
+      : JSON.stringify(opts.body);
     const authorization = typeof this.#authorization === "string"
       ? this.#authorization
       : `Bearer ${
