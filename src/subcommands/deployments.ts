@@ -80,7 +80,6 @@ export default async function (args: Args): Promise<void> {
 }
 
 // TODO: Show if active (and maybe some stats?)
-// TODO: show TZ in date
 async function showDeployment(args: Args): Promise<void> {
   const deploymentIdArg = args._.shift()?.toString() || args.id;
   // Ignore --project if user also provided --id
