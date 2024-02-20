@@ -73,6 +73,7 @@ export default async function (args: Args): Promise<void> {
   }
 }
 
+// TODO: Show if active (and maybe some stats?)
 async function showDeployment(args: Args): Promise<void> {
   let deploymentId = args._.shift()?.toString() || args.id;
   let project, organization, databases;
@@ -156,8 +157,8 @@ async function showDeployment(args: Args): Promise<void> {
     build = maybeBuild;
     spinner.succeed(
       `The deployment ${relativePosString} relative to '${deploymentId}' is '${
-        build.deployment!.id
-      }'`,
+        // NULL SAFETY: the subcommand searches by deployment id, thus the build must have the deployment
+        build.deployment!.id}'`,
     );
   }
 
@@ -331,7 +332,7 @@ function renderOverview(
   );
   console.log(
     `Domain(s):\t${
-      build.deployment?.domainMappings.map((domain) =>
+      build.deployment!.domainMappings.map((domain) =>
         `https://${domain.domain}`
       ).sort((a, b) => a.length - b.length).join(
         "\n\t\t",
@@ -340,6 +341,9 @@ function renderOverview(
   );
   console.log(`Database:\t${databaseEnv} (${database.databaseId})`);
   console.log(`Entrypoint:\t${entrypoint}`);
+  console.log(
+    `Env Vars:\t${build.deployment!.envVars.join("\n\t\t")}`,
+  );
   if (build.relatedCommit) {
     console.log(`Git`);
     console.log(
