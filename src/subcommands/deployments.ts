@@ -81,9 +81,6 @@ export default async function (args: Args): Promise<void> {
 
 // TODO: Show if active (and maybe some stats?)
 // TODO: show TZ in date
-// TODO: deployment even if failure? then show failure if any
-// TODO: prev and next should skipped failed deployments?
-// TODO: correct projects show, as it is not a failure to not have deployment
 async function showDeployment(args: Args): Promise<void> {
   const deploymentIdArg = args._.shift()?.toString() || args.id;
   // Ignore --project if user also provided --id
@@ -367,7 +364,11 @@ function renderOverview(
   if (buildError) {
     console.log(`Error:\t\t${buildError}`);
   }
-  console.log(`Date:\t\t${sinceStr} ago (${createdAt.toLocaleString()})`);
+  console.log(
+    `Date:\t\t${sinceStr} ago (${
+      createdAt.toLocaleString(navigator.language, { timeZoneName: "short" })
+    })`,
+  );
   console.log(`Project:\t${magenta(project.name)} (${project.id})`);
   console.log(
     `Organization:\t${organizationName} (${project.organizationId})`,
