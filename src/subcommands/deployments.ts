@@ -17,8 +17,10 @@ const help = `Manage deployments in Deno Deploy
 
 ## SHOW
 
-You can fetch the details of the production deployment of
-the project you are currently in (project will be picked up from the config file):
+The "deployments show" subcommand is used to see all the details of a deployment.
+
+The simplest form of the command will show the details of the production deployment of the project
+you are currently in (project will be picked up from the config file):
 
     deployctl deployments show
 
@@ -35,7 +37,7 @@ You can also see the production deployment of any project using --project:
 
     deployctl deployments show --project=my-other-project
 
-Or just show the details of an specific deployment, of any project, using --id. This can also be combined with --prev and --next too:
+Or just show the details of a specific deployment, of any project, using --id. This can also be combined with --prev and --next too:
 
     deployctl deployments show --id=p63c39ck5feg --next
 
@@ -45,7 +47,7 @@ USAGE:
 SUBCOMMANDS:
     show [ID]   View details of a deployment. Specify the deployment with a positional argument or the --id option; otherwise, it will 
                 show the details of the current production deployment of the project specified in the config file or with the --project option.
-                Use --next and --prev to fetch the deployments deployed after or before to the specified (or production) deployment.
+                Use --next and --prev to fetch the deployments deployed after or before the specified (or production) deployment.
 
 
 OPTIONS:
@@ -213,7 +215,7 @@ async function showDeployment(args: Args): Promise<void> {
   }
   if (!databases) {
     spinner.fail(
-      `The project '${projectId}' does not exist, or you don't have access to it`,
+      `Failed to fetch the databases of project '${projectId}'`,
     );
     return Deno.exit(1);
   }
