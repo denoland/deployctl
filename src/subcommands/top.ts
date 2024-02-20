@@ -36,7 +36,7 @@ OPTIONS:
         --token=<TOKEN>           The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
         --config=<PATH>           Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
         --color=<auto|always|off> Enable colored output. Defaults to 'auto' (colored when stdout is a tty)
-        --format=<table|json>     Output the project stats in a table or JSON-encoded. Defaults to 'table' when stdout is a tty, 'json' otherwise.
+        --format=<table|json>     Output the project stats in a table or JSON-encoded. Defaults to 'table' when stdout is a tty, and 'json' otherwise.
         --region=<REGION>         Show stats from only specific regions. Can be used multiple times (--region=us-east4 --region=us-west2).
                                   Can also be a substring (--region=us)
 `;
@@ -51,7 +51,7 @@ export default async function topSubcommand(args: Args) {
       "No project specified. Use --project to specify the project of which to stream the stats",
     );
   }
-  let format: Format;
+  let format: "table" | "json";
   switch (args.format) {
     case "table":
     case "json":
@@ -201,5 +201,3 @@ async function json(stats: AsyncGenerator<ProjectStats>) {
     console.log(JSON.stringify(stat));
   }
 }
-
-type Format = "table" | "json";
