@@ -17,7 +17,7 @@ const help = `Manage deployments in Deno Deploy
 
 ## SHOW
 
-Fetch the all the details of a deployment using deployctl deployments show. You can fetch the details of the production deployment of
+You can fetch the details of the production deployment of
 the project you are currently in (project will be picked up from the config file):
 
     deployctl deployments show
