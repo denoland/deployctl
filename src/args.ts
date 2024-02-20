@@ -40,6 +40,8 @@ export function parseArgs(args: string[]) {
       "id",
       "prev",
       "next",
+      "method",
+      "body",
     ],
     collect: ["grep", "include", "exclude", "region", "prev", "next"],
     default: {

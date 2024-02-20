@@ -11,6 +11,7 @@ import logsSubcommand from "./src/subcommands/logs.ts";
 import topSubcommand from "./src/subcommands/top.ts";
 import projectsSubcommand from "./src/subcommands/projects.ts";
 import deploymentsSubcommand from "./src/subcommands/deployments.ts";
+import apiSubcommand from "./src/subcommands/api.ts";
 import { MINIMUM_DENO_VERSION, VERSION } from "./src/version.ts";
 import { fetchReleases, getConfigPaths } from "./src/utils/info.ts";
 import configFile from "./src/config_file.ts";
@@ -28,6 +29,7 @@ SUBCOMMANDS:
     logs        View logs for the given project
     top         Monitor projects resource usage in real time
     upgrade     Upgrade deployctl to the given version (defaults to latest)
+    api         Perform raw HTTP requests against the Deploy API 
 
 For more detailed help on each subcommand, use:
 
@@ -112,6 +114,9 @@ switch (subcommand) {
   case "deployments":
     await setDefaultsFromConfigFile(args);
     await deploymentsSubcommand(args);
+    break;
+  case "api":
+    await apiSubcommand(args);
     break;
   default:
     if (args.version) {
