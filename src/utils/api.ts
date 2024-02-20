@@ -185,6 +185,10 @@ export class API {
     }
   }
 
+  async getOrganizationById(id: string): Promise<Organization | undefined> {
+    return await this.#requestJson(`/organizations/${id}`);
+  }
+
   async createOrganization(name: string): Promise<Organization> {
     const body = { name };
     return await this.#requestJson(

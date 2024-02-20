@@ -30,6 +30,13 @@ jobs:
           root: action/tests
           entrypoint: include_exclude.ts
           include: include_exclude.ts
+      - name: Deploy with comma-separated include 
+        uses: ./
+        with:
+          project: happy-rat-64
+          root: action
+          entrypoint: tests/include_exclude.ts
+          include: foo,tests/include_exclude.ts,bar
       - name: Deploy with comma-separated exclude 
         uses: ./
         with:
@@ -46,6 +53,16 @@ jobs:
           exclude: |
             import_bomb1
             import_bomb2
+      - name: Deploy combine include and exclude
+        uses: ./
+        with:
+          project: happy-rat-64
+          root: action
+          entrypoint: tests/include_exclude.ts
+          include: tests
+          exclude: |
+            tests/import_bomb1
+            tests/import_bomb2
       - name: Always exclude node_modules directory
         uses: ./
         with:

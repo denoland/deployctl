@@ -96,7 +96,7 @@ async function inferProject(api: API, dryRun: boolean, orgName?: string) {
         spinner.fail(
           `Guessing project name '${projectName}': Creating project...`,
         );
-        error(e.code);
+        error(e);
       }
     }
   }
