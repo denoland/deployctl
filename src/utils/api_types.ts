@@ -17,6 +17,7 @@ export interface Build {
   deployment?: Deployment;
   project: Project;
   createdAt: string;
+  logs: DeploymentProgress[];
 }
 
 export interface Deployment {

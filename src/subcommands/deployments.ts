@@ -2,7 +2,13 @@ import { Args } from "../args.ts";
 import { API } from "../utils/api.ts";
 import TokenProvisioner from "../utils/access_token.ts";
 import { wait } from "../utils/spinner.ts";
-import { Build, Database, Organization, Project } from "../utils/api_types.ts";
+import {
+  Build,
+  Database,
+  DeploymentProgressError,
+  Organization,
+  Project,
+} from "../utils/api_types.ts";
 import { bold, cyan, fromFileUrl, green, magenta, yellow } from "../../deps.ts";
 import { error } from "../error.ts";
 import { isTerminal } from "../utils/mod.ts";
@@ -74,27 +80,42 @@ export default async function (args: Args): Promise<void> {
 }
 
 // TODO: Show if active (and maybe some stats?)
+// TODO: show TZ in date
+// TODO: deployment even if failure? then show failure if any
+// TODO: prev and next should skipped failed deployments?
+// TODO: correct projects show, as it is not a failure to not have deployment
 async function showDeployment(args: Args): Promise<void> {
-  let deploymentId = args._.shift()?.toString() || args.id;
-  let project, organization, databases;
+  const deploymentIdArg = args._.shift()?.toString() || args.id;
+  // Ignore --project if user also provided --id
+  const projectIdArg = deploymentIdArg ? undefined : args.project;
+
   const api = args.token
     ? API.fromToken(args.token)
     : API.withTokenProvisioner(TokenProvisioner);
 
-  if (!deploymentId) {
+  let deploymentId,
+    projectId,
+    build: Build | null | undefined,
+    project: Project | null | undefined,
+    databases: Database[] | null;
+
+  if (deploymentIdArg) {
+    deploymentId = deploymentIdArg;
+  } else {
     // Default to showing the production deployment of the project
-    if (!args.project) {
+    if (!projectIdArg) {
       error(
         "No deployment or project specified. Use --id <deployment-id> or --project <project-name>",
       );
     }
+    projectId = projectIdArg;
     const spinner = wait(
-      `Searching production deployment of project '${args.project}'...`,
+      `Searching production deployment of project '${projectId}'...`,
     ).start();
-    project = await api.getProject(args.project);
+    project = await api.getProject(projectId);
     if (!project) {
       spinner.fail(
-        `The project '${args.project}' does not exist, or you don't have access to it`,
+        `The project '${projectId}' does not exist, or you don't have access to it`,
       );
       return Deno.exit(1);
     }
@@ -111,24 +132,22 @@ async function showDeployment(args: Args): Promise<void> {
     );
   }
 
-  let build;
   if (args.prev.length !== 0 || args.next.length !== 0) {
-    if (!project) {
-      if (!args.project) {
-        error(
-          "No deployment or project specified. Use --id <deployment-id> or --project <project-name>",
-        );
-      }
-      const projectSpinner = wait(`Fetching project '${args.project}'...`)
+    // Search the deployment relative to the specified deployment
+    if (!projectId) {
+      // Fetch the deployment specified with --id, to know of which project to search the relative deployment
+      // If user didn't use --id, they must have used --project, thus we already know the project-id
+      const spinner_ = wait(`Fetching deployment '${deploymentId}'...`)
         .start();
-      project = await api.getProject(args.project);
-      if (!project) {
-        projectSpinner.fail(
-          `The project '${args.project}' does not exist, or you don't have access to it`,
+      const specifiedDeployment = await api.getDeployment(deploymentId);
+      if (!specifiedDeployment) {
+        spinner_.fail(
+          `The deployment '${deploymentId}' does not exist, or you don't have access to it`,
         );
         return Deno.exit(1);
       }
-      projectSpinner.succeed(`Project '${project.name}' found`);
+      spinner_.succeed(`Deployment '${deploymentId}' found`);
+      projectId = specifiedDeployment.project.id;
     }
     let relativePos = 0;
     for (const prev of args.prev) {
@@ -144,7 +163,7 @@ async function showDeployment(args: Args): Promise<void> {
       `Searching the deployment ${relativePosString} relative to '${deploymentId}'...`,
     ).start();
     const maybeBuild = await searchRelativeDeployment(
-      api.listAllDeployments(project.id),
+      api.listAllDeployments(projectId),
       deploymentId,
       relativePos,
     );
@@ -165,37 +184,44 @@ async function showDeployment(args: Args): Promise<void> {
   const spinner = wait(`Fetching deployment '${deploymentId}' details...`)
     .start();
 
-  if (!build) {
-    build = await api.getDeployment(deploymentId);
-    if (!build) {
-      spinner.fail(
-        `The deployment '${deploymentId}' does not exist, or you don't have access to it`,
-      );
-      return Deno.exit(1);
-    }
-  }
-
   // Need to fetch project because the build.project does not include productionDeployment
-  // Need to fetch organization because build.project does not include organization
-  [project, organization, databases] = await Promise.all([
-    project ? Promise.resolve(project) : api.getProject(build.project.id),
-    api.getOrganizationById(
-      (project || build.project).organizationId,
-    ),
-    api.getProjectDatabases((project || build.project).id),
-  ]);
+  [build, project, databases] = projectId
+    ? await Promise.all([
+      build ? Promise.resolve(build) : api.getDeployment(deploymentId),
+      project ? Promise.resolve(project) : api.getProject(projectId),
+      api.getProjectDatabases(projectId),
+    ])
+    : await api.getDeployment(deploymentId).then(async (build) =>
+      build
+        ? [
+          build,
+          ...await Promise.all([
+            api.getProject(build.project.id),
+            api.getProjectDatabases(build.project.id),
+          ]),
+        ]
+        : [null, null, null]
+    );
+
+  if (!build) {
+    spinner.fail(
+      `The deployment '${deploymentId}' does not exist, or you don't have access to it`,
+    );
+    return Deno.exit(1);
+  }
   if (!project) {
     spinner.fail(
-      `The project '${build.project.id}' does not exist, or you don't have access to it`,
+      `The project '${projectId}' does not exist, or you don't have access to it`,
     );
     return Deno.exit(1);
   }
-  if (!organization) {
+  if (!databases) {
     spinner.fail(
-      `The organization '${build.project.organizationId}' does not exist, or you don't have access to it`,
+      `The project '${projectId}' does not exist, or you don't have access to it`,
     );
     return Deno.exit(1);
   }
+  const organization = project.organization;
   spinner.succeed(
     `The details of the deployment '${build.deployment!.id}' are ready:`,
   );
@@ -306,7 +332,14 @@ function renderOverview(
     }
   }
   const isCurrentProd = project.productionDeployment?.id === build.id;
-  const status = isCurrentProd ? yellow(bold("Production")) : "Preview";
+  const buildError = build.logs.find((log): log is DeploymentProgressError =>
+    log.type === "error"
+  )?.ctx.replaceAll(/\s+/g, " ");
+  const status = buildError
+    ? "FAILED"
+    : isCurrentProd
+    ? yellow(bold("Production"))
+    : "Preview";
   const database = databases.find((db) =>
     // NULL SAFETY: At this point build cannot ever be undefined
     db.databaseId === build!.deployment!.kvDatabases["default"]
@@ -321,23 +354,26 @@ function renderOverview(
       ? "Preview"
       : yellow(bold("Production"));
   const entrypoint = fromFileUrl(build.deployment!.url).replace("/src", "");
+  const domains = build.deployment!.domainMappings.map((domain) =>
+    `https://${domain.domain}`
+  ).sort((a, b) => a.length - b.length);
+  if (domains.length === 0) {
+    domains.push("(See Error)");
+  }
   console.log();
   console.log(bold(green(build.deployment!.id)));
   console.log(new Array(build.deployment!.id.length).fill("-").join(""));
   console.log(`Status:\t\t${status}`);
+  if (buildError) {
+    console.log(`Error:\t\t${buildError}`);
+  }
   console.log(`Date:\t\t${sinceStr} ago (${createdAt.toLocaleString()})`);
   console.log(`Project:\t${magenta(project.name)} (${project.id})`);
   console.log(
     `Organization:\t${organizationName} (${project.organizationId})`,
   );
   console.log(
-    `Domain(s):\t${
-      build.deployment!.domainMappings.map((domain) =>
-        `https://${domain.domain}`
-      ).sort((a, b) => a.length - b.length).join(
-        "\n\t\t",
-      )
-    }`,
+    `Domain(s):\t${domains.join("\n\t\t")}`,
   );
   console.log(`Database:\t${databaseEnv} (${database.databaseId})`);
   console.log(`Entrypoint:\t${entrypoint}`);
