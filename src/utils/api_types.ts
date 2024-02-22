@@ -14,7 +14,8 @@ export interface Build {
     authorGithubUsername: string;
     url: string;
   };
-  deployment?: Deployment;
+  deployment: Deployment | null;
+  deploymentId: string;
   project: Project;
   createdAt: string;
   logs: DeploymentProgress[];

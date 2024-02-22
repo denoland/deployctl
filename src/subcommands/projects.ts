@@ -130,7 +130,7 @@ async function showProject(args: Args): Promise<void> {
     } [personal]`;
   spinner.succeed(`Project '${args.project}' found`);
   console.log();
-  console.log(bold(green(project.name)));
+  console.log(bold(project.name));
   console.log(new Array(project.name.length).fill("-").join(""));
   console.log(`Organization:\t${organizationName} (${project.organizationId})`);
   const ingressRoot = new URL(endpoint()).hostname.split(".").at(-2);
