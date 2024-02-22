@@ -3,7 +3,8 @@
 GitHub Actions for deploying to Deno Deploy.
 
 > ⚠ If your project does not require a build step, we recommend you use the
-> ["Automatic" deployment mode](https://docs.deno.com/deploy/manual/ci_github#automatic) of our GitHub integration. It is faster and requires no setup.
+> ["Automatic" deployment mode](https://docs.deno.com/deploy/manual/ci_github#automatic)
+> of our GitHub integration. It is faster and requires no setup.
 
 - [Usage](#usage)
   - [Permissions](#permissions)
@@ -17,11 +18,16 @@ GitHub Actions for deploying to Deno Deploy.
 
 ## Usage
 
-To deploy you just need to include the Deno Deploy GitHub Action as a step in your workflow.
+To deploy you just need to include the Deno Deploy GitHub Action as a step in
+your workflow.
 
 You do **not** need to set up any secrets for this to work.
 
-You **do** need to link your GitHub repository to your Deno Deploy project. You have to choose the "GitHub Actions" deployment mode in your project settings on https://dash.deno.com. Read [Deno Deploy documenation](https://docs.deno.com/deploy/manual/ci_github#github-action) for more information.
+You **do** need to link your GitHub repository to your Deno Deploy project. You
+have to choose the "GitHub Actions" deployment mode in your project settings on
+https://dash.deno.com. Read
+[Deno Deploy documenation](https://docs.deno.com/deploy/manual/ci_github#github-action)
+for more information.
 
 ### Permissions
 
@@ -149,7 +155,11 @@ include: |
     entrypoint: https://your-external-path/mod.ts
 ```
 
-An interesting use case is to directly use [std/http/file_server.ts](https://deno.land/std/http/file_server.ts) as suggested in [Deploy a static site](https://docs.deno.com/deploy/tutorials/static-site) tutorial.
+An interesting use case is to directly use
+[std/http/file_server.ts](https://deno.land/std/http/file_server.ts) as
+suggested in
+[Deploy a static site](https://docs.deno.com/deploy/tutorials/static-site)
+tutorial.
 
 ```yaml
 - name: Deploy to Deno Deploy
