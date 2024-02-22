@@ -37,6 +37,8 @@ export function parseArgs(args: string[]) {
       "format",
       "color",
       "region",
+      "method",
+      "body",
     ],
     collect: ["grep", "include", "exclude", "region"],
     default: {

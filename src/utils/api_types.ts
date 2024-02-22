@@ -43,13 +43,24 @@ export interface Project {
 
 export type Organization = UserOrganization | NormalOrganization;
 
-export interface UserOrganization {
-  id: string;
+export type UserOrganization = CommonOrganization & {
   name: null;
+};
+
+export type NormalOrganization = CommonOrganization & {
+  name: string;
+};
+
+export interface CommonOrganization {
+  id: string;
+  members: OrganizationMember[];
 }
 
-export interface NormalOrganization {
-  id: string;
+export interface OrganizationMember {
+  user: User;
+}
+
+export interface User {
   name: string;
 }
 
