@@ -52,6 +52,24 @@ Or just show the details of a specific deployment, of any project, using --id. T
 
     deployctl deployments show --id=p63c39ck5feg --next
 
+## List
+
+The "deployments list" subcommand is used to list the deployments of a project. 
+
+The simples form of the command will list the first 20 deployments of the project you are currently
+in (project will be picked up from the config file):
+
+    deployctl deployments list
+
+You can list the rest of the deployments using --page, --next or --prev:
+
+    deployctl deployments list --page=2
+
+You can specify the project to list deployments of with the --project option:
+
+    deployctl deployments list --project=my-other-project
+
+
 USAGE:
     deployctl deployments <SUBCOMMAND> [OPTIONS]
 
@@ -59,15 +77,22 @@ SUBCOMMANDS:
     show [ID]   View details of a deployment. Specify the deployment with a positional argument or the --id option; otherwise, it will 
                 show the details of the current production deployment of the project specified in the config file or with the --project option.
                 Use --next and --prev to fetch the deployments deployed after or before the specified (or production) deployment.
+    list        List the deployments of a project. Specify the project using --project. Pagination can be controlled with --page, --limit,
+                --next and --prev. 
 
 OPTIONS:
     -h, --help                      Prints this help information
-        --id=<deployment-id>        Id of the deployment of which to show details
-        --next[=pos]                Show the details of a deployment deployed after the specified deployment.
+        --id=<deployment-id>        [show] Id of the deployment of which to show details
+    -p, --project=<NAME|ID>         [show] The project the production deployment of which to show the details. Ignored if combined with --id
+                                    [list] The project of which to list deployments.
+        --next[=pos]                [show] Show the details of a deployment deployed after the specified deployment
+                                    [list] Fetch the next page of the list
                                     Can be used multiple times (--next --next is the same as --next=2)
-        --prev[=pos]                Show the details of a deployment deployed before the specified deployment.
+        --prev[=pos]                [show] Show the details of a deployment deployed before the specified deployment.
+                                    [list] Fetch the previous page of the list
                                     Can be used multiple times (--prev --prev is the same as --prev=2)
-    -p, --project=<NAME|ID>         The project the production deployment of which to show the details. Ignored if combined with --id
+        --page=<num>                [list] Page of the deployments list to fetch
+        --limit=<num>               [list] Amount of deployments to include in the list
         --format=<overview|json>    Output the deployment details in an overview or JSON-encoded. Defaults to 'overview' when stdout is a tty, and 'json' otherwise.
         --token=<TOKEN>             The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
         --config=<PATH>             Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
