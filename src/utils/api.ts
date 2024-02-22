@@ -3,6 +3,7 @@ import { VERSION } from "../version.ts";
 
 import {
   Build,
+  Database,
   DeploymentProgress,
   Domain,
   GitHubActionsDeploymentRequest,
@@ -256,13 +257,44 @@ export class API {
     return await this.#requestJson(`/projects/${projectId}/domains`);
   }
 
-  async getDeployments(
+  async listDeployments(
     projectId: string,
   ): Promise<[Build[], PagingInfo] | null> {
     try {
       return await this.#requestJson(`/projects/${projectId}/deployments/`);
     } catch (err) {
       if (err instanceof APIError && err.code === "projectNotFound") {
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  async *listAllDeployments(
+    projectId: string,
+  ): AsyncGenerator<Build> {
+    let totalPages = 1;
+    let page = 0;
+    while (totalPages > page) {
+      const [deployments, paging]: [Build[], PagingInfo] = await this
+        .#requestJson(
+          `/projects/${projectId}/deployments/?limit=50&page=${page}`,
+        );
+      for (const deployment of deployments) {
+        yield deployment;
+      }
+      totalPages = paging.totalPages;
+      page = paging.page + 1;
+    }
+  }
+
+  async getDeployment(
+    deploymentId: string,
+  ): Promise<Build | null> {
+    try {
+      return await this.#requestJson(`/deployments/${deploymentId}`);
+    } catch (err) {
+      if (err instanceof APIError && err.code === "deploymentNotFound") {
         return null;
       }
       throw err;
@@ -366,5 +398,9 @@ export class API {
         }
       }
     }();
+  }
+
+  async getProjectDatabases(project: string): Promise<Database[]> {
+    return await this.#requestJson(`/projects/${project}/databases`);
   }
 }
