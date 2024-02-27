@@ -750,6 +750,9 @@ async function resolveDeploymentId(
     for (const next of args.next) {
       relativePos += parseInt(next || "1");
     }
+    if (Number.isNaN(relativePos)) {
+      error("Value of --next and --prev must be a number");
+    }
     const relativePosString = relativePos.toLocaleString(navigator.language, {
       signDisplay: "exceptZero",
     });
