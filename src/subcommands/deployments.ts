@@ -56,7 +56,7 @@ Or just show the details of a specific deployment, of any project, using --id. T
 
 The "deployments list" subcommand is used to list the deployments of a project. 
 
-The simples form of the command will list the first 20 deployments of the project you are currently
+The simplest form of the command will list the first 20 deployments of the project you are currently
 in (project will be picked up from the config file):
 
     deployctl deployments list
