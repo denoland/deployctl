@@ -302,10 +302,11 @@ async function deleteDeployment(args: Args): Promise<void> {
   const api = args.token
     ? API.fromToken(args.token)
     : API.withTokenProvisioner(TokenProvisioner);
-  const [deploymentId, _projectId, _build, _project] = await resolveDeploymentId(
-    args,
-    api,
-  );
+  const [deploymentId, _projectId, _build, _project] =
+    await resolveDeploymentId(
+      args,
+      api,
+    );
   const confirmation = args.force ? true : confirm(
     `${
       magenta("?")
