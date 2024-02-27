@@ -17,7 +17,6 @@ import {
   green,
   magenta,
   red,
-  relative,
   stripColor,
   tty,
   yellow,
