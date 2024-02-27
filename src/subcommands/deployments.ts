@@ -17,6 +17,7 @@ import {
   green,
   magenta,
   red,
+  relative,
   stripColor,
   tty,
   yellow,
@@ -56,7 +57,7 @@ Or just show the details of a specific deployment, of any project, using --id. T
 
 The "deployments list" subcommand is used to list the deployments of a project. 
 
-The simples form of the command will list the first 20 deployments of the project you are currently
+The simplest form of the command will list the first 20 deployments of the project you are currently
 in (project will be picked up from the config file):
 
     deployctl deployments list
@@ -133,10 +134,16 @@ async function listDeployments(args: Args): Promise<void> {
     (prev, next) => prev + parseInt(next || "1"),
     0,
   );
+  if (Number.isNaN(relativeNext)) {
+    error("Value of --next must be a number");
+  }
   const relativePrev = args.prev.reduce(
     (prev, next) => prev + parseInt(next || "1"),
     0,
   );
+  if (Number.isNaN(relativePrev)) {
+    error("Value of --prev must be a number");
+  }
   // User-facing page is 1-based. Paging in API is 0-based.
   const page = parseInt(args.page || "1") + relativeNext - relativePrev;
   if (page < 1) {
@@ -328,7 +335,7 @@ async function searchRelativeDeployment(
   const buffer = [];
   for await (const build of deployments) {
     if (relativePos === 0) {
-      if (build.deploymentId == deploymentId) {
+      if (build.deploymentId === deploymentId) {
         return build;
       }
     }
