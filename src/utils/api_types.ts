@@ -8,6 +8,7 @@ export interface Build {
   id: string;
   relatedCommit?: {
     hash: string;
+    branch: string;
     message: string;
     authorName: string;
     authorEmail: string;

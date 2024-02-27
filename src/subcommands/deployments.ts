@@ -415,7 +415,7 @@ function renderShowOverview(
   if (build.relatedCommit) {
     console.log(`Git`);
     console.log(
-      `  Ref:\t\t${cyan("<Branch (soon)>")} [${
+      `  Ref:\t\t${cyan(build.relatedCommit.branch)} [${
         build.relatedCommit.hash.slice(0, 7)
       }]`,
     );
@@ -485,7 +485,7 @@ async function renderListOverview(
         Entrypoint: colorByStatus(deploymentEntrypoint(build)),
         ...build.relatedCommit
           ? {
-            Branch: colorByStatus("<Branch (soon)>"),
+            Branch: colorByStatus(build.relatedCommit.branch),
             Commit: colorByStatus(build.relatedCommit.hash.slice(0, 7)),
           }
           : {},
