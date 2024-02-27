@@ -374,7 +374,7 @@ async function searchRelativeDeployment(
   const buffer = [];
   for await (const build of deployments) {
     if (relativePos === 0) {
-      if (build.deploymentId == deploymentId) {
+      if (build.deploymentId === deploymentId) {
         return build;
       }
     }
