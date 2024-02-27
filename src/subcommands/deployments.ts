@@ -17,6 +17,7 @@ import {
   green,
   magenta,
   red,
+  relative,
   stripColor,
   tty,
   yellow,
@@ -129,10 +130,16 @@ async function listDeployments(args: Args): Promise<void> {
     (prev, next) => prev + parseInt(next || "1"),
     0,
   );
+  if (Number.isNaN(relativeNext)) {
+    error("Value of --next must be a number");
+  }
   const relativePrev = args.prev.reduce(
     (prev, next) => prev + parseInt(next || "1"),
     0,
   );
+  if (Number.isNaN(relativePrev)) {
+    error("Value of --prev must be a number");
+  }
   // User-facing page is 1-based. Paging in API is 0-based.
   const page = parseInt(args.page || "1") + relativeNext - relativePrev;
   if (page < 1) {
