@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "https://deno.land/": "./deno.land/",
+    "https://raw.githubusercontent.com/denosaurs/wait/453df8babdd72c59d865c5a616c5b04ee1154b9f/": "./wait-deprecated-warnings-pr-head/"
+  }
+}

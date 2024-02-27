@@ -1,3 +1,4 @@
+import { semverParse } from "../../deps.ts";
 import { semverGreaterThanOrEquals } from "../../deps.ts";
 
 export { parseEntrypoint } from "./entrypoint.ts";
@@ -7,7 +8,12 @@ export { fromFileUrl, resolve } from "../../deps.ts";
 
 // deno-lint-ignore no-explicit-any
 export function isTerminal(stream: any) {
-  if (semverGreaterThanOrEquals(Deno.version.deno, "1.40.0")) {
+  if (
+    semverGreaterThanOrEquals(
+      semverParse(Deno.version.deno),
+      semverParse("1.40.0"),
+    )
+  ) {
     return stream.isTerminal();
   } else {
     // deno-lint-ignore no-deprecated-deno-api

@@ -152,10 +152,10 @@ export class API {
       throw new Error("Stream ended unexpectedly");
     }
 
-    const lines = res.body
+    const lines: ReadableStream<string> = res.body
       .pipeThrough(new TextDecoderStream())
       .pipeThrough(new TextLineStream());
-    return async function* () {
+    return async function* (): AsyncGenerator<string, void> {
       for await (const line of lines) {
         if (line === "") return;
         yield line;
