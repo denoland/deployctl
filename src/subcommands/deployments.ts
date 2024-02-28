@@ -138,11 +138,17 @@ async function listDeployments(args: Args): Promise<void> {
   }
   // User-facing page is 1-based. Paging in API is 0-based.
   const page = parseInt(args.page || "1") + relativeNext - relativePrev;
+  if (Number.isNaN(page)) {
+    error("Value of --page must be a number");
+  }
   if (page < 1) {
     error(`The page cannot be lower than 1. You asked for page '${page}'`);
   }
   const apiPage = page - 1;
   const limit = args.limit ? parseInt(args.limit) : undefined;
+  if (Number.isNaN(limit)) {
+    error("Value of --limit must be a number");
+  }
   let format: "overview" | "json";
   switch (args.format) {
     case "overview":
