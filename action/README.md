@@ -1,86 +1,183 @@
-# deployctl GitHub Action
+# denoland/deployctl <!-- omit in toc -->
 
-The Deno Deploy GitHub Action allows for easy deployment to Deno Deploy from a
-GitHub Actions workflow. This allows a simple way to have a build step before
-deploying to Deno Deploy.
+GitHub Actions for deploying to Deno Deploy.
 
 > ⚠ If your project does not require a build step, we recommend you use the
-> ["Automatic" deployment mode][automatic-mode] of our GitHub integration. It is
-> faster and requires no setup.
+> ["Automatic" deployment mode](https://docs.deno.com/deploy/manual/ci_github#automatic)
+> of our GitHub integration. It is faster and requires no setup.
+
+- [Usage](#usage)
+  - [Permissions](#permissions)
+  - [Inputs](#inputs)
+- [Examples](#examples)
+  - [Deploy everything](#deploy-everything)
+  - [Deploy a directory](#deploy-a-directory)
+  - [Filter content with `include` and `exclude`](#filter-content-with-include-and-exclude)
+  - [Use external or absolute path as an entrypoint](#use-external-or-absolute-path-as-an-entrypoint)
+  - [Use import map](#use-import-map)
 
 ## Usage
 
 To deploy you just need to include the Deno Deploy GitHub Action as a step in
 your workflow.
 
-You do **not** need to set up any secrets for this to work. You **do** need to
-link your GitHub repository to your Deno Deploy project and choose the "GitHub
-Actions" deployment mode. You can do this in your project settings on
-https://dash.deno.com.
+You do **not** need to set up any secrets for this to work.
 
-```yml
-name: Deploy
+You **do** need to link your GitHub repository to your Deno Deploy project. You
+have to choose the "GitHub Actions" deployment mode in your project settings on
+https://dash.deno.com. Read
+[Deno Deploy documenation](https://docs.deno.com/deploy/manual/ci_github#github-action)
+for more information.
 
-on: push
+### Permissions
 
+You have to set `id-token: write` permission to authenticate with Deno Deploy.
+
+```yaml
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-
     permissions:
-      id-token: write # This is required to allow the GitHub Action to authenticate with Deno Deploy.
+      id-token: write # required
       contents: read
-
     steps:
-      - name: Clone repository
-        uses: actions/checkout@v3
-
-      - name: Deploy to Deno Deploy
-        uses: denoland/deployctl@v1
-        with:
-          project: my-project # the name of the project on Deno Deploy
-          entrypoint: main.ts # the entrypoint to deploy
+      # your steps here...
 ```
 
-By default the entire contents of the repository will be deployed. This can be
-changed by specifying the `root` option.
+### Inputs
 
-```yml
+```yaml
+- name: Deploy to Deno Deploy
+  uses: denoland/deployctl@v1
+  with:
+    # Name of the project on Deno Deploy
+    # Required.
+    project:
+
+    # Entrypoint location executed by Deno Deploy
+    # The entrypoint can be a relative path or an absolute URL.
+    # If it is a relative path, it will be resolved relative to the `root` directory.
+    # Required.
+    entrypoint:
+
+    # Root directory to deploy
+    # All files and subdirectories will be deployed.
+    # Optional. Default is "process.cwd()"
+    root:
+
+    # Filter which files to include in the deployment
+    # It supports a single file, multiple files separated by a comma or by a newline
+    # Optional.
+    include:
+
+    # Filter which files to exclude in the deployment
+    # It supports a single file, multiple files separated by a comma or by a newline
+    # Optional.
+    exclude:
+
+    # Location of an import map
+    # Must be relative to root directory
+    # Optional.
+    import-map:
+```
+
+## Examples
+
+### Deploy everything
+
+All files and subdirectories in the **working directory** will be deployed.
+
+```yaml
 - name: Deploy to Deno Deploy
   uses: denoland/deployctl@v1
   with:
     project: my-project
-    entrypoint: index.js
-    root: dist
+    entrypoint: main.ts
 ```
 
-The `entrypoint` can either be a relative path or file name, or a an absolute
-URL. If it is a relative path, it will be resolved relative to the `root`. Both
-absolute `file:///` and `https://` URLs are supported.
+### Deploy a directory
 
-To deploy the `./dist` directory using the [std/http/file_server.ts][fileserver]
-module, you can use the following configuration:
+All files and subdirectories in the **specified directory** will be deployed.
 
-```yml
+```yaml
+- name: Deploy to Deno Deploy
+  uses: denoland/deployctl@v1
+  with:
+    project: my-project
+    entrypoint: main.ts # the entrypoint is relative to the root directory (path/to/your/directory/main.ts)
+    root: path/to/your/directory
+```
+
+### Filter content with `include` and `exclude`
+
+Use `include` and `exclude` to filter which contents to deploy.
+
+```yaml
+- name: Deploy to Deno Deploy
+  uses: denoland/deployctl@v1
+  with:
+    project: my-project
+    entrypoint: main.ts # the entrypoint must be relative to the root directory
+    include: |
+      main.ts
+      dist
+    exclude: node_modules
+```
+
+You can set a single file
+
+```yaml
+include: main.ts
+```
+
+multiple files or directories, separated by a comma
+
+```yaml
+include: main.ts,dist
+```
+
+or separated by a newline
+
+```yaml
+include: |
+  main.ts
+  dist
+```
+
+### Use external or absolute path as an entrypoint
+
+`entrypoint` supports absolute path (`file://`) and external path (`https://`)
+
+```yaml
+- name: Deploy to Deno Deploy
+  uses: denoland/deployctl@v1
+  with:
+    project: my-project
+    entrypoint: https://your-external-path/mod.ts
+```
+
+An interesting use case is to directly use
+[std/http/file_server.ts](https://deno.land/std/http/file_server.ts) as
+suggested in
+[Deploy a static site](https://docs.deno.com/deploy/tutorials/static-site)
+tutorial.
+
+```yaml
 - name: Deploy to Deno Deploy
   uses: denoland/deployctl@v1
   with:
     project: my-project
     entrypoint: https://deno.land/std/http/file_server.ts
-    root: dist
 ```
 
-If you want to use [import maps](https://github.com/WICG/import-maps):
+### Use import map
 
-```yml
+You can specify an [import map](https://github.com/WICG/import-maps).
+
+```yaml
 - name: Deploy to Deno Deploy
   uses: denoland/deployctl@v1
   with:
     project: my-project
-    entrypoint: https://deno.land/std/http/file_server.ts
-    root: dist
-    import-map: import-map.json
+    entrypoint: main.ts
+    import-map: path/to/import-map.json
 ```
-
-[automatic-mode]: https://deno.com/deploy/docs/projects#git-integration
-[fileserver]: https://deno.land/std/http/file_server.ts

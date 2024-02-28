@@ -61,7 +61,7 @@ in (project will be picked up from the config file):
 
     deployctl deployments list
 
-You can list the rest of the deployments using --page, --next or --prev:
+You can list the rest of the deployments using --page:
 
     deployctl deployments list --page=2
 
@@ -77,8 +77,7 @@ SUBCOMMANDS:
     show [ID]   View details of a deployment. Specify the deployment with a positional argument or the --id option; otherwise, it will 
                 show the details of the current production deployment of the project specified in the config file or with the --project option.
                 Use --next and --prev to fetch the deployments deployed after or before the specified (or production) deployment.
-    list        List the deployments of a project. Specify the project using --project. Pagination can be controlled with --page, --limit,
-                --next and --prev. 
+    list        List the deployments of a project. Specify the project using --project. Pagination can be controlled with --page and --limit.
     delete      Delete a deployment. Same options to select the deployment as the show subcommand apply (--id, --project, --next and --prev).
 
 OPTIONS:
@@ -87,10 +86,8 @@ OPTIONS:
     -p, --project=<NAME|ID>         [show,delete] Select the production deployment of a project. Ignored if combined with --id
                                     [list] The project of which to list deployments.
         --next[=pos]                [show,delete] Modifier that selects a deployment deployed chronologically after the deployment selected with --id or --project
-                                    [list] Fetch the next page of the list
                                     Can be used multiple times (--next --next is the same as --next=2)
         --prev[=pos]                [show,delete] Modifier that selects a deployment deployed chronologically before the deployment selected with --id or --project
-                                    [list] Fetch the previous page of the list
                                     Can be used multiple times (--prev --prev is the same as --prev=2)
         --page=<num>                [list] Page of the deployments list to fetch
         --limit=<num>               [list] Amount of deployments to include in the list
@@ -145,11 +142,17 @@ async function listDeployments(args: Args): Promise<void> {
   }
   // User-facing page is 1-based. Paging in API is 0-based.
   const page = parseInt(args.page || "1") + relativeNext - relativePrev;
+  if (Number.isNaN(page)) {
+    error("Value of --page must be a number");
+  }
   if (page < 1) {
     error(`The page cannot be lower than 1. You asked for page '${page}'`);
   }
   const apiPage = page - 1;
   const limit = args.limit ? parseInt(args.limit) : undefined;
+  if (Number.isNaN(limit)) {
+    error("Value of --limit must be a number");
+  }
   let format: "overview" | "json";
   switch (args.format) {
     case "overview":
@@ -447,7 +450,7 @@ async function renderListOverview(
   deployments: Build[],
   paging: PagingInfo,
 ) {
-  const ingressRoot = new URL(endpoint()).hostname.split(".").at(-2);
+  const sld = new URL(endpoint()).hostname.split(".").at(-2);
   for (;;) {
     const table = deployments.map((build) => {
       const status = deploymentStatus(project, build);
@@ -480,7 +483,7 @@ async function renderListOverview(
         Domain: colorByStatus(
           !isReady(status)
             ? "n/a"
-            : `https://${project.name}-${build.deploymentId}.${ingressRoot}.dev`,
+            : `https://${project.name}-${build.deploymentId}.${sld}.dev`,
         ),
         Entrypoint: colorByStatus(deploymentEntrypoint(build)),
         ...build.relatedCommit
@@ -582,7 +585,7 @@ function deploymentRelativeDate(build: Build): string {
   const sinces = [new Date().getTime() - createdAt.getTime()];
   const sinceUnits = ["milliseconds ago"];
   if (sinces[0] >= 1000) {
-    // Remove milis
+    // Remove millis
     sinces[0] = Math.floor(sinces[0] / 1000);
     sinceUnits[0] = "second";
   }
