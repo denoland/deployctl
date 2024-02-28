@@ -624,7 +624,7 @@ function deploymentRelativeDate(build: Build): string {
   const sinces = [new Date().getTime() - createdAt.getTime()];
   const sinceUnits = ["milliseconds ago"];
   if (sinces[0] >= 1000) {
-    // Remove milis
+    // Remove millis
     sinces[0] = Math.floor(sinces[0] / 1000);
     sinceUnits[0] = "second";
   }
