@@ -21,6 +21,7 @@ export {
   magenta,
   red,
   setColorEnabled,
+  stripColor,
   yellow,
 } from "https://deno.land/std@0.170.0/fmt/colors.ts";
 export { parse } from "https://deno.land/std@0.195.0/flags/mod.ts";

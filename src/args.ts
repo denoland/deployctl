@@ -31,6 +31,7 @@ export function parseArgs(args: string[]) {
       "levels",
       "regions",
       "limit",
+      "page",
       "config",
       "entrypoint",
       "org",
@@ -46,7 +47,6 @@ export function parseArgs(args: string[]) {
     collect: ["grep", "include", "exclude", "region", "prev", "next"],
     default: {
       static: true,
-      limit: "100",
       config: Deno.env.get("DEPLOYCTL_CONFIG_FILE"),
       token: Deno.env.get("DENO_DEPLOY_TOKEN"),
       org: Deno.env.get("DEPLOYCTL_ORGANIZATION"),

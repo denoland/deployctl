@@ -174,7 +174,7 @@ function invalidRegionError(
 
 export function parseArgsForLogSubcommand(args: Args): LogSubcommandArgs {
   const DEFAULT_LIMIT = 100;
-  const limit = parseInt(args.limit);
+  const limit = args.limit ? parseInt(args.limit) : DEFAULT_LIMIT;
 
   let since: Date | null = null;
   if (args.since !== undefined) {

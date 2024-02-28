@@ -8,13 +8,15 @@ export interface Build {
   id: string;
   relatedCommit?: {
     hash: string;
+    branch: string;
     message: string;
     authorName: string;
     authorEmail: string;
     authorGithubUsername: string;
     url: string;
   };
-  deployment?: Deployment;
+  deployment: Deployment | null;
+  deploymentId: string;
   project: Project;
   createdAt: string;
   logs: DeploymentProgress[];
