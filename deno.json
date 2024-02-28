@@ -1,6 +1,6 @@
 {
   "name": "@deno/deployctl",
-  "version": "1.10.5",
+  "version": "1.11.0",
   "exports": "./deployctl.ts",
   "fmt": {
     "files": {
@@ -17,5 +17,5 @@
     "build-action": "deno bundle ./src/utils/mod.ts > ./action/deps.js",
     "version-match": "deno run --allow-read --allow-env ./tools/version_match.ts"
   },
-  "importMap": "./vendor/import_map.json"
+  "importMap": "./import_map.json"
 }
