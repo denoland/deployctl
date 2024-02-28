@@ -24,6 +24,7 @@ export interface Build {
 
 export interface Deployment {
   id: string;
+  description: string;
   url: string;
   domainMappings: DomainMapping[];
   project?: Project;

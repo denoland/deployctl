@@ -101,10 +101,11 @@ async function showProject(args: Args): Promise<void> {
   const api = args.token
     ? API.fromToken(args.token)
     : API.withTokenProvisioner(TokenProvisioner);
-  const [project, domains, pagedBuilds] = await Promise.all([
+  const [project, domains, pagedBuilds, databases] = await Promise.all([
     api.getProject(args.project),
     api.getDomains(args.project),
     api.listDeployments(args.project),
+    api.getProjectDatabases(args.project),
   ]).catch((err) => {
     if (err instanceof APIError && err.code === "projectNotFound") {
       return [null, null, null];
@@ -112,7 +113,7 @@ async function showProject(args: Args): Promise<void> {
     throw err;
   });
 
-  if (!project || !domains || !pagedBuilds) {
+  if (!project || !domains || !pagedBuilds || !databases) {
     spinner.fail(
       `The project '${args.project}' does not exist, or you don't have access to it`,
     );
@@ -152,6 +153,13 @@ async function showProject(args: Args): Promise<void> {
   if (project.git) {
     console.log(
       `Repository:\thttps://github.com/${project.git.repository.owner}/${project.git.repository.name}`,
+    );
+  }
+  if (databases.length > 0) {
+    console.log(
+      `Databases:\t${
+        databases.map((db) => `[${db.branch}] ${db.databaseId}`).join(`\n\t\t`)
+      }`,
     );
   }
   const [builds, _] = pagedBuilds;
