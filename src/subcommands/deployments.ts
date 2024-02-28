@@ -495,7 +495,7 @@ async function renderListOverview(
   deployments: Build[],
   paging: PagingInfo,
 ) {
-  const ingressRoot = new URL(endpoint()).hostname.split(".").at(-2);
+  const sld = new URL(endpoint()).hostname.split(".").at(-2);
   for (;;) {
     const table = deployments.map((build) => {
       const status = deploymentStatus(project, build);
@@ -528,7 +528,7 @@ async function renderListOverview(
         Domain: colorByStatus(
           !isReady(status)
             ? "n/a"
-            : `https://${project.name}-${build.deploymentId}.${ingressRoot}.dev`,
+            : `https://${project.name}-${build.deploymentId}.${sld}.dev`,
         ),
         Entrypoint: colorByStatus(deploymentEntrypoint(build)),
         ...build.relatedCommit
