@@ -61,7 +61,7 @@ in (project will be picked up from the config file):
 
     deployctl deployments list
 
-You can list the rest of the deployments using --page, --next or --prev:
+You can list the rest of the deployments using --page:
 
     deployctl deployments list --page=2
 
@@ -77,8 +77,7 @@ SUBCOMMANDS:
     show [ID]   View details of a deployment. Specify the deployment with a positional argument or the --id option; otherwise, it will 
                 show the details of the current production deployment of the project specified in the config file or with the --project option.
                 Use --next and --prev to fetch the deployments deployed after or before the specified (or production) deployment.
-    list        List the deployments of a project. Specify the project using --project. Pagination can be controlled with --page, --limit,
-                --next and --prev. 
+    list        List the deployments of a project. Specify the project using --project. Pagination can be controlled with --page and --limit.
 
 OPTIONS:
     -h, --help                      Prints this help information
@@ -86,10 +85,8 @@ OPTIONS:
     -p, --project=<NAME|ID>         [show] The project the production deployment of which to show the details. Ignored if combined with --id
                                     [list] The project of which to list deployments.
         --next[=pos]                [show] Show the details of a deployment deployed after the specified deployment
-                                    [list] Fetch the next page of the list
                                     Can be used multiple times (--next --next is the same as --next=2)
         --prev[=pos]                [show] Show the details of a deployment deployed before the specified deployment.
-                                    [list] Fetch the previous page of the list
                                     Can be used multiple times (--prev --prev is the same as --prev=2)
         --page=<num>                [list] Page of the deployments list to fetch
         --limit=<num>               [list] Amount of deployments to include in the list
