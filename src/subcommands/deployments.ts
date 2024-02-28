@@ -421,11 +421,6 @@ function renderShowOverview(
     ? green(bold(status))
     : status;
   const database = deploymentDatabase(databases, build);
-  if (isReady(status) && !database) {
-    error(
-      `Unexpected error: deployment uses a database not in the list of databases of the project`,
-    );
-  }
   const databaseEnv = database
     ? `${deploymentDatabaseEnv(project, database)} (${database.databaseId})`
     : "n/a";
@@ -448,6 +443,12 @@ function renderShowOverview(
       deploymentLocaleDate(build)
     })`,
   );
+  if (
+    build.deployment?.description &&
+    build.deployment.description !== build.relatedCommit?.message
+  ) {
+    console.log(`Description:\t${build.deployment.description}`);
+  }
   console.log(`Project:\t${magenta(project.name)} (${project.id})`);
   console.log(
     `Organization:\t${organizationName} (${project.organizationId})`,
@@ -508,11 +509,6 @@ async function renderListOverview(
           ? yellow(s)
           : s;
       const database = deploymentDatabase(databases, build);
-      if (isReady(status) && !database) {
-        error(
-          `Unexpected error: deployment uses a database not in the list of databases of the project`,
-        );
-      }
       const databaseEnv = database
         ? deploymentDatabaseEnv(project, database)
         : "n/a";
