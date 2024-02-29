@@ -312,6 +312,22 @@ export class API {
     }
   }
 
+  async deleteDeployment(
+    deploymentId: string,
+  ): Promise<boolean> {
+    try {
+      await this.#requestJson(`/v1/deployments/${deploymentId}`, {
+        method: "DELETE",
+      });
+      return true;
+    } catch (err) {
+      if (err instanceof APIError && err.code === "deploymentNotFound") {
+        return false;
+      }
+      throw err;
+    }
+  }
+
   getLogs(
     projectId: string,
     deploymentId: string,

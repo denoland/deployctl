@@ -78,15 +78,16 @@ SUBCOMMANDS:
                 show the details of the current production deployment of the project specified in the config file or with the --project option.
                 Use --next and --prev to fetch the deployments deployed after or before the specified (or production) deployment.
     list        List the deployments of a project. Specify the project using --project. Pagination can be controlled with --page and --limit.
+    delete      Delete a deployment. Same options to select the deployment as the show subcommand apply (--id, --project, --next and --prev).
 
 OPTIONS:
     -h, --help                      Prints this help information
-        --id=<deployment-id>        [show] Id of the deployment of which to show details
-    -p, --project=<NAME|ID>         [show] The project the production deployment of which to show the details. Ignored if combined with --id
+        --id=<deployment-id>        [show,delete] Select a deployment by id.
+    -p, --project=<NAME|ID>         [show,delete] Select the production deployment of a project. Ignored if combined with --id
                                     [list] The project of which to list deployments.
-        --next[=pos]                [show] Show the details of a deployment deployed after the specified deployment
+        --next[=pos]                [show,delete] Modifier that selects a deployment deployed chronologically after the deployment selected with --id or --project
                                     Can be used multiple times (--next --next is the same as --next=2)
-        --prev[=pos]                [show] Show the details of a deployment deployed before the specified deployment.
+        --prev[=pos]                [show,delete] Modifier that selects a deployment deployed chronologically before the deployment selected with --id or --project
                                     Can be used multiple times (--prev --prev is the same as --prev=2)
         --page=<num>                [list] Page of the deployments list to fetch
         --limit=<num>               [list] Amount of deployments to include in the list
@@ -94,7 +95,7 @@ OPTIONS:
         --token=<TOKEN>             The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
         --config=<PATH>             Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
         --color=<auto|always|never> Enable or disable colored output. Defaults to 'auto' (colored when stdout is a tty)
-        --force                     Automatically execute the command without waiting for confirmation.
+        --force                     [delete] Automatically execute the command without waiting for confirmation.
 `;
 
 export default async function (args: Args): Promise<void> {
@@ -109,6 +110,9 @@ export default async function (args: Args): Promise<void> {
       break;
     case "show":
       await showDeployment(args);
+      break;
+    case "delete":
+      await deleteDeployment(args);
       break;
     default:
       console.error(help);
@@ -212,98 +216,20 @@ async function listDeployments(args: Args): Promise<void> {
 
 // TODO: Show if active (and maybe some stats?)
 async function showDeployment(args: Args): Promise<void> {
-  const deploymentIdArg = args._.shift()?.toString() || args.id;
-  // Ignore --project if user also provided --id
-  const projectIdArg = deploymentIdArg ? undefined : args.project;
-
   const api = args.token
     ? API.fromToken(args.token)
     : API.withTokenProvisioner(TokenProvisioner);
 
-  let deploymentId,
-    projectId,
-    build: Build | null | undefined,
-    project: Project | null | undefined,
-    databases: Database[] | null;
-
-  if (deploymentIdArg) {
-    deploymentId = deploymentIdArg;
-  } else {
-    // Default to showing the production deployment of the project
-    if (!projectIdArg) {
-      error(
-        "No deployment or project specified. Use --id <deployment-id> or --project <project-name>",
-      );
-    }
-    projectId = projectIdArg;
-    const spinner = wait(
-      `Searching production deployment of project '${projectId}'...`,
-    ).start();
-    project = await api.getProject(projectId);
-    if (!project) {
-      spinner.fail(
-        `The project '${projectId}' does not exist, or you don't have access to it`,
-      );
-      return Deno.exit(1);
-    }
-    if (!project.productionDeployment) {
-      spinner.fail(
-        `Project '${project.name}' does not have a production deployment. Use --id <deployment-id> to specify the deployment to show`,
-      );
-      return Deno.exit(1);
-    }
-    deploymentId = project.productionDeployment.deploymentId;
-    spinner.succeed(
-      `The production deployment of the project '${project.name}' is '${deploymentId}'`,
-    );
-  }
-
-  if (args.prev.length !== 0 || args.next.length !== 0) {
-    // Search the deployment relative to the specified deployment
-    if (!projectId) {
-      // Fetch the deployment specified with --id, to know of which project to search the relative deployment
-      // If user didn't use --id, they must have used --project, thus we already know the project-id
-      const spinner_ = wait(`Fetching deployment '${deploymentId}'...`)
-        .start();
-      const specifiedDeployment = await api.getDeployment(deploymentId);
-      if (!specifiedDeployment) {
-        spinner_.fail(
-          `The deployment '${deploymentId}' does not exist, or you don't have access to it`,
-        );
-        return Deno.exit(1);
-      }
-      spinner_.succeed(`Deployment '${deploymentId}' found`);
-      projectId = specifiedDeployment.project.id;
-    }
-    let relativePos = 0;
-    for (const prev of args.prev) {
-      relativePos -= parseInt(prev || "1");
-    }
-    for (const next of args.next) {
-      relativePos += parseInt(next || "1");
-    }
-    const relativePosString = relativePos.toLocaleString(navigator.language, {
-      signDisplay: "exceptZero",
-    });
-    const spinner = wait(
-      `Searching the deployment ${relativePosString} relative to '${deploymentId}'...`,
-    ).start();
-    const maybeBuild = await searchRelativeDeployment(
-      api.listAllDeployments(projectId),
-      deploymentId,
-      relativePos,
-    );
-    if (!maybeBuild) {
-      spinner.fail(
-        `The deployment '${deploymentId}' does not have a deployment ${relativePosString} relative to it`,
-      );
-      return Deno.exit(1);
-    }
-    build = maybeBuild;
-    spinner.succeed(
-      `The deployment ${relativePosString} relative to '${deploymentId}' is '${build.deploymentId}'`,
-    );
-  }
+  let [deploymentId, projectId, build, project]: [
+    string,
+    string | undefined,
+    Build | null | undefined,
+    Project | null | undefined,
+  ] = await resolveDeploymentId(
+    args,
+    api,
+  );
+  let databases: Database[] | null;
 
   const spinner = wait(`Fetching deployment '${deploymentId}' details...`)
     .start();
@@ -372,6 +298,35 @@ async function showDeployment(args: Args): Promise<void> {
     case "json":
       renderShowJson(build, project, organization, databases);
       break;
+  }
+}
+
+async function deleteDeployment(args: Args): Promise<void> {
+  const api = args.token
+    ? API.fromToken(args.token)
+    : API.withTokenProvisioner(TokenProvisioner);
+  const [deploymentId, _projectId, _build, _project] =
+    await resolveDeploymentId(
+      args,
+      api,
+    );
+  const confirmation = args.force ? true : confirm(
+    `${
+      magenta("?")
+    } Are you sure you want to delete the deployment '${deploymentId}'?`,
+  );
+  if (!confirmation) {
+    wait("").fail("Delete canceled");
+    return;
+  }
+  const spinner = wait(`Deleting deployment '${deploymentId}'...`).start();
+  const deleted = await api.deleteDeployment(deploymentId);
+  if (deleted) {
+    spinner.succeed(`Deployment '${deploymentId}' deleted successfully`);
+  } else {
+    spinner.fail(
+      `Deployment '${deploymentId}' not found, or you don't have access to it`,
+    );
   }
 }
 
@@ -721,4 +676,108 @@ function renderTable(table: Record<string, string>[]) {
     console.log(`\u2502 ${row} \u2502`);
   }
   console.log(`\u2514\u2500${divisor}\u2500\u2518`);
+}
+
+type DeploymentId = string;
+type ProjectId = string;
+
+async function resolveDeploymentId(
+  args: Args,
+  api: API,
+): Promise<
+  [DeploymentId, ProjectId | undefined, Build | undefined, Project | undefined]
+> {
+  const deploymentIdArg = args._.shift()?.toString() || args.id;
+  // Ignore --project if user also provided --id
+  const projectIdArg = deploymentIdArg ? undefined : args.project;
+
+  let deploymentId,
+    projectId: string | undefined,
+    build: Build | undefined,
+    project: Project | undefined;
+
+  if (deploymentIdArg) {
+    deploymentId = deploymentIdArg;
+  } else {
+    // Default to showing the production deployment of the project
+    if (!projectIdArg) {
+      error(
+        "No deployment or project specified. Use --id <deployment-id> or --project <project-name>",
+      );
+    }
+    projectId = projectIdArg;
+    const spinner = wait(
+      `Searching production deployment of project '${projectId}'...`,
+    ).start();
+    const maybeProject = await api.getProject(projectId);
+    if (!maybeProject) {
+      spinner.fail(
+        `The project '${projectId}' does not exist, or you don't have access to it`,
+      );
+      return Deno.exit(1);
+    }
+    project = maybeProject;
+    if (!project.productionDeployment) {
+      spinner.fail(
+        `Project '${project.name}' does not have a production deployment. Use --id <deployment-id> to specify the deployment to show`,
+      );
+      return Deno.exit(1);
+    }
+    deploymentId = project.productionDeployment.deploymentId;
+    spinner.succeed(
+      `The production deployment of the project '${project.name}' is '${deploymentId}'`,
+    );
+  }
+
+  if (args.prev.length !== 0 || args.next.length !== 0) {
+    // Search the deployment relative to the specified deployment
+    if (!projectId) {
+      // Fetch the deployment specified with --id, to know of which project to search the relative deployment
+      // If user didn't use --id, they must have used --project, thus we already know the project-id
+      const spinner_ = wait(`Fetching deployment '${deploymentId}'...`)
+        .start();
+      const specifiedDeployment = await api.getDeployment(deploymentId);
+      if (!specifiedDeployment) {
+        spinner_.fail(
+          `The deployment '${deploymentId}' does not exist, or you don't have access to it`,
+        );
+        return Deno.exit(1);
+      }
+      spinner_.succeed(`Deployment '${deploymentId}' found`);
+      projectId = specifiedDeployment.project.id;
+    }
+    let relativePos = 0;
+    for (const prev of args.prev) {
+      relativePos -= parseInt(prev || "1");
+    }
+    for (const next of args.next) {
+      relativePos += parseInt(next || "1");
+    }
+    if (Number.isNaN(relativePos)) {
+      error("Value of --next and --prev must be a number");
+    }
+    const relativePosString = relativePos.toLocaleString(navigator.language, {
+      signDisplay: "exceptZero",
+    });
+    const spinner = wait(
+      `Searching the deployment ${relativePosString} relative to '${deploymentId}'...`,
+    ).start();
+    const maybeBuild = await searchRelativeDeployment(
+      api.listAllDeployments(projectId),
+      deploymentId,
+      relativePos,
+    );
+    if (!maybeBuild) {
+      spinner.fail(
+        `The deployment '${deploymentId}' does not have a deployment ${relativePosString} relative to it`,
+      );
+      return Deno.exit(1);
+    }
+    build = maybeBuild;
+    deploymentId = build.deploymentId;
+    spinner.succeed(
+      `The deployment ${relativePosString} relative to '${deploymentId}' is '${build.deploymentId}'`,
+    );
+  }
+  return [deploymentId, projectId, build, project];
 }
