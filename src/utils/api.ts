@@ -186,7 +186,7 @@ export class API {
     }
   }
 
-  async getOrganizationById(id: string): Promise<Organization | undefined> {
+  async getOrganizationById(id: string): Promise<Organization> {
     return await this.#requestJson(`/organizations/${id}`);
   }
 
@@ -259,9 +259,20 @@ export class API {
 
   async listDeployments(
     projectId: string,
+    page?: number,
+    limit?: number,
   ): Promise<[Build[], PagingInfo] | null> {
+    const query = new URLSearchParams();
+    if (page !== undefined) {
+      query.set("page", page.toString());
+    }
+    if (limit !== undefined) {
+      query.set("limit", limit.toString());
+    }
     try {
-      return await this.#requestJson(`/projects/${projectId}/deployments/`);
+      return await this.#requestJson(
+        `/projects/${projectId}/deployments?${query}`,
+      );
     } catch (err) {
       if (err instanceof APIError && err.code === "projectNotFound") {
         return null;
@@ -296,6 +307,22 @@ export class API {
     } catch (err) {
       if (err instanceof APIError && err.code === "deploymentNotFound") {
         return null;
+      }
+      throw err;
+    }
+  }
+
+  async deleteDeployment(
+    deploymentId: string,
+  ): Promise<boolean> {
+    try {
+      await this.#requestJson(`/v1/deployments/${deploymentId}`, {
+        method: "DELETE",
+      });
+      return true;
+    } catch (err) {
+      if (err instanceof APIError && err.code === "deploymentNotFound") {
+        return false;
       }
       throw err;
     }
@@ -400,7 +427,14 @@ export class API {
     }();
   }
 
-  async getProjectDatabases(project: string): Promise<Database[]> {
-    return await this.#requestJson(`/projects/${project}/databases`);
+  async getProjectDatabases(project: string): Promise<Database[] | null> {
+    try {
+      return await this.#requestJson(`/projects/${project}/databases`);
+    } catch (err) {
+      if (err instanceof APIError && err.code === "projectNotFound") {
+        return null;
+      }
+      throw err;
+    }
   }
 }

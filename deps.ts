@@ -21,6 +21,7 @@ export {
   magenta,
   red,
   setColorEnabled,
+  stripColor,
   yellow,
 } from "jsr:@std/fmt@0.217/colors";
 export { parse } from "jsr:@std/flags@0.217";
