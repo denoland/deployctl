@@ -23,7 +23,7 @@ export {
   setColorEnabled,
   yellow,
 } from "jsr:@std/fmt@0.217/colors";
-export { parse } from "jsr:@std/flags@0.217.0";
+export { parse } from "jsr:@std/flags@0.217";
 export { TextLineStream } from "jsr:@std/streams@0.217/text_line_stream";
 export * as JSONC from "jsr:@std/jsonc@0.217";
 export { encodeHex } from "jsr:@std/encoding@0.217/hex";

@@ -1,5 +1,5 @@
 import { parseArgsForLogSubcommand } from "./logs.ts";
-import { assertEquals, assertThrows } from "jsr:@std/assert@0.217.0";
+import { assertEquals, assertThrows } from "jsr:@std/assert@0.217";
 import { parseArgs } from "../args.ts";
 
 Deno.test("parseArgsForLogSubcommand", async (t) => {
