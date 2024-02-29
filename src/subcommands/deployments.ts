@@ -271,7 +271,11 @@ async function showDeployment(args: Args): Promise<void> {
     );
     return Deno.exit(1);
   }
-  const organization = project.organization;
+  let organization = project.organization;
+  if (!organization.name && !organization.members) {
+    // project.organization does not incude members array, and we need it for naming personal orgs
+    organization = await api.getOrganizationById(organization.id);
+  }
   spinner.succeed(
     `The details of the deployment '${build.deploymentId}' are ready:`,
   );

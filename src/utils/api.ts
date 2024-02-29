@@ -186,7 +186,7 @@ export class API {
     }
   }
 
-  async getOrganizationById(id: string): Promise<Organization | undefined> {
+  async getOrganizationById(id: string): Promise<Organization> {
     return await this.#requestJson(`/organizations/${id}`);
   }
 
