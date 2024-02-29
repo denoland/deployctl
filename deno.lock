@@ -5,8 +5,10 @@
       "jsr:@std/assert@^0.217.0": "jsr:@std/assert@0.217.0",
       "jsr:@std/async@0.217": "jsr:@std/async@0.217.0",
       "jsr:@std/encoding@0.217": "jsr:@std/encoding@0.217.0",
+      "jsr:@std/flags@0.217": "jsr:@std/flags@0.217.0",
       "jsr:@std/flags@0.217.0": "jsr:@std/flags@0.217.0",
       "jsr:@std/fmt@0.217": "jsr:@std/fmt@0.217.0",
+      "jsr:@std/json@^0.217.0": "jsr:@std/json@0.217.0",
       "jsr:@std/jsonc@0.217": "jsr:@std/jsonc@0.217.0",
       "jsr:@std/path@0.217": "jsr:@std/path@0.217.0",
       "jsr:@std/semver@0.217": "jsr:@std/semver@0.217.0",
@@ -35,10 +37,14 @@
       "@std/fmt@0.217.0": {
         "integrity": "cb99f82500b8da20202fedfa8bb94dd0222e81f0494ed9087de20ee3d8a39a8d"
       },
+      "@std/json@0.217.0": {
+        "integrity": "173f1156d23d11095b6ff7df6266c80e8f83afcd9a6af1731ec301f485806986"
+      },
       "@std/jsonc@0.217.0": {
         "integrity": "125c47f36ef8160e1b4fd5bff096e8f0ea3f49bea197de5b182eb130bb8a527c",
         "dependencies": [
-          "jsr:@std/assert@^0.217.0"
+          "jsr:@std/assert@^0.217.0",
+          "jsr:@std/json@^0.217.0"
         ]
       },
       "@std/path@0.217.0": {
