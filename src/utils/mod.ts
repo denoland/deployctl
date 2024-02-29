@@ -1,5 +1,4 @@
-import { semverParse } from "../../deps.ts";
-import { semverGreaterThanOrEquals } from "../../deps.ts";
+import { semverGreaterThanOrEquals, semverParse } from "../../deps.ts";
 
 export { parseEntrypoint } from "./entrypoint.ts";
 export { API, APIError } from "./api.ts";
