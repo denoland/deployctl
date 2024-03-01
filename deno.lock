@@ -2,12 +2,14 @@
   "version": "3",
   "packages": {
     "specifiers": {
+      "jsr:@std/assert@0.217": "jsr:@std/assert@0.217.0",
       "jsr:@std/assert@^0.217.0": "jsr:@std/assert@0.217.0",
       "jsr:@std/async@0.217": "jsr:@std/async@0.217.0",
       "jsr:@std/encoding@0.217": "jsr:@std/encoding@0.217.0",
       "jsr:@std/flags@0.217": "jsr:@std/flags@0.217.0",
       "jsr:@std/flags@0.217.0": "jsr:@std/flags@0.217.0",
       "jsr:@std/fmt@0.217": "jsr:@std/fmt@0.217.0",
+      "jsr:@std/fmt@^0.217.0": "jsr:@std/fmt@0.217.0",
       "jsr:@std/json@^0.217.0": "jsr:@std/json@0.217.0",
       "jsr:@std/jsonc@0.217": "jsr:@std/jsonc@0.217.0",
       "jsr:@std/path@0.217": "jsr:@std/path@0.217.0",
@@ -17,7 +19,10 @@
     },
     "jsr": {
       "@std/assert@0.217.0": {
-        "integrity": "c98e279362ca6982d5285c3b89517b757c1e3477ee9f14eb2fdf80a45aaa9642"
+        "integrity": "c98e279362ca6982d5285c3b89517b757c1e3477ee9f14eb2fdf80a45aaa9642",
+        "dependencies": [
+          "jsr:@std/fmt@^0.217.0"
+        ]
       },
       "@std/async@0.217.0": {
         "integrity": "14dac94f59595e39e519de379c47170d8bbedea253824c4b167108aa943ddb69",
