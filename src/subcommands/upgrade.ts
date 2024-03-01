@@ -1,7 +1,11 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
 import { error } from "../error.ts";
-import { semverGreaterThanOrEquals, semverValid } from "../../deps.ts";
+import {
+  semverGreaterThanOrEquals,
+  semverParse,
+  semverValid,
+} from "../../deps.ts";
 import { VERSION } from "../version.ts";
 
 const help = `deployctl upgrade
@@ -56,7 +60,10 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     );
   }
 
-  if (!version && semverGreaterThanOrEquals(VERSION, latest)) {
+  if (
+    !version &&
+    semverGreaterThanOrEquals(semverParse(VERSION), semverParse(latest))
+  ) {
     console.log("You're using the latest version.");
     Deno.exit();
   } else {

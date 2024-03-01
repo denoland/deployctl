@@ -1,4 +1,7 @@
 {
+  "name": "@deno/deployctl",
+  "version": "1.11.0",
+  "exports": "./deployctl.ts",
   "fmt": {
     "files": {
       "exclude": ["action/node_modules/"]
@@ -13,5 +16,6 @@
     "test": "deno test -A --unstable tests/ src/",
     "build-action": "deno bundle ./src/utils/mod.ts > ./action/deps.js",
     "version-match": "deno run --allow-read --allow-env ./tools/version_match.ts"
-  }
+  },
+  "importMap": "./import_map.json"
 }

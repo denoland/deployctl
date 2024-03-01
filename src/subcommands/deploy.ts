@@ -57,7 +57,7 @@ The following example will fail because main.ts is not included:
 The entrypoint can also be a remote script. A common use case for this is to deploy an static site
 using std/http/file_server.ts (more details in https://docs.deno.com/deploy/tutorials/static-site ):
 
-    deployctl deploy --entrypoint=https://deno.land/std@0.208.0/http/file_server.ts
+    deployctl deploy --entrypoint=jsr:@std/http/file_server
 
 
 USAGE:
