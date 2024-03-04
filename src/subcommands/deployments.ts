@@ -436,7 +436,14 @@ async function redeployDeployment(args: Args): Promise<void> {
   const previewDatabase = databases?.find((database) =>
     deploymentDatabaseEnv(project, database) === "Preview"
   );
-  const db = resolveDatabase(spinnerPrep, args, prod, project, prodDatabase, previewDatabase);
+  const db = resolveDatabase(
+    spinnerPrep,
+    args,
+    prod,
+    project,
+    prodDatabase,
+    previewDatabase,
+  );
 
   const envVarsToAdd = await envVarsFromArgs(args) || {};
   const addedEnvs = Object.keys(envVarsToAdd);
