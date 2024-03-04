@@ -18,6 +18,7 @@ import {
   green,
   magenta,
   red,
+  Spinner,
   stripAnsiCode,
   tty,
   yellow,
@@ -428,48 +429,14 @@ async function redeployDeployment(args: Args): Promise<void> {
   const alreadyProd =
     project.productionDeployment?.deploymentId === build.deploymentId;
   const prod = args.prod ?? alreadyProd;
+
   const prodDatabase = databases?.find((database) =>
     deploymentDatabaseEnv(project, database) === "Production"
   );
   const previewDatabase = databases?.find((database) =>
     deploymentDatabaseEnv(project, database) === "Preview"
   );
-  let db;
-  switch (args.db?.toLowerCase().trim()) {
-    case "prod":
-    case "production": {
-      if (!prodDatabase) {
-        spinnerPrep.fail(
-          `Project '${project.name}' does not have a production database`,
-        );
-        return Deno.exit(1);
-      }
-      db = prodDatabase.databaseId;
-      break;
-    }
-    case "preview": {
-      if (!previewDatabase) {
-        spinnerPrep.fail(
-          `Project '${project.name}' does not have a preview database`,
-        );
-        return Deno.exit(1);
-      }
-      db = previewDatabase.databaseId;
-      break;
-    }
-    default:
-      db = args.db;
-  }
-
-  if (!db) {
-    // For GitHub deployments, Deploy assigns the branch database also during redeployment
-    // Unless the user is explicit about the db, we want to maintain the invariant status == databaseEnv
-    if (prod) {
-      db = prodDatabase?.databaseId;
-    } else {
-      db = previewDatabase?.databaseId;
-    }
-  }
+  const db = resolveDatabase(spinnerPrep, args, prod, project, prodDatabase, previewDatabase);
 
   const envVarsToAdd = await envVarsFromArgs(args) || {};
   const addedEnvs = Object.keys(envVarsToAdd);
@@ -998,6 +965,53 @@ async function resolveDeploymentId(
     );
   }
   return [deploymentId, projectId, build, project];
+}
+
+function resolveDatabase(
+  spinner: Spinner,
+  args: Args,
+  prod: boolean,
+  project: Project,
+  prodDatabase: Database | undefined,
+  previewDatabase: Database | undefined,
+): string | undefined {
+  let db;
+  switch (args.db?.toLowerCase().trim()) {
+    case "prod":
+    case "production": {
+      if (!prodDatabase) {
+        spinner.fail(
+          `Project '${project.name}' does not have a production database`,
+        );
+        return Deno.exit(1);
+      }
+      db = prodDatabase.databaseId;
+      break;
+    }
+    case "preview": {
+      if (!previewDatabase) {
+        spinner.fail(
+          `Project '${project.name}' does not have a preview database`,
+        );
+        return Deno.exit(1);
+      }
+      db = previewDatabase.databaseId;
+      break;
+    }
+    default:
+      db = args.db;
+  }
+
+  if (!db) {
+    // For GitHub deployments, Deploy assigns the branch database also during redeployment
+    // Unless the user is explicit about the db, we want to maintain the invariant status == databaseEnv
+    if (prod) {
+      db = prodDatabase?.databaseId;
+    } else {
+      db = previewDatabase?.databaseId;
+    }
+  }
+  return db;
 }
 
 function greenProd(s: "Production" | string): string {
