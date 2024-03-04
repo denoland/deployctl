@@ -425,8 +425,6 @@ async function redeployDeployment(args: Args): Promise<void> {
   const project = mProject;
   const databases = mDatabases;
 
-  // ----
-
   const alreadyProd =
     project.productionDeployment?.deploymentId === build.deploymentId;
   const prod = args.prod ?? alreadyProd;
