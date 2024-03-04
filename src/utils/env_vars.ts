@@ -4,8 +4,8 @@ import { Args } from "../args.ts";
 /**
  * Obtain the env variables provided by the user with the --env and --env-file options.
  *
- * Both --env and --env-file options can be used multiple times. Env vars set with --env always
- * takes precedence over envs in env files.
+ * Both --env and --env-file options can be used multiple times. In case of conflict, the last
+ * option takes precedence. Env vars set with --env always takes precedence over envs in env files.
  */
 export async function envVarsFromArgs(
   args: Args,
