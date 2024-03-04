@@ -5,6 +5,7 @@ import {
   Build,
   Database,
   DeploymentProgress,
+  DeploymentV1,
   Domain,
   GitHubActionsDeploymentRequest,
   LiveLog,
@@ -323,6 +324,30 @@ export class API {
     } catch (err) {
       if (err instanceof APIError && err.code === "deploymentNotFound") {
         return false;
+      }
+      throw err;
+    }
+  }
+
+  async redeployDeployment(
+    deploymentId: string,
+    redeployParams: {
+      prod?: boolean;
+      env_vars?: Record<string, string | null>;
+      databases?: { default: string };
+    },
+  ): Promise<DeploymentV1 | null> {
+    try {
+      return await this.#requestJson(
+        `/v1/deployments/${deploymentId}/redeploy?internal=true`,
+        {
+          method: "POST",
+          body: redeployParams,
+        },
+      );
+    } catch (err) {
+      if (err instanceof APIError && err.code === "deploymentNotFound") {
+        return null;
       }
       throw err;
     }

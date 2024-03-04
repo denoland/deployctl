@@ -7,6 +7,7 @@ import {
   normalize,
   Spinner,
 } from "../../deps.ts";
+import { envVarsFromArgs } from "../utils/env_vars.ts";
 import { wait } from "../utils/spinner.ts";
 import configFile from "../config_file.ts";
 import { error } from "../error.ts";
@@ -59,6 +60,15 @@ using std/http/file_server.ts (more details in https://docs.deno.com/deploy/tuto
 
     deployctl deploy --entrypoint=jsr:@std/http/file_server
 
+You can set env variables for deployments to have access using Deno.env. You can use --env to set individual
+environment variables, or --env-file to load one or more environment files. These options can be combined
+and used multiple times:
+
+    deployctl deploy --env-file --env-file=.other-env --env=DEPLOYMENT_TS=$(date +%s)
+
+Be aware that the env variables set with --env and --env-file are merged with the env variables configured for the project.
+If this does not suit your needs, please report your feedback at
+https://github.com/denoland/deploy_feedback/issues/
 
 USAGE:
     deployctl deploy [OPTIONS] [<ENTRYPOINT>]
@@ -72,6 +82,8 @@ OPTIONS:
     -p, --project=<NAME|ID>         The project in which to deploy. If it does not exist yet, it will be created (see --org).
         --org=<ORG>                 The organization in which to create the project. Defaults to the user's personal organization
         --entrypoint=<PATH|URL>     The file that Deno Deploy will run. Also available as positional argument, which takes precedence
+        --env=<KEY=VALUE>           Set individual environment variables in a KEY=VALUE format. Can be used multiple times
+        --env-file[=FILE]           Set environment variables using a dotenv file. If the file name is not provided, defaults to '.env'. Can be used multiple times.
         --token=<TOKEN>             The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
         --dry-run                   Dry run the deployment process.
         --config=<PATH>             Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
@@ -153,6 +165,7 @@ export default async function (rawArgs: RawArgs): Promise<void> {
     dryRun: args.dryRun,
     config: args.config,
     saveConfig: args.saveConfig,
+    envVars: await envVarsFromArgs(rawArgs),
   };
 
   await deploy(opts);
@@ -171,6 +184,7 @@ interface DeployOpts {
   dryRun: boolean;
   config: string | null;
   saveConfig: boolean;
+  envVars: Record<string, string> | null;
 }
 
 async function deploy(opts: DeployOpts): Promise<void> {
@@ -352,6 +366,19 @@ async function deploy(opts: DeployOpts): Promise<void> {
           deploySpinner!.text = `Finishing deployment...`;
           break;
         case "success": {
+          let domains;
+          if (opts.envVars) {
+            deploySpinner!.text = "Setting environment variables...";
+            // Hack while Deno Deploy implements settings env variables during deployment_with_assets
+            const redeployed = await api.redeployDeployment(event.id, {
+              env_vars: opts.envVars,
+            });
+            // NULL SAFETY: deployment was just created
+            domains = redeployed!.domains;
+            await api.deleteDeployment(event.id);
+          } else {
+            domains = event.domainMappings.map((m) => m.domain);
+          }
           const deploymentKind = opts.prod ? "Production" : "Preview";
           deploySpinner!.succeed(`${deploymentKind} deployment complete.`);
 
@@ -360,7 +387,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
           opts.project = project.id;
           await configFile.maybeWrite(opts.config, opts, opts.saveConfig);
           console.log("\nView at:");
-          for (const { domain } of event.domainMappings) {
+          for (const domain of domains) {
             console.log(` - https://${domain}`);
           }
           break;
