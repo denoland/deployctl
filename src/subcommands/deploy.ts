@@ -83,7 +83,7 @@ OPTIONS:
         --org=<ORG>                 The organization in which to create the project. Defaults to the user's personal organization
         --entrypoint=<PATH|URL>     The file that Deno Deploy will run. Also available as positional argument, which takes precedence
         --env=<KEY=VALUE>           Set individual environment variables in a KEY=VALUE format. Can be used multiple times
-        --env-file[=FILE]           Set environment variables using a dotenv file. If the file name is not provided, defaults to '.env'. Can be used multiple times.
+        --env-file[=FILE]           Set environment variables using a dotenv file. If the file name is not provided, defaults to '.env'. Can be used multiple times
         --token=<TOKEN>             The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
         --dry-run                   Dry run the deployment process.
         --config=<PATH>             Path to the file from where to load DeployCTL config. Defaults to 'deno.json'
