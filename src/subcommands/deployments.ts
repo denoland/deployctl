@@ -97,7 +97,7 @@ environment variables, or --env-file to load one or more environment files:
 
     deployctl deployments redeploy --env-file --env-file=.other-env --env=DEPLOYMENT_TS=$(date +%s)
 
-Be aware that when changing env variables, only the env variables set during de redeployment will be
+Be aware that when changing env variables, only the env variables set during the redeployment will be
 used by the new deployment. Currently the project env variables are ignored during redeployment. If
 this does not suit your needs, please report your feedback at https://github.com/denoland/deploy_feedback/issues/
 
