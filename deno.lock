@@ -5,6 +5,7 @@
       "jsr:@std/assert@0.217": "jsr:@std/assert@0.217.0",
       "jsr:@std/assert@^0.217.0": "jsr:@std/assert@0.217.0",
       "jsr:@std/async@0.217": "jsr:@std/async@0.217.0",
+      "jsr:@std/dotenv@0.217": "jsr:@std/dotenv@0.217.0",
       "jsr:@std/encoding@0.217": "jsr:@std/encoding@0.217.0",
       "jsr:@std/flags@0.217": "jsr:@std/flags@0.217.0",
       "jsr:@std/flags@0.217.0": "jsr:@std/flags@0.217.0",
@@ -29,6 +30,9 @@
         "dependencies": [
           "jsr:@std/assert@^0.217.0"
         ]
+      },
+      "@std/dotenv@0.217.0": {
+        "integrity": "e65cbbf669f482c320b2f94d0a2fc536f1fcd06afdcfa4fde358129a18d1d428"
       },
       "@std/encoding@0.217.0": {
         "integrity": "b03e8ff94c98d6b6a02c02c5cf8e5d203400155516248964fc4559abc04669dc"
