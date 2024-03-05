@@ -5,6 +5,7 @@ import {
   Build,
   Database,
   DeploymentProgress,
+  DeploymentV1,
   Domain,
   GitHubActionsDeploymentRequest,
   LiveLog,
@@ -152,10 +153,10 @@ export class API {
       throw new Error("Stream ended unexpectedly");
     }
 
-    const lines = res.body
+    const lines: ReadableStream<string> = res.body
       .pipeThrough(new TextDecoderStream())
       .pipeThrough(new TextLineStream());
-    return async function* () {
+    return async function* (): AsyncGenerator<string, void> {
       for await (const line of lines) {
         if (line === "") return;
         yield line;
@@ -186,7 +187,7 @@ export class API {
     }
   }
 
-  async getOrganizationById(id: string): Promise<Organization | undefined> {
+  async getOrganizationById(id: string): Promise<Organization> {
     return await this.#requestJson(`/organizations/${id}`);
   }
 
@@ -304,6 +305,46 @@ export class API {
   ): Promise<Build | null> {
     try {
       return await this.#requestJson(`/deployments/${deploymentId}`);
+    } catch (err) {
+      if (err instanceof APIError && err.code === "deploymentNotFound") {
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  async deleteDeployment(
+    deploymentId: string,
+  ): Promise<boolean> {
+    try {
+      await this.#requestJson(`/v1/deployments/${deploymentId}`, {
+        method: "DELETE",
+      });
+      return true;
+    } catch (err) {
+      if (err instanceof APIError && err.code === "deploymentNotFound") {
+        return false;
+      }
+      throw err;
+    }
+  }
+
+  async redeployDeployment(
+    deploymentId: string,
+    redeployParams: {
+      prod?: boolean;
+      env_vars?: Record<string, string | null>;
+      databases?: { default: string };
+    },
+  ): Promise<DeploymentV1 | null> {
+    try {
+      return await this.#requestJson(
+        `/v1/deployments/${deploymentId}/redeploy?internal=true`,
+        {
+          method: "POST",
+          body: redeployParams,
+        },
+      );
     } catch (err) {
       if (err instanceof APIError && err.code === "deploymentNotFound") {
         return null;

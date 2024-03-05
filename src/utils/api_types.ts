@@ -35,6 +35,17 @@ export interface Deployment {
   kvDatabases: Record<string, string>;
 }
 
+export type DeploymentV1 = {
+  id: string;
+  projectId: string;
+  description?: string;
+  status: "failed" | "pending" | "success";
+  domains: string[];
+  databases: Record<string, string>;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export interface Project {
   id: string;
   name: string;

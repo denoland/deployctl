@@ -2,7 +2,11 @@
 
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { semverGreaterThanOrEquals, setColorEnabled } from "./deps.ts";
+import {
+  semverGreaterThanOrEquals,
+  semverParse,
+  setColorEnabled,
+} from "./deps.ts";
 import { Args, parseArgs } from "./src/args.ts";
 import { error } from "./src/error.ts";
 import deploySubcommand from "./src/subcommands/deploy.ts";
@@ -36,7 +40,12 @@ For more detailed help on each subcommand, use:
     deployctl <SUBCOMMAND> -h
 `;
 
-if (!semverGreaterThanOrEquals(Deno.version.deno, MINIMUM_DENO_VERSION)) {
+if (
+  !semverGreaterThanOrEquals(
+    semverParse(Deno.version.deno),
+    semverParse(MINIMUM_DENO_VERSION),
+  )
+) {
   error(
     `The Deno version you are using is too old. Please update to Deno ${MINIMUM_DENO_VERSION} or later. To do this run \`deno upgrade\`.`,
   );
@@ -76,7 +85,10 @@ if (isTerminal(Deno.stdin)) {
   // If latestVersion is set we need to inform the user about a new release.
   if (
     latestVersion &&
-    !(semverGreaterThanOrEquals(VERSION, latestVersion.toString()))
+    !(semverGreaterThanOrEquals(
+      semverParse(VERSION),
+      semverParse(latestVersion.toString()),
+    ))
   ) {
     console.error(
       [

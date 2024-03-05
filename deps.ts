@@ -13,7 +13,7 @@ export {
   relative,
   resolve,
   toFileUrl,
-} from "https://deno.land/std@0.170.0/path/mod.ts";
+} from "jsr:@std/path@0.217";
 export {
   bold,
   cyan,
@@ -21,20 +21,22 @@ export {
   magenta,
   red,
   setColorEnabled,
-  stripColor,
+  stripAnsiCode,
   yellow,
-} from "https://deno.land/std@0.170.0/fmt/colors.ts";
-export { parse } from "https://deno.land/std@0.195.0/flags/mod.ts";
-export { TextLineStream } from "https://deno.land/std@0.170.0/streams/text_line_stream.ts";
-export * as JSONC from "https://deno.land/std@0.170.0/encoding/jsonc.ts";
-export { encodeHex } from "https://deno.land/std@0.212.0/encoding/hex.ts";
-export { delay } from "https://deno.land/std@0.212.0/async/mod.ts";
+} from "jsr:@std/fmt@0.217/colors";
+export { parse } from "jsr:@std/flags@0.217";
+export { TextLineStream } from "jsr:@std/streams@0.217/text_line_stream";
+export * as JSONC from "jsr:@std/jsonc@0.217";
+export { encodeHex } from "jsr:@std/encoding@0.217/hex";
+export { delay } from "jsr:@std/async@0.217";
+export * as dotenv from "jsr:@std/dotenv@0.217";
 
 // x/semver
 export {
-  gte as semverGreaterThanOrEquals,
-  valid as semverValid,
-} from "https://deno.land/std@0.170.0/semver/mod.ts";
+  canParse as semverValid,
+  greaterOrEqual as semverGreaterThanOrEquals,
+  parse as semverParse,
+} from "jsr:@std/semver@0.217";
 
 // x/wait
 export {
