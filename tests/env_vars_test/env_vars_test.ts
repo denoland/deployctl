@@ -11,7 +11,7 @@ Deno.test("envVarsFromArgs gets env variables from multiple --env options", asyn
   assertEquals(envVars.BAR, "bar");
 });
 
-Deno.test("envVarsFromArgs last --env option takes precedence when overlaping", async () => {
+Deno.test("envVarsFromArgs last --env option takes precedence when overlapping", async () => {
   const args = parseArgs(["--env=FOO=foo", "--env=BAR=bar", "--env=FOO=last"]);
   const envVars = await envVarsFromArgs(args);
   assertEquals(envVars?.FOO, "last");
@@ -29,11 +29,11 @@ Deno.test("envVarsFromArgs gets env variables from multiple --env-file options",
   assertEquals(envVars.BAR, "bar");
 });
 
-Deno.test("envVarsFromArgs last --env-file option takes precedence when overlaping", async () => {
+Deno.test("envVarsFromArgs last --env-file option takes precedence when overlapping", async () => {
   const args = parseArgs([
     `--env-file=${import.meta.dirname}/.env`,
     `--env-file=${import.meta.dirname}/.another-env`,
-    `--env-file=${import.meta.dirname}/.overlaping-env`,
+    `--env-file=${import.meta.dirname}/.overlapping-env`,
   ]);
   const envVars = await envVarsFromArgs(args);
   assertEquals(envVars?.FOO, "last");
