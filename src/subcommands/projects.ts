@@ -6,6 +6,7 @@ import { Organization, Project } from "../utils/api_types.ts";
 import { bold, green, magenta, red } from "../../deps.ts";
 import { error } from "../error.ts";
 import organization from "../utils/organization.ts";
+import { renderCron } from "../utils/crons.ts";
 
 const help = `Manage projects in Deno Deploy
 
@@ -101,11 +102,18 @@ async function showProject(args: Args): Promise<void> {
   const api = args.token
     ? API.fromToken(args.token)
     : API.withTokenProvisioner(TokenProvisioner);
-  const [project, domains, pagedBuilds, databases] = await Promise.all([
+  const [project, domains, pagedBuilds, databases, crons] = await Promise.all([
     api.getProject(args.project),
     api.getDomains(args.project),
     api.listDeployments(args.project),
     api.getProjectDatabases(args.project),
+    api.getDeploymentCrons(args.project, "latest").catch((err) => {
+      // When the project does not have a production deployment, API returns deploymentNotFound
+      if (err instanceof APIError && err.code === "deploymentNotFound") {
+        return null;
+      }
+      throw err;
+    }),
   ]).catch((err) => {
     if (err instanceof APIError && err.code === "projectNotFound") {
       return [null, null, null];
@@ -160,6 +168,11 @@ async function showProject(args: Args): Promise<void> {
       `Databases:\t${
         databases.map((db) => `[${db.branch}] ${db.databaseId}`).join(`\n\t\t`)
       }`,
+    );
+  }
+  if (crons && crons.length > 0) {
+    console.log(
+      `Crons:\t\t${crons?.map(renderCron).join("\n\t\t")}`,
     );
   }
   const [builds, _] = pagedBuilds;

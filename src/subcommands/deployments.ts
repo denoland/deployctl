@@ -6,7 +6,6 @@ import { wait } from "../utils/spinner.ts";
 import {
   Build,
   Cron,
-  CronExecutionRetry,
   Database,
   DeploymentProgressError,
   Organization,
@@ -27,6 +26,8 @@ import {
 } from "../../deps.ts";
 import { error } from "../error.ts";
 import { isTerminal } from "../utils/mod.ts";
+import { renderCron } from "../utils/crons.ts";
+import { renderTimeDelta } from "../utils/time.ts";
 
 const help = `Manage deployments in Deno Deploy
 
@@ -645,13 +646,7 @@ function renderShowOverview(
   // The API only shows the data of the cron in the production deployment regardless of the deployment queried
   if (status === "Production" && crons.length > 0) {
     console.log(
-      `Crons:\t\t${
-        crons.map((cron) =>
-          `${cron.cron_spec.name} [${cron.cron_spec.schedule}] ${
-            renderCronStatus(cron)
-          }`
-        ).join("\n\t\t")
-      }`,
+      `Crons:\t\t${crons.map(renderCron).join("\n\t\t")}`,
     );
   }
 }
@@ -798,59 +793,6 @@ function deploymentLocaleDate(build: Build): string {
   });
 }
 
-function renderTimeDelta(delta: number): string {
-  const sinces = [delta];
-  const sinceUnits = ["milli"];
-  if (sinces[0] >= 1000) {
-    sinces.push(Math.floor(sinces[0] / 1000));
-    sinces[0] = sinces[0] % 1000;
-    sinceUnits.push("second");
-  }
-  if (sinces[1] >= 60) {
-    sinces.push(Math.floor(sinces[1] / 60));
-    sinces[1] = sinces[1] % 60;
-    sinceUnits.push("minute");
-  }
-
-  if (sinces[2] >= 60) {
-    sinces.push(Math.floor(sinces[2] / 60));
-    sinces[2] = sinces[2] % 60;
-    sinceUnits.push("hour");
-  }
-
-  if (sinces[3] >= 24) {
-    sinces.push(Math.floor(sinces[3] / 24));
-    sinces[3] = sinces[3] % 24;
-    sinceUnits.push("day");
-  }
-
-  if (sinces.length > 1) {
-    // remove millis if there are already seconds
-    sinces.shift();
-    sinceUnits.shift();
-  }
-
-  sinces.reverse();
-  sinceUnits.reverse();
-  let sinceStr = "";
-  for (let x = 0; x < sinces.length; x++) {
-    const since = sinces[x];
-    let sinceUnit = sinceUnits[x];
-    if (since === 0) continue;
-    if (sinceStr) {
-      sinceStr += ", ";
-    }
-    if (sinces[x] > 1) {
-      sinceUnit += "s";
-    }
-    sinceStr += `${since} ${sinceUnit}`;
-    if (x === 0) {
-      sinceStr = yellow(sinceStr);
-    }
-  }
-  return sinceStr;
-}
-
 function deploymentRelativeDate(build: Build): string {
   const createdAt = new Date(build.createdAt);
   return renderTimeDelta(new Date().getTime() - createdAt.getTime());
@@ -904,52 +846,6 @@ function renderTable(table: Record<string, string>[]) {
     console.log(`\u2502 ${row} \u2502`);
   }
   console.log(`\u2514\u2500${divisor}\u2500\u2518`);
-}
-
-function renderCronStatus(cron: Cron): string {
-  if (!cron.status) {
-    return "n/a";
-  }
-  switch (cron.status.status) {
-    case "unscheduled":
-      return `${
-        cron.history.length > 0
-          ? `${renderLastCronExecution(cron.history[0][0])} `
-          : ""
-      }(unscheduled)`;
-    case "executing":
-      if (cron.status.retries.length > 0) {
-        return `${
-          renderLastCronExecution(cron.status.retries[0])
-        } (retrying...)`;
-      } else {
-        return "(executing...)";
-      }
-    case "scheduled":
-      return `${
-        cron.history.length > 0
-          ? `${renderLastCronExecution(cron.history[0][0])} `
-          : ""
-      }(next at ${
-        new Date(cron.status.deadline_ms).toLocaleString(navigator.language, {
-          timeZoneName: "short",
-        })
-      })`;
-  }
-}
-
-function renderLastCronExecution(execution: CronExecutionRetry): string {
-  const start = new Date(execution.start_ms);
-  const end = new Date(execution.end_ms);
-  const duration = end.getTime() - start.getTime();
-  const status = execution.status === "success"
-    ? green("succeeded")
-    : execution.status === "failure"
-    ? red("failed")
-    : "executing";
-  return `${status} at ${
-    start.toLocaleString(navigator.language, { timeZoneName: "short" })
-  } after ${stripAnsiCode(renderTimeDelta(duration))}`;
 }
 
 async function resolveDeploymentId(
