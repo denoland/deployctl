@@ -12,6 +12,7 @@ export function parseArgs(args: string[]) {
     boolean: [
       "help",
       "prod",
+      "last",
       "static",
       "version",
       "dry-run",

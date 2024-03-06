@@ -242,3 +242,26 @@ export interface Database {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface Cron {
+  cron_spec: {
+    name: string;
+    schedule: string;
+    backoff_schedule?: number;
+  };
+  status?: CronStatus;
+  history: CronExecutionRetry[][];
+}
+
+export interface CronExecutionRetry {
+  status: "success" | "failure" | "executing";
+  start_ms: number;
+  end_ms: number;
+  error_message?: string;
+  deployment_id: string;
+}
+
+type CronStatus =
+  | { status: "unscheduled" }
+  | { status: "scheduled"; deadline_ms: number }
+  | { status: "executing"; retries: CronExecutionRetry[] };
