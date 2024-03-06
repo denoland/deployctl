@@ -3,6 +3,7 @@ import { VERSION } from "../version.ts";
 
 import {
   Build,
+  Cron,
   Database,
   DeploymentProgress,
   DeploymentV1,
@@ -461,5 +462,14 @@ export class API {
       }
       throw err;
     }
+  }
+
+  async getDeploymentCrons(
+    projectId: string,
+    deploymentId: string,
+  ): Promise<Cron[]> {
+    return await this.#requestJson(
+      `/projects/${projectId}/deployments/${deploymentId}/crons`,
+    );
   }
 }
