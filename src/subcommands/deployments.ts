@@ -814,7 +814,12 @@ function deploymentDatabaseEnv(
 }
 
 function renderTable(table: Record<string, string>[]) {
-  const headers = Object.keys(table[0]);
+  const headers = [];
+  for (const row of table) {
+    for (const [i, key] of Object.keys(row).entries()) {
+      headers[i] = key;
+    }
+  }
   const widths: number[] = [];
   for (const rowData of table) {
     for (const [i, value] of Object.values(rowData).entries()) {
