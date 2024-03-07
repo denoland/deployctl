@@ -46,6 +46,11 @@ export type DeploymentV1 = {
   updatedAt: string;
 };
 
+export interface BuildsPage {
+  list: Build[],
+  paging: PagingInfo
+}
+
 export interface Project {
   id: string;
   name: string;

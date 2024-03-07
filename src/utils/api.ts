@@ -3,6 +3,7 @@ import { VERSION } from "../version.ts";
 
 import {
   Build,
+  BuildsPage,
   Cron,
   Database,
   DeploymentProgress,
@@ -263,7 +264,7 @@ export class API {
     projectId: string,
     page?: number,
     limit?: number,
-  ): Promise<[Build[], PagingInfo] | null> {
+  ): Promise<BuildsPage | null> {
     const query = new URLSearchParams();
     if (page !== undefined) {
       query.set("page", page.toString());
@@ -272,9 +273,10 @@ export class API {
       query.set("limit", limit.toString());
     }
     try {
-      return await this.#requestJson(
+      const [list, paging]: [Build[], PagingInfo] = await this.#requestJson(
         `/projects/${projectId}/deployments?${query}`,
       );
+      return { list, paging };
     } catch (err) {
       if (err instanceof APIError && err.code === "projectNotFound") {
         return null;

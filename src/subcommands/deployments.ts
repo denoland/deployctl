@@ -5,11 +5,11 @@ import { envVarsFromArgs } from "../utils/env_vars.ts";
 import { wait } from "../utils/spinner.ts";
 import {
   Build,
+  BuildsPage,
   Cron,
   Database,
   DeploymentProgressError,
   Organization,
-  PagingInfo,
   Project,
 } from "../utils/api_types.ts";
 import {
@@ -220,7 +220,7 @@ async function listDeployments(args: Args): Promise<void> {
   const api = args.token
     ? API.fromToken(args.token)
     : API.withTokenProvisioner(TokenProvisioner);
-  const [deployments, project, databases] = await Promise.all([
+  const [buildsPage, project, databases] = await Promise.all([
     api.listDeployments(
       args.project,
       apiPage,
@@ -229,7 +229,7 @@ async function listDeployments(args: Args): Promise<void> {
     api.getProject(args.project),
     api.getProjectDatabases(args.project),
   ]);
-  if (!deployments || !project || !databases) {
+  if (!buildsPage || !project || !databases) {
     spinner.fail(
       `The project '${args.project}' does not exist, or you don't have access to it`,
     );
@@ -239,7 +239,7 @@ async function listDeployments(args: Args): Promise<void> {
     `Page ${page} of the list of deployments of the project '${args.project}' is ready`,
   );
 
-  if (deployments[0].length === 0) {
+  if (buildsPage.list.length === 0) {
     wait("").warn(`Page '${page}' is empty`);
     return;
   }
@@ -250,12 +250,11 @@ async function listDeployments(args: Args): Promise<void> {
         api,
         project,
         databases,
-        deployments[0],
-        deployments[1],
+        buildsPage,
       );
       break;
     case "json":
-      console.log(JSON.stringify(deployments[0]));
+      console.log(JSON.stringify(buildsPage.list));
       break;
   }
 }
@@ -667,12 +666,11 @@ async function renderListOverview(
   api: API,
   project: Project,
   databases: Database[],
-  deployments: Build[],
-  paging: PagingInfo,
+  buildsPage: BuildsPage,
 ) {
   const sld = new URL(endpoint()).hostname.split(".").at(-2);
   for (;;) {
-    const table = deployments.map((build) => {
+    const table = buildsPage.list.map((build) => {
       const status = deploymentStatus(project, build);
       const colorByStatus = (s: string) =>
         status === "Failed"
@@ -712,13 +710,13 @@ async function renderListOverview(
     });
     renderTable(table);
 
-    if (paging.page + 1 >= paging.totalPages) {
+    if (buildsPage.paging.page + 1 >= buildsPage.paging.totalPages) {
       return;
     }
     alert(`Press enter to fetch the next page`);
     tty.goUpSync(1, Deno.stdout);
     tty.clearDownSync(Deno.stdout);
-    const nextPage = paging.page + 1;
+    const nextPage = buildsPage.paging.page + 1;
     const spinner = wait(
       `Fetching page ${
         // API page param is 0-based
@@ -726,22 +724,21 @@ async function renderListOverview(
         1} of the list of deployments of project '${project.name}'...`,
     )
       .start();
-    const deploymentsNextPage = await api.listDeployments(
+    const buildsNextPage = await api.listDeployments(
       project.id,
       nextPage,
-      paging.limit,
+      buildsPage.paging.limit,
     );
-    if (!deploymentsNextPage) {
+    if (!buildsNextPage) {
       spinner.fail(
         `The project '${project.name}' does not exist, or you don't have access to it`,
       );
       return Deno.exit(1);
     }
-    deployments = deploymentsNextPage[0];
-    paging = deploymentsNextPage[1];
+    buildsPage = buildsNextPage;
     spinner.succeed(
       `Page ${
-        paging.page + 1
+        buildsPage.paging.page + 1
       } of the list of deployments of the project '${project.name}' is ready`,
     );
   }
@@ -883,20 +880,20 @@ async function resolveDeploymentId(
       const spinner = wait(
         `Searching the last deployment of project '${projectId}'...`,
       ).start();
-      const deployments = await api.listDeployments(projectId, 0, 1);
-      if (!deployments) {
+      const buildsPage = await api.listDeployments(projectId, 0, 1);
+      if (!buildsPage) {
         spinner.fail(
           `The project '${projectId}' does not exist, or you don't have access to it`,
         );
         return Deno.exit(1);
       }
-      if (deployments[0].length === 0) {
+      if (buildsPage.list.length === 0) {
         spinner.fail(
           `The project '${projectId}' does not have any deployment yet`,
         );
         return Deno.exit(1);
       }
-      deploymentId = deployments[0][0].deploymentId;
+      deploymentId = buildsPage.list[0].deploymentId;
       spinner.succeed(
         `The last deployment of the project '${projectId}' is '${deploymentId}'`,
       );
