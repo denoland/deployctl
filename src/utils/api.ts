@@ -479,9 +479,9 @@ export class API {
     projectId: string,
   ): Promise<Cron[] | null> {
     try {
-    return await this.#requestJson(
-      `/projects/${projectId}/deployments/latest/crons`,
-    );
+      return await this.#requestJson(
+        `/projects/${projectId}/deployments/latest/crons`,
+      );
     } catch (err) {
       // When the project does not have a production deployment, API returns deploymentNotFound
       if (err instanceof APIError && err.code === "deploymentNotFound") {

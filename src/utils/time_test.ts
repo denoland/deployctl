@@ -32,8 +32,7 @@ Deno.test("renderTimeDelta returns time in hours, minutes and seconds if above 1
 Deno.test("renderTimeDelta returns time in days, hours, minutes and seconds if above 1 day", () => {
   const result1 = renderTimeDelta(1 * 24 * 60 * 60 * 1000);
   assertEquals(result1, `${yellow("1 day")}`);
-  const result2 = renderTimeDelta(1_000_000 * 24 * 60 * 60 * 1000 - 1);
-  Deno.env.set("LC_ALL", "en-US");
+  const result2 = renderTimeDelta(1_000_000 * 24 * 60 * 60 * 1000 - 1, "en-US");
   assertEquals(
     result2,
     `${yellow("999,999 days")}, 23 hours, 59 minutes, 59 seconds`,

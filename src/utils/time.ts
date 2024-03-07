@@ -1,6 +1,6 @@
 import { yellow } from "../../deps.ts";
 
-export function renderTimeDelta(delta: number): string {
+export function renderTimeDelta(delta: number, language?: string): string {
   const sinces = [delta];
   const sinceUnits = ["milli"];
   if (sinces[0] >= 1000) {
@@ -45,7 +45,9 @@ export function renderTimeDelta(delta: number): string {
     if (sinces[x] > 1) {
       sinceUnit += "s";
     }
-    sinceStr += `${since.toLocaleString()} ${sinceUnit}`;
+    sinceStr += `${
+      since.toLocaleString(language ?? navigator.language)
+    } ${sinceUnit}`;
     if (x === 0) {
       sinceStr = yellow(sinceStr);
     }
