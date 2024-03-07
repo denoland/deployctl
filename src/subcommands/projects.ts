@@ -113,16 +113,10 @@ async function showProject(args: Args): Promise<void> {
     api.getDomains(args.project),
     api.listDeployments(args.project),
     api.getProjectDatabases(args.project),
-    api.getDeploymentCrons(args.project, "latest").catch((err) => {
-      // When the project does not have a production deployment, API returns deploymentNotFound
-      if (err instanceof APIError && err.code === "deploymentNotFound") {
-        return null;
-      }
-      throw err;
-    }),
+    api.getProjectCrons(args.project),
   ]).catch((err) => {
     if (err instanceof APIError && err.code === "projectNotFound") {
-      return [null, null, null];
+      return [null, null, null, null, null];
     }
     throw err;
   });
