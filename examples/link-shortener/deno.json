@@ -1,6 +1,5 @@
 {
   "deploy": {
-    "project": "example-link-shortener",
     "exclude": [],
     "include": [],
     "entrypoint": "main.ts"

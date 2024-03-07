@@ -34,7 +34,6 @@
     "jsxImportSource": "preact"
   },
   "deploy": {
-    "project": "example-fresh",
     "exclude": [],
     "include": [],
     "entrypoint": "main.ts"
