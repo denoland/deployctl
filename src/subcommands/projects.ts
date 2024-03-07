@@ -108,7 +108,7 @@ async function showProject(args: Args): Promise<void> {
   const api = args.token
     ? API.fromToken(args.token)
     : API.withTokenProvisioner(TokenProvisioner);
-  const [project, domains, pagedBuilds, databases, crons] = await Promise.all([
+  const [project, domains, buildsPage, databases, crons] = await Promise.all([
     api.getProject(args.project),
     api.getDomains(args.project),
     api.listDeployments(args.project),
@@ -127,7 +127,7 @@ async function showProject(args: Args): Promise<void> {
     throw err;
   });
 
-  if (!project || !domains || !pagedBuilds || !databases) {
+  if (!project || !domains || !buildsPage || !databases) {
     spinner.fail(
       `The project '${args.project}' does not exist, or you don't have access to it`,
     );
@@ -181,11 +181,10 @@ async function showProject(args: Args): Promise<void> {
       `Crons:\t\t${crons?.map(renderCron).join("\n\t\t")}`,
     );
   }
-  const [builds, _] = pagedBuilds;
-  if (builds.length > 0) {
+  if (buildsPage.list.length > 0) {
     console.log(
       `Deployments:${
-        builds.map((build, i) =>
+        buildsPage.list.map((build, i) =>
           `${i !== 0 && i % 5 === 0 ? "\n\t\t" : "\t"}${
             build.deployment
               ? project.productionDeployment?.deployment?.id ===
