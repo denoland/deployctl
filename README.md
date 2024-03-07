@@ -11,16 +11,15 @@ deno install -Arf jsr:@deno/deployctl
 
 ## Usage
 
-Before being able to deploy, you need to get a personal access token from the
-[Deno Deploy access token page](https://dash.deno.com/account#access-tokens).
-Store this token in a `DENO_DEPLOY_TOKEN` environment variable, or pass it to
-`deployctl` with the `--token` flag.
+The easiest way to get started with `deployctl` is to deploy one of the
+examples in the [examples directory](./examples): 
 
 ```shell
-deployctl deploy --project=hello-world ./examples/hello.ts
+cd examples/hello-world
+deployctl deploy
 ```
 
-View the help:
+Checkout the help output for more information:
 
 ```shell
 deployctl -h
