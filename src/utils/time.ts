@@ -45,7 +45,7 @@ export function renderTimeDelta(delta: number): string {
     if (sinces[x] > 1) {
       sinceUnit += "s";
     }
-    sinceStr += `${since} ${sinceUnit}`;
+    sinceStr += `${since.toLocaleString()} ${sinceUnit}`;
     if (x === 0) {
       sinceStr = yellow(sinceStr);
     }

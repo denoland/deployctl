@@ -47,8 +47,8 @@ export type DeploymentV1 = {
 };
 
 export interface BuildsPage {
-  list: Build[],
-  paging: PagingInfo
+  list: Build[];
+  paging: PagingInfo;
 }
 
 export interface Project {
