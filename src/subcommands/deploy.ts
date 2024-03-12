@@ -230,15 +230,14 @@ async function deploy(opts: DeployOpts): Promise<void> {
       );
       Deno.exit(1);
     }
-    const deploymentsListing = await api.listDeployments(project.id);
-    if (deploymentsListing === null) {
+    const buildsPage = await api.listDeployments(project.id, 0, 1);
+    if (buildsPage === null) {
       projectInfoSpinner.fail("Project deployments details not found.");
-      Deno.exit(1);
+      return Deno.exit(1);
     }
-    const [projectDeployments, _pagination] = deploymentsListing!;
     projectInfoSpinner.succeed(`Deploying to project ${project.name}.`);
 
-    if (projectDeployments.length === 0) {
+    if (buildsPage.list.length === 0) {
       projectIsEmpty = true;
     }
   }
