@@ -6,6 +6,7 @@ import { Organization, Project } from "../utils/api_types.ts";
 import { bold, green, magenta, red } from "../../deps.ts";
 import { error } from "../error.ts";
 import organization from "../utils/organization.ts";
+import { renderCron } from "../utils/crons.ts";
 
 const help = `Manage projects in Deno Deploy
 
@@ -13,17 +14,18 @@ USAGE:
     deployctl projects <SUBCOMMAND> [OPTIONS]
 
 SUBCOMMANDS:
-    list            List the name of all the projects accessible by the user
-    show            View details of a project. Specify the project using the --project option; otherwise, it will 
-                    show the details of the project specified in the config file or try to guess it from the working context
-    delete          Delete a project. Specify the project in the same way as the show subcommand
-    create          Create a new project. Specify the project name in the same way as the show subcommand 
-    rename <NAME>   Change the name of the project. Specify the project in the same way as the show subcommand
+    list               List the name of all the projects accessible by the user
+    show   [NAME]      View details of a project. Specify the project using the positional argument or the --project option;
+                       otherwise, it will show the details of the project specified in the config file
+                       or try to guess it from the working context
+    delete [NAME]      Delete a project. Specify the project in the same way as the show subcommand
+    create [NAME]      Create a new project. Specify the project name in the same way as the show subcommand 
+    rename [OLD] <NEW> Change the name of the project. Specify the project in the same way as the show subcommand
 
 
 OPTIONS:
     -h, --help                      Prints this help information
-    -p, --project=<NAME|ID>         The project selected. 
+    -p, --project=<NAME|ID>         The project selected. Can also be provided as positional argument
         --org=<ORG>                 Specify an organization. When creating a project, defaults to the user's personal organization.
                                     When listing projects, use "personal" to filter by the personal organization.
         --token=<TOKEN>             The API token to use (defaults to DENO_DEPLOY_TOKEN env var)
@@ -92,6 +94,11 @@ async function listProjects(args: Args): Promise<void> {
 }
 
 async function showProject(args: Args): Promise<void> {
+  const positionalArg = args._.shift();
+  if (positionalArg) {
+    // Positional arguments supersedes --project flag
+    args.project = positionalArg.toString();
+  }
   if (!args.project) {
     error(
       "No project specified. Use --project to specify the project of which to show the details",
@@ -101,18 +108,20 @@ async function showProject(args: Args): Promise<void> {
   const api = args.token
     ? API.fromToken(args.token)
     : API.withTokenProvisioner(TokenProvisioner);
-  const [project, domains, pagedBuilds] = await Promise.all([
+  const [project, domains, buildsPage, databases, crons] = await Promise.all([
     api.getProject(args.project),
     api.getDomains(args.project),
     api.listDeployments(args.project),
+    api.getProjectDatabases(args.project),
+    api.getProjectCrons(args.project),
   ]).catch((err) => {
     if (err instanceof APIError && err.code === "projectNotFound") {
-      return [null, null, null];
+      return [null, null, null, null, null];
     }
     throw err;
   });
 
-  if (!project || !domains || !pagedBuilds) {
+  if (!project || !domains || !buildsPage || !databases) {
     spinner.fail(
       `The project '${args.project}' does not exist, or you don't have access to it`,
     );
@@ -154,11 +163,22 @@ async function showProject(args: Args): Promise<void> {
       `Repository:\thttps://github.com/${project.git.repository.owner}/${project.git.repository.name}`,
     );
   }
-  const [builds, _] = pagedBuilds;
-  if (builds.length > 0) {
+  if (databases.length > 0) {
+    console.log(
+      `Databases:\t${
+        databases.map((db) => `[${db.branch}] ${db.databaseId}`).join(`\n\t\t`)
+      }`,
+    );
+  }
+  if (crons && crons.length > 0) {
+    console.log(
+      `Crons:\t\t${crons.map(renderCron).join("\n\t\t")}`,
+    );
+  }
+  if (buildsPage.list.length > 0) {
     console.log(
       `Deployments:${
-        builds.map((build, i) =>
+        buildsPage.list.map((build, i) =>
           `${i !== 0 && i % 5 === 0 ? "\n\t\t" : "\t"}${
             build.deployment
               ? project.productionDeployment?.deployment?.id ===
@@ -174,6 +194,11 @@ async function showProject(args: Args): Promise<void> {
 }
 
 async function deleteProject(args: Args): Promise<void> {
+  const positionalArg = args._.shift();
+  if (positionalArg) {
+    // Positional arguments supersedes --project flag
+    args.project = positionalArg.toString();
+  }
   if (!args.project) {
     error(
       "No project specified. Use --project to specify the project to delete",
@@ -213,6 +238,11 @@ async function deleteProject(args: Args): Promise<void> {
 }
 
 async function createProject(args: Args): Promise<void> {
+  const positionalArg = args._.shift();
+  if (positionalArg) {
+    // Positional arguments supersedes --project flag
+    args.project = positionalArg.toString();
+  }
   if (!args.project) {
     error(
       "No project specified. Use --project to specify the project to create",
@@ -240,6 +270,17 @@ async function createProject(args: Args): Promise<void> {
 }
 
 async function renameProject(args: Args): Promise<void> {
+  let currentId = args._.shift()?.toString();
+  let newName: string | null | undefined = args._.shift()?.toString();
+  if (currentId && !newName) {
+    // Only required positional argument is the new name
+    newName = currentId;
+    currentId = undefined;
+  }
+  if (currentId) {
+    // Positional arguments supersedes --project flag
+    args.project = currentId;
+  }
   if (!args.project) {
     error(
       "no project specified. Use --project to specify the project to rename",
@@ -259,7 +300,6 @@ async function renameProject(args: Args): Promise<void> {
   }
   const currentName = project.name;
   fetchSpinner.succeed(`Project '${currentName}' (${project.id}) found`);
-  let newName: string | undefined | null = args._.shift()?.toString();
   if (!newName) {
     newName = prompt(`${magenta("?")} New name for project '${currentName}':`);
   }

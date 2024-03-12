@@ -3,6 +3,8 @@ import { VERSION } from "../version.ts";
 
 import {
   Build,
+  BuildsPage,
+  Cron,
   Database,
   DeploymentProgress,
   DeploymentV1,
@@ -262,7 +264,7 @@ export class API {
     projectId: string,
     page?: number,
     limit?: number,
-  ): Promise<[Build[], PagingInfo] | null> {
+  ): Promise<BuildsPage | null> {
     const query = new URLSearchParams();
     if (page !== undefined) {
       query.set("page", page.toString());
@@ -271,9 +273,10 @@ export class API {
       query.set("limit", limit.toString());
     }
     try {
-      return await this.#requestJson(
+      const [list, paging]: [Build[], PagingInfo] = await this.#requestJson(
         `/projects/${projectId}/deployments?${query}`,
       );
+      return { list, paging };
     } catch (err) {
       if (err instanceof APIError && err.code === "projectNotFound") {
         return null;
@@ -457,6 +460,31 @@ export class API {
       return await this.#requestJson(`/projects/${project}/databases`);
     } catch (err) {
       if (err instanceof APIError && err.code === "projectNotFound") {
+        return null;
+      }
+      throw err;
+    }
+  }
+
+  async getDeploymentCrons(
+    projectId: string,
+    deploymentId: string,
+  ): Promise<Cron[]> {
+    return await this.#requestJson(
+      `/projects/${projectId}/deployments/${deploymentId}/crons`,
+    );
+  }
+
+  async getProjectCrons(
+    projectId: string,
+  ): Promise<Cron[] | null> {
+    try {
+      return await this.#requestJson(
+        `/projects/${projectId}/deployments/latest/crons`,
+      );
+    } catch (err) {
+      // When the project does not have a production deployment, API returns deploymentNotFound
+      if (err instanceof APIError && err.code === "deploymentNotFound") {
         return null;
       }
       throw err;

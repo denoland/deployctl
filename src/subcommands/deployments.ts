@@ -5,10 +5,11 @@ import { envVarsFromArgs } from "../utils/env_vars.ts";
 import { wait } from "../utils/spinner.ts";
 import {
   Build,
+  BuildsPage,
+  Cron,
   Database,
   DeploymentProgressError,
   Organization,
-  PagingInfo,
   Project,
 } from "../utils/api_types.ts";
 import {
@@ -25,6 +26,8 @@ import {
 } from "../../deps.ts";
 import { error } from "../error.ts";
 import { isTerminal } from "../utils/mod.ts";
+import { renderCron } from "../utils/crons.ts";
+import { renderTimeDelta } from "../utils/time.ts";
 
 const help = `Manage deployments in Deno Deploy
 
@@ -217,7 +220,7 @@ async function listDeployments(args: Args): Promise<void> {
   const api = args.token
     ? API.fromToken(args.token)
     : API.withTokenProvisioner(TokenProvisioner);
-  const [deployments, project, databases] = await Promise.all([
+  const [buildsPage, project, databases] = await Promise.all([
     api.listDeployments(
       args.project,
       apiPage,
@@ -226,7 +229,7 @@ async function listDeployments(args: Args): Promise<void> {
     api.getProject(args.project),
     api.getProjectDatabases(args.project),
   ]);
-  if (!deployments || !project || !databases) {
+  if (!buildsPage || !project || !databases) {
     spinner.fail(
       `The project '${args.project}' does not exist, or you don't have access to it`,
     );
@@ -236,7 +239,7 @@ async function listDeployments(args: Args): Promise<void> {
     `Page ${page} of the list of deployments of the project '${args.project}' is ready`,
   );
 
-  if (deployments[0].length === 0) {
+  if (buildsPage.list.length === 0) {
     wait("").warn(`Page '${page}' is empty`);
     return;
   }
@@ -247,12 +250,11 @@ async function listDeployments(args: Args): Promise<void> {
         api,
         project,
         databases,
-        deployments[0],
-        deployments[1],
+        buildsPage,
       );
       break;
     case "json":
-      console.log(JSON.stringify(deployments[0]));
+      console.log(JSON.stringify(buildsPage.list));
       break;
   }
 }
@@ -273,16 +275,18 @@ async function showDeployment(args: Args): Promise<void> {
     api,
   );
   let databases: Database[] | null;
+  let crons: Cron[] | null;
 
   const spinner = wait(`Fetching deployment '${deploymentId}' details...`)
     .start();
 
   // Need to fetch project because the build.project does not include productionDeployment
-  [build, project, databases] = projectId
+  [build, project, databases, crons] = projectId
     ? await Promise.all([
       build ? Promise.resolve(build) : api.getDeployment(deploymentId),
       project ? Promise.resolve(project) : api.getProject(projectId),
       api.getProjectDatabases(projectId),
+      api.getDeploymentCrons(projectId, deploymentId),
     ])
     : await api.getDeployment(deploymentId).then(async (build) =>
       build
@@ -291,9 +295,10 @@ async function showDeployment(args: Args): Promise<void> {
           ...await Promise.all([
             api.getProject(build.project.id),
             api.getProjectDatabases(build.project.id),
+            api.getDeploymentCrons(build.project.id, deploymentId),
           ]),
         ]
-        : [null, null, null]
+        : [null, null, null, null]
     );
 
   if (!build) {
@@ -311,6 +316,12 @@ async function showDeployment(args: Args): Promise<void> {
   if (!databases) {
     spinner.fail(
       `Failed to fetch the databases of project '${projectId}'`,
+    );
+    return Deno.exit(1);
+  }
+  if (!crons) {
+    spinner.fail(
+      `Failed to fetch the crons of project '${projectId}'`,
     );
     return Deno.exit(1);
   }
@@ -340,10 +351,10 @@ async function showDeployment(args: Args): Promise<void> {
 
   switch (format) {
     case "overview":
-      renderShowOverview(build, project, organization, databases);
+      renderShowOverview(build, project, organization, databases, crons);
       break;
     case "json":
-      renderShowJson(build, project, organization, databases);
+      renderShowJson(build, project, organization, databases, crons);
       break;
   }
 }
@@ -558,6 +569,7 @@ function renderShowOverview(
   project: Project,
   organization: Organization,
   databases: Database[],
+  crons: Cron[],
 ) {
   const organizationName = organization.name && cyan(organization.name) ||
     `${cyan(organization.members[0].user.name)} [personal]`;
@@ -571,11 +583,6 @@ function renderShowOverview(
     ? green(bold(status))
     : status;
   const database = deploymentDatabase(databases, build);
-  if (isReady(status) && !database) {
-    error(
-      `Unexpected error: deployment uses a database not in the list of databases of the project`,
-    );
-  }
   const databaseEnv = database
     ? `${
       greenProd(deploymentDatabaseEnv(project, database))
@@ -600,6 +607,12 @@ function renderShowOverview(
       deploymentLocaleDate(build)
     })`,
   );
+  if (
+    build.deployment?.description &&
+    build.deployment.description !== build.relatedCommit?.message
+  ) {
+    console.log(`Description:\t${build.deployment.description}`);
+  }
   console.log(`Project:\t${magenta(project.name)} (${project.id})`);
   console.log(
     `Organization:\t${organizationName} (${project.organizationId})`,
@@ -629,6 +642,12 @@ function renderShowOverview(
     );
     console.log(`  Url:\t\t${build.relatedCommit.url}`);
   }
+  // The API only shows the data of the cron in the production deployment regardless of the deployment queried
+  if (status === "Production" && crons.length > 0) {
+    console.log(
+      `Crons:\t\t${crons.map(renderCron).join("\n\t\t")}`,
+    );
+  }
 }
 
 function renderShowJson(
@@ -636,20 +655,22 @@ function renderShowJson(
   project: Project,
   organization: Organization,
   databases: Database[],
+  crons: Cron[],
 ) {
-  console.log(JSON.stringify({ build, project, organization, databases }));
+  console.log(
+    JSON.stringify({ build, project, organization, databases, crons }),
+  );
 }
 
 async function renderListOverview(
   api: API,
   project: Project,
   databases: Database[],
-  deployments: Build[],
-  paging: PagingInfo,
+  buildsPage: BuildsPage,
 ) {
   const sld = new URL(endpoint()).hostname.split(".").at(-2);
   for (;;) {
-    const table = deployments.map((build) => {
+    const table = buildsPage.list.map((build) => {
       const status = deploymentStatus(project, build);
       const colorByStatus = (s: string) =>
         status === "Failed"
@@ -660,11 +681,6 @@ async function renderListOverview(
           ? yellow(s)
           : s;
       const database = deploymentDatabase(databases, build);
-      if (isReady(status) && !database) {
-        error(
-          `Unexpected error: deployment uses a database not in the list of databases of the project`,
-        );
-      }
       const databaseEnv = database
         ? greenProd(deploymentDatabaseEnv(project, database))
         : "n/a";
@@ -694,13 +710,13 @@ async function renderListOverview(
     });
     renderTable(table);
 
-    if (paging.page + 1 >= paging.totalPages) {
+    if (buildsPage.paging.page + 1 >= buildsPage.paging.totalPages) {
       return;
     }
     alert(`Press enter to fetch the next page`);
     tty.goUpSync(1, Deno.stdout);
     tty.clearDownSync(Deno.stdout);
-    const nextPage = paging.page + 1;
+    const nextPage = buildsPage.paging.page + 1;
     const spinner = wait(
       `Fetching page ${
         // API page param is 0-based
@@ -708,22 +724,21 @@ async function renderListOverview(
         1} of the list of deployments of project '${project.name}'...`,
     )
       .start();
-    const deploymentsNextPage = await api.listDeployments(
+    const buildsNextPage = await api.listDeployments(
       project.id,
       nextPage,
-      paging.limit,
+      buildsPage.paging.limit,
     );
-    if (!deploymentsNextPage) {
+    if (!buildsNextPage) {
       spinner.fail(
         `The project '${project.name}' does not exist, or you don't have access to it`,
       );
       return Deno.exit(1);
     }
-    deployments = deploymentsNextPage[0];
-    paging = deploymentsNextPage[1];
+    buildsPage = buildsNextPage;
     spinner.succeed(
       `Page ${
-        paging.page + 1
+        buildsPage.paging.page + 1
       } of the list of deployments of the project '${project.name}' is ready`,
     );
   }
@@ -777,50 +792,7 @@ function deploymentLocaleDate(build: Build): string {
 
 function deploymentRelativeDate(build: Build): string {
   const createdAt = new Date(build.createdAt);
-  const sinces = [new Date().getTime() - createdAt.getTime()];
-  const sinceUnits = ["milliseconds ago"];
-  if (sinces[0] >= 1000) {
-    // Remove millis
-    sinces[0] = Math.floor(sinces[0] / 1000);
-    sinceUnits[0] = "second";
-  }
-  if (sinces[0] >= 60) {
-    sinces.push(Math.floor(sinces[0] / 60));
-    sinces[0] = sinces[0] % 60;
-    sinceUnits.push("minute");
-  }
-
-  if (sinces[1] >= 60) {
-    sinces.push(Math.floor(sinces[1] / 60));
-    sinces[1] = sinces[1] % 60;
-    sinceUnits.push("hour");
-  }
-
-  if (sinces[2] >= 24) {
-    sinces.push(Math.floor(sinces[2] / 24));
-    sinces[2] = sinces[2] % 24;
-    sinceUnits.push("day");
-  }
-
-  sinces.reverse();
-  sinceUnits.reverse();
-  let sinceStr = "";
-  for (let x = 0; x < sinces.length; x++) {
-    const since = sinces[x];
-    let sinceUnit = sinceUnits[x];
-    if (since === 0) continue;
-    if (sinceStr) {
-      sinceStr += ", ";
-    }
-    if (sinces[x] > 1) {
-      sinceUnit += "s";
-    }
-    sinceStr += `${since} ${sinceUnit}`;
-    if (x === 0) {
-      sinceStr = yellow(sinceStr);
-    }
-  }
-  return sinceStr;
+  return renderTimeDelta(new Date().getTime() - createdAt.getTime());
 }
 
 function deploymentEntrypoint(build: Build): string {
@@ -839,7 +811,12 @@ function deploymentDatabaseEnv(
 }
 
 function renderTable(table: Record<string, string>[]) {
-  const headers = Object.keys(table[0]);
+  const headers = [];
+  for (const row of table) {
+    for (const [i, key] of Object.keys(row).entries()) {
+      headers[i] = key;
+    }
+  }
   const widths: number[] = [];
   for (const rowData of table) {
     for (const [i, value] of Object.values(rowData).entries()) {
@@ -891,34 +868,58 @@ async function resolveDeploymentId(
   if (deploymentIdArg) {
     deploymentId = deploymentIdArg;
   } else {
-    // Default to showing the production deployment of the project
+    // Default to showing the production deployment of the project or the last
     if (!projectIdArg) {
       error(
         "No deployment or project specified. Use --id <deployment-id> or --project <project-name>",
       );
     }
     projectId = projectIdArg;
-    const spinner = wait(
-      `Searching production deployment of project '${projectId}'...`,
-    ).start();
-    const maybeProject = await api.getProject(projectId);
-    if (!maybeProject) {
-      spinner.fail(
-        `The project '${projectId}' does not exist, or you don't have access to it`,
+
+    if (args.last) {
+      const spinner = wait(
+        `Searching the last deployment of project '${projectId}'...`,
+      ).start();
+      const buildsPage = await api.listDeployments(projectId, 0, 1);
+      if (!buildsPage) {
+        spinner.fail(
+          `The project '${projectId}' does not exist, or you don't have access to it`,
+        );
+        return Deno.exit(1);
+      }
+      if (buildsPage.list.length === 0) {
+        spinner.fail(
+          `The project '${projectId}' does not have any deployment yet`,
+        );
+        return Deno.exit(1);
+      }
+      deploymentId = buildsPage.list[0].deploymentId;
+      spinner.succeed(
+        `The last deployment of the project '${projectId}' is '${deploymentId}'`,
       );
-      return Deno.exit(1);
-    }
-    project = maybeProject;
-    if (!project.productionDeployment) {
-      spinner.fail(
-        `Project '${project.name}' does not have a production deployment. Use --id <deployment-id> to specify the deployment to show`,
+    } else {
+      const spinner = wait(
+        `Searching the production deployment of project '${projectId}'...`,
+      ).start();
+      const maybeProject = await api.getProject(projectId);
+      if (!maybeProject) {
+        spinner.fail(
+          `The project '${projectId}' does not exist, or you don't have access to it`,
+        );
+        return Deno.exit(1);
+      }
+      project = maybeProject;
+      if (!project.productionDeployment) {
+        spinner.fail(
+          `Project '${project.name}' does not have a production deployment. Use --id <deployment-id> to specify the deployment to show`,
+        );
+        return Deno.exit(1);
+      }
+      deploymentId = project.productionDeployment.deploymentId;
+      spinner.succeed(
+        `The production deployment of the project '${project.name}' is '${deploymentId}'`,
       );
-      return Deno.exit(1);
     }
-    deploymentId = project.productionDeployment.deploymentId;
-    spinner.succeed(
-      `The production deployment of the project '${project.name}' is '${deploymentId}'`,
-    );
   }
 
   if (args.prev.length !== 0 || args.next.length !== 0) {
