@@ -172,7 +172,7 @@ async function showProject(args: Args): Promise<void> {
   }
   if (crons && crons.length > 0) {
     console.log(
-      `Crons:\t\t${crons?.map(renderCron).join("\n\t\t")}`,
+      `Crons:\t\t${crons.map(renderCron).join("\n\t\t")}`,
     );
   }
   if (buildsPage.list.length > 0) {
