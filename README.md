@@ -19,7 +19,8 @@ cd examples/hello-world
 deployctl deploy
 ```
 
-Checkout the help output for more information:
+Visit the [deployctl docs](https://docs.deno.com/deploy/manual/deployctl) and check out
+the help output to learn all you can do with deployctl:
 
 ```shell
 deployctl -h
