@@ -16,6 +16,7 @@ Project monitoring (ALPHA)
 Definition of the table columns:
 
     idx         Instance discriminator. Opaque id to discriminate different executions running in the same region.
+    Deployment  The id of the deployment running in the executing instance.
     Req/min     Requests per minute received by the project.
     CPU%        Percentage of CPU used by the project.
     CPU/req     CPU time per request, in milliseconds. 
@@ -137,9 +138,10 @@ async function tabbed(stats: AsyncGenerator<ProjectStats, void>) {
       }
       if (typeof stat === "object") {
         next = stats.next();
-        const id = encodeHex(await sha256(stat.id + stat.region))
+        const id = encodeHex(await sha256(stat.id + stat.region + stat.deploymentId))
           .slice(0, 6);
         table[id] = {
+          "deployment": stat.deploymentId,
           "region": stat.region,
           "Req/min": Math.ceil(stat.requestsPerMinute),
           "CPU%": parseFloat((stat.cpuTimePerSecond / 10).toFixed(2)),
