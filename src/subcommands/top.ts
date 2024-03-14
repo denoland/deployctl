@@ -138,7 +138,9 @@ async function tabbed(stats: AsyncGenerator<ProjectStats, void>) {
       }
       if (typeof stat === "object") {
         next = stats.next();
-        const id = encodeHex(await sha256(stat.id + stat.region + stat.deploymentId))
+        const id = encodeHex(
+          await sha256(stat.id + stat.region + stat.deploymentId),
+        )
           .slice(0, 6);
         table[id] = {
           "deployment": stat.deploymentId,

@@ -11,16 +11,16 @@ deno install -Arf jsr:@deno/deployctl
 
 ## Usage
 
-The easiest way to get started with `deployctl` is to deploy one of the
-examples in the [examples directory](./examples): 
+The easiest way to get started with `deployctl` is to deploy one of the examples
+in the [examples directory](./examples):
 
 ```shell
 cd examples/hello-world
 deployctl deploy
 ```
 
-Visit the [deployctl docs](https://docs.deno.com/deploy/manual/deployctl) and check out
-the help output to learn all you can do with deployctl:
+Visit the [deployctl docs](https://docs.deno.com/deploy/manual/deployctl) and
+check out the help output to learn all you can do with deployctl:
 
 ```shell
 deployctl -h
