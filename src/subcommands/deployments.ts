@@ -94,7 +94,7 @@ You can control the database with the --db option:
 
 If your organization has custom databases, you can also set them by UUID:
 
-    deployctl deployments redeploy --db=0b1c3e1b-a527-4055-b864-8bc7884390c9
+    deployctl deployments redeploy --db=5261e096-f9aa-4b72-8440-1c2b5b553def
 
 Lastly, environment variables can also be changed using the redeploy functionality. You can use --env to set individual
 environment variables, or --env-file to load one or more environment files:
@@ -628,7 +628,7 @@ function renderShowOverview(
   if (build.relatedCommit) {
     console.log(`Git`);
     console.log(
-      `  Ref:\t\t${cyan(build.relatedCommit.branch)} [${
+      `  Ref:\t\t${cyan(build.relatedCommit.branch ?? "??")} [${
         build.relatedCommit.hash.slice(0, 7)
       }]`,
     );
@@ -701,7 +701,7 @@ async function renderListOverview(
         Entrypoint: colorByStatus(deploymentEntrypoint(build)),
         ...build.relatedCommit
           ? {
-            Branch: colorByStatus(build.relatedCommit.branch),
+            Branch: colorByStatus(build.relatedCommit.branch ?? "??"),
             Commit: colorByStatus(build.relatedCommit.hash.slice(0, 7)),
           }
           : {},
@@ -797,7 +797,9 @@ function deploymentRelativeDate(build: Build): string {
 
 function deploymentEntrypoint(build: Build): string {
   return build.deployment
-    ? fromFileUrl(build.deployment.url).replace("/src/", "")
+    ? build.deployment.url.startsWith("https://")
+      ? build.deployment.url
+      : fromFileUrl(build.deployment.url).replace("/src/", "")
     : "n/a";
 }
 
@@ -967,10 +969,10 @@ async function resolveDeploymentId(
       return Deno.exit(1);
     }
     build = maybeBuild;
-    deploymentId = build.deploymentId;
     spinner.succeed(
       `The deployment ${relativePosString} relative to '${deploymentId}' is '${build.deploymentId}'`,
     );
+    deploymentId = build.deploymentId;
   }
   return [deploymentId, projectId, build, project];
 }
