@@ -5,18 +5,18 @@ import {
   globToRegExp,
   isGlob,
   normalize,
-  Spinner,
+  type Spinner,
 } from "../../deps.ts";
 import { envVarsFromArgs } from "../utils/env_vars.ts";
 import { wait } from "../utils/spinner.ts";
 import configFile from "../config_file.ts";
 import { error } from "../error.ts";
 import { API, APIError, endpoint } from "../utils/api.ts";
-import { ManifestEntry } from "../utils/api_types.ts";
+import type { ManifestEntry } from "../utils/api_types.ts";
 import { parseEntrypoint } from "../utils/entrypoint.ts";
 import { walk } from "../utils/walk.ts";
 import TokenProvisioner from "../utils/access_token.ts";
-import { Args as RawArgs } from "../args.ts";
+import type { Args as RawArgs } from "../args.ts";
 import organization from "../utils/organization.ts";
 
 const help = `deployctl deploy

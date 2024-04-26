@@ -1,6 +1,6 @@
 import { error } from "../error.ts";
-import { API } from "./api.ts";
-import { Organization } from "./api_types.ts";
+import type { API } from "./api.ts";
+import type { Organization } from "./api_types.ts";
 import { interruptSpinner, wait } from "./spinner.ts";
 
 export default {

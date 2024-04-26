@@ -1,7 +1,7 @@
 import { delay, TextLineStream } from "../../deps.ts";
 import { VERSION } from "../version.ts";
 
-import {
+import type {
   Build,
   BuildsPage,
   Cron,
