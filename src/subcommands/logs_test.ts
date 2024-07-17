@@ -1,6 +1,7 @@
 import { parseArgsForLogSubcommand } from "./logs.ts";
 import { assertEquals, assertThrows } from "jsr:@std/assert@0.217";
 import { parseArgs } from "../args.ts";
+import { greaterOrEqual, parse } from "jsr:@std/semver@0.224.3";
 
 Deno.test("parseArgsForLogSubcommand", async (t) => {
   const parseHelper = (args: string[]) => {
@@ -15,7 +16,11 @@ Deno.test("parseArgsForLogSubcommand", async (t) => {
       // to fail unexpectedly (not sure if this is intended). To avoid this, we
       // set `Deno.exitCode` to 0 before giving control back to each test case.
       // https://github.com/denoland/deno/pull/23609
-      Deno.exitCode = 0;
+      const EXIT_CODE_MIN_VERSION = parse("1.44.0");
+      const currentVersion = parse(Deno.version.deno);
+      if (greaterOrEqual(currentVersion, EXIT_CODE_MIN_VERSION)) {
+        Deno.exitCode = 0;
+      }
       throw e;
     }
   };
