@@ -3,11 +3,22 @@ import { assertEquals, assertThrows } from "jsr:@std/assert@0.217";
 import { parseArgs } from "../args.ts";
 
 Deno.test("parseArgsForLogSubcommand", async (t) => {
-  const parseHelper = (args: string[]) =>
-    // NOTE: We omit `logs` subcommand from the arguments passed to `parseArgs()`
-    // in order to match the actual behavior; the first positional argument is
-    // removed using `args._.shift()` in `deployctl.ts`.
-    parseArgsForLogSubcommand(parseArgs(args));
+  const parseHelper = (args: string[]) => {
+    try {
+      // NOTE: We omit `logs` subcommand from the arguments passed to `parseArgs()`
+      // in order to match the actual behavior; the first positional argument is
+      // removed using `args._.shift()` in `deployctl.ts`.
+      return parseArgsForLogSubcommand(parseArgs(args));
+    } catch (e) {
+      // Since Deno v1.44.0, when `Deno.exitCode` was instroduced, test cases
+      // with non-zero exit code has been treated as failure, causing some tests
+      // to fail unexpectedly (not sure if this is intended). To avoid this, we
+      // set `Deno.exitCode` to 0 before giving control back to each test case.
+      // https://github.com/denoland/deno/pull/23609
+      Deno.exitCode = 0;
+      throw e;
+    }
+  };
 
   await t.step("specify help", () => {
     const got = parseHelper(["--help"]);
