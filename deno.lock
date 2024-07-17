@@ -15,7 +15,6 @@
       "jsr:@std/jsonc@0.217": "jsr:@std/jsonc@0.217.0",
       "jsr:@std/path@0.217": "jsr:@std/path@0.217.0",
       "jsr:@std/semver@0.217": "jsr:@std/semver@0.217.0",
-      "jsr:@std/semver@0.224.3": "jsr:@std/semver@0.224.3",
       "jsr:@std/streams@0.217": "jsr:@std/streams@0.217.0",
       "npm:keychain@1.5.0": "npm:keychain@1.5.0"
     },
@@ -65,9 +64,6 @@
       },
       "@std/semver@0.217.0": {
         "integrity": "c1ba42cdcaacf610f1a62ec2256ab29765a73fede65120214c3acb9c85ed3d35"
-      },
-      "@std/semver@0.224.3": {
-        "integrity": "7bb34b5ad46de2c0c73de0ca3e30081ef64b4361f66abd57c84ff1011c6a1233"
       },
       "@std/streams@0.217.0": {
         "integrity": "b4a6de703d6aa59c4777f89fc002e82b8401dada44d1e6f7e916664c1e6cfd36"
