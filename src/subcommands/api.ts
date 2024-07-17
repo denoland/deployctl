@@ -1,4 +1,4 @@
-import { Args } from "../args.ts";
+import type { Args } from "../args.ts";
 import { API, isTerminal } from "../utils/mod.ts";
 import TokenProvisioner from "../utils/access_token.ts";
 import { error } from "../error.ts";

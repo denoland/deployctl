@@ -1,5 +1,5 @@
 import { green, red, stripAnsiCode } from "../../deps.ts";
-import { Cron, CronExecutionRetry } from "./api_types.ts";
+import type { Cron, CronExecutionRetry } from "./api_types.ts";
 import { renderTimeDelta } from "./time.ts";
 export function renderCron(cron: Cron): string {
   return `${cron.cron_spec.name} [${cron.cron_spec.schedule}] ${

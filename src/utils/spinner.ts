@@ -1,4 +1,8 @@
-import { Spinner, SpinnerOptions, wait as innerWait } from "../../deps.ts";
+import {
+  type Spinner,
+  type SpinnerOptions,
+  wait as innerWait,
+} from "../../deps.ts";
 
 let current: Spinner | null = null;
 

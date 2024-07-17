@@ -1,9 +1,9 @@
-import { Args } from "../args.ts";
+import type { Args } from "../args.ts";
 import { API, endpoint } from "../utils/api.ts";
 import TokenProvisioner from "../utils/access_token.ts";
 import { envVarsFromArgs } from "../utils/env_vars.ts";
 import { wait } from "../utils/spinner.ts";
-import {
+import type {
   Build,
   BuildsPage,
   Cron,
@@ -19,7 +19,7 @@ import {
   green,
   magenta,
   red,
-  Spinner,
+  type Spinner,
   stripAnsiCode,
   tty,
   yellow,

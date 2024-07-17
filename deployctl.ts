@@ -7,7 +7,7 @@ import {
   semverParse,
   setColorEnabled,
 } from "./deps.ts";
-import { Args, parseArgs } from "./src/args.ts";
+import { type Args, parseArgs } from "./src/args.ts";
 import { error } from "./src/error.ts";
 import deploySubcommand from "./src/subcommands/deploy.ts";
 import upgradeSubcommand from "./src/subcommands/upgrade.ts";
