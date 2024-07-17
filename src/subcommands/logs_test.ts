@@ -1,7 +1,6 @@
 import { parseArgsForLogSubcommand } from "./logs.ts";
 import { assertEquals, assertThrows } from "jsr:@std/assert@0.217";
 import { parseArgs } from "../args.ts";
-import { greaterOrEqual, parse } from "jsr:@std/semver@0.224.3";
 
 Deno.test("parseArgsForLogSubcommand", async (t) => {
   const parseHelper = (args: string[]) => {
@@ -11,15 +10,16 @@ Deno.test("parseArgsForLogSubcommand", async (t) => {
       // removed using `args._.shift()` in `deployctl.ts`.
       return parseArgsForLogSubcommand(parseArgs(args));
     } catch (e) {
-      // Since Deno v1.44.0, when `Deno.exitCode` was instroduced, test cases
+      // Since Deno v1.44.0, when `Deno.exitCode` was introduced, test cases
       // with non-zero exit code has been treated as failure, causing some tests
-      // to fail unexpectedly (not sure if this is intended). To avoid this, we
-      // set `Deno.exitCode` to 0 before giving control back to each test case.
+      // to fail unexpectedly (not sure if this behavior change is intended).
+      // To avoid this, we set `Deno.exitCode` to 0 before giving control back
+      // to each test case.
       // https://github.com/denoland/deno/pull/23609
-      const EXIT_CODE_MIN_VERSION = parse("1.44.0");
-      const currentVersion = parse(Deno.version.deno);
-      if (greaterOrEqual(currentVersion, EXIT_CODE_MIN_VERSION)) {
-        Deno.exitCode = 0;
+      // deno-lint-ignore no-explicit-any
+      if ((Deno as any).exitCode !== undefined) {
+        // deno-lint-ignore no-explicit-any
+        (Deno as any).exitCode = 0;
       }
       throw e;
     }
