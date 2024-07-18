@@ -1,13 +1,17 @@
 import { parseArgsForLogSubcommand } from "./logs.ts";
-import { assertEquals, assertThrows } from "jsr:@std/assert@0.217";
+import {
+  assertEquals,
+  assertNotEquals,
+  assertThrows,
+} from "jsr:@std/assert@0.217";
 import { parseArgs } from "../args.ts";
 
 Deno.test("parseArgsForLogSubcommand", async (t) => {
   const parseHelper = (args: string[]) => {
+    // For this test, the subcommand name should not be included in `args`.
+    assertNotEquals(args.at(0), "logs");
+
     try {
-      // NOTE: We omit `logs` subcommand from the arguments passed to `parseArgs()`
-      // in order to match the actual behavior; the first positional argument is
-      // removed using `args._.shift()` in `deployctl.ts`.
       return parseArgsForLogSubcommand(parseArgs(args));
     } catch (e) {
       // Since Deno v1.44.0, when `Deno.exitCode` was introduced, test cases
