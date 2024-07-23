@@ -4,7 +4,7 @@
 
 const assert = require('assert')
 const { Readable } = require('stream')
-const { RequestAbortedError, NotSupportedError } = require('../core/errors')
+const { RequestAbortedError, NotSupportedError, InvalidArgumentError } = require('../core/errors')
 const util = require('../core/util')
 const { ReadableStreamFrom, toUSVString } = require('../core/util')
 
@@ -16,12 +16,19 @@ const kBody = Symbol('kBody')
 const kAbort = Symbol('abort')
 const kContentType = Symbol('kContentType')
 
+const noop = () => {}
+
 module.exports = class BodyReadable extends Readable {
-  constructor (resume, abort, contentType = '') {
+  constructor ({
+    resume,
+    abort,
+    contentType = '',
+    highWaterMark = 64 * 1024 // Same as nodejs fs streams.
+  }) {
     super({
       autoDestroy: true,
       read: resume,
-      highWaterMark: 64 * 1024 // Same as nodejs fs streams.
+      highWaterMark
     })
 
     this._readableState.dataEmitted = false
@@ -144,18 +151,50 @@ module.exports = class BodyReadable extends Readable {
     return this[kBody]
   }
 
-  async dump (opts) {
+  dump (opts) {
     let limit = opts && Number.isFinite(opts.limit) ? opts.limit : 262144
-    try {
-      for await (const chunk of this) {
-        limit -= Buffer.byteLength(chunk)
-        if (limit < 0) {
-          return
+    const signal = opts && opts.signal
+
+    if (signal) {
+      try {
+        if (typeof signal !== 'object' || !('aborted' in signal)) {
+          throw new InvalidArgumentError('signal must be an AbortSignal')
         }
+        util.throwIfAborted(signal)
+      } catch (err) {
+        return Promise.reject(err)
       }
-    } catch {
-      // Do nothing...
     }
+
+    if (this.closed) {
+      return Promise.resolve(null)
+    }
+
+    return new Promise((resolve, reject) => {
+      const signalListenerCleanup = signal
+        ? util.addAbortListener(signal, () => {
+          this.destroy()
+        })
+        : noop
+
+      this
+        .on('close', function () {
+          signalListenerCleanup()
+          if (signal && signal.aborted) {
+            reject(signal.reason || Object.assign(new Error('The operation was aborted'), { name: 'AbortError' }))
+          } else {
+            resolve(null)
+          }
+        })
+        .on('error', noop)
+        .on('data', function (chunk) {
+          limit -= chunk.length
+          if (limit <= 0) {
+            this.destroy()
+          }
+        })
+        .resume()
+    })
   }
 }
 
@@ -244,7 +283,7 @@ function consumeEnd (consume) {
         pos += buf.byteLength
       }
 
-      resolve(dst)
+      resolve(dst.buffer)
     } else if (type === 'blob') {
       if (!Blob) {
         Blob = require('buffer').Blob

@@ -14,7 +14,7 @@
   },
   "tasks": {
     "test": "deno test -A --unstable tests/ src/",
-    "build-action": "deno bundle ./src/utils/mod.ts > ./action/deps.js",
+    "build-action": "deno run --allow-read --allow-env ./tools/bundle.ts ./src/utils/mod.ts > ./action/deps.js",
     "version-match": "deno run --allow-read --allow-env ./tools/version_match.ts"
   },
   "imports": {

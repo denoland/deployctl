@@ -1,33 +1,62 @@
 // deno-fmt-ignore-file
 // deno-lint-ignore-file
-// This code was bundled using `deno bundle` and it's not recommended to edit it manually
+// This code was bundled using `deno task build-action` and it's not recommended to edit it manually
 
-const osType = (()=>{
-    const { Deno: Deno1  } = globalThis;
-    if (typeof Deno1?.build?.os === "string") {
-        return Deno1.build.os;
-    }
-    const { navigator  } = globalThis;
-    if (navigator?.appVersion?.includes?.("Win")) {
-        return "windows";
-    }
-    return "linux";
-})();
-const isWindows = osType === "windows";
-const CHAR_FORWARD_SLASH = 47;
 function assertPath(path) {
     if (typeof path !== "string") {
         throw new TypeError(`Path must be a string. Received ${JSON.stringify(path)}`);
     }
 }
-function isPosixPathSeparator(code) {
-    return code === 47;
-}
+const CHAR_FORWARD_SLASH = 47;
 function isPathSeparator(code) {
-    return isPosixPathSeparator(code) || code === 92;
+    return code === 47 || code === 92;
 }
 function isWindowsDeviceRoot(code) {
     return code >= 97 && code <= 122 || code >= 65 && code <= 90;
+}
+function assertArg(url) {
+    url = url instanceof URL ? url : new URL(url);
+    if (url.protocol !== "file:") {
+        throw new TypeError("Must be a file URL.");
+    }
+    return url;
+}
+function fromFileUrl(url) {
+    url = assertArg(url);
+    let path = decodeURIComponent(url.pathname.replace(/\//g, "\\").replace(/%(?![0-9A-Fa-f]{2})/g, "%25")).replace(/^\\*([A-Za-z]:)(\\|$)/, "$1\\");
+    if (url.hostname !== "") {
+        path = `\\\\${url.hostname}${path}`;
+    }
+    return path;
+}
+function isAbsolute(path) {
+    assertPath(path);
+    const len = path.length;
+    if (len === 0) return false;
+    const code = path.charCodeAt(0);
+    if (isPathSeparator(code)) {
+        return true;
+    } else if (isWindowsDeviceRoot(code)) {
+        if (len > 2 && path.charCodeAt(1) === 58) {
+            if (isPathSeparator(path.charCodeAt(2))) return true;
+        }
+    }
+    return false;
+}
+class AssertionError extends Error {
+    constructor(message){
+        super(message);
+        this.name = "AssertionError";
+    }
+}
+function assert(expr, msg = "") {
+    if (!expr) {
+        throw new AssertionError(msg);
+    }
+}
+function assertArg1(path) {
+    assertPath(path);
+    if (path.length === 0) return ".";
 }
 function normalizeString(path, allowAboveRoot, separator, isPathSeparator) {
     let res = "";
@@ -82,46 +111,133 @@ function normalizeString(path, allowAboveRoot, separator, isPathSeparator) {
     }
     return res;
 }
-function _format(sep, pathObject) {
-    const dir = pathObject.dir || pathObject.root;
-    const base = pathObject.base || (pathObject.name || "") + (pathObject.ext || "");
-    if (!dir) return base;
-    if (dir === pathObject.root) return dir + base;
-    return dir + sep + base;
-}
-const WHITESPACE_ENCODINGS = {
-    "\u0009": "%09",
-    "\u000A": "%0A",
-    "\u000B": "%0B",
-    "\u000C": "%0C",
-    "\u000D": "%0D",
-    "\u0020": "%20"
-};
-function encodeWhitespace(string) {
-    return string.replaceAll(/[\s]/g, (c)=>{
-        return WHITESPACE_ENCODINGS[c] ?? c;
-    });
-}
-class DenoStdInternalError extends Error {
-    constructor(message){
-        super(message);
-        this.name = "DenoStdInternalError";
+function normalize(path) {
+    assertArg1(path);
+    const len = path.length;
+    let rootEnd = 0;
+    let device;
+    let isAbsolute = false;
+    const code = path.charCodeAt(0);
+    if (len > 1) {
+        if (isPathSeparator(code)) {
+            isAbsolute = true;
+            if (isPathSeparator(path.charCodeAt(1))) {
+                let j = 2;
+                let last = j;
+                for(; j < len; ++j){
+                    if (isPathSeparator(path.charCodeAt(j))) break;
+                }
+                if (j < len && j !== last) {
+                    const firstPart = path.slice(last, j);
+                    last = j;
+                    for(; j < len; ++j){
+                        if (!isPathSeparator(path.charCodeAt(j))) break;
+                    }
+                    if (j < len && j !== last) {
+                        last = j;
+                        for(; j < len; ++j){
+                            if (isPathSeparator(path.charCodeAt(j))) break;
+                        }
+                        if (j === len) {
+                            return `\\\\${firstPart}\\${path.slice(last)}\\`;
+                        } else if (j !== last) {
+                            device = `\\\\${firstPart}\\${path.slice(last, j)}`;
+                            rootEnd = j;
+                        }
+                    }
+                }
+            } else {
+                rootEnd = 1;
+            }
+        } else if (isWindowsDeviceRoot(code)) {
+            if (path.charCodeAt(1) === 58) {
+                device = path.slice(0, 2);
+                rootEnd = 2;
+                if (len > 2) {
+                    if (isPathSeparator(path.charCodeAt(2))) {
+                        isAbsolute = true;
+                        rootEnd = 3;
+                    }
+                }
+            }
+        }
+    } else if (isPathSeparator(code)) {
+        return "\\";
+    }
+    let tail;
+    if (rootEnd < len) {
+        tail = normalizeString(path.slice(rootEnd), !isAbsolute, "\\", isPathSeparator);
+    } else {
+        tail = "";
+    }
+    if (tail.length === 0 && !isAbsolute) tail = ".";
+    if (tail.length > 0 && isPathSeparator(path.charCodeAt(len - 1))) {
+        tail += "\\";
+    }
+    if (device === undefined) {
+        if (isAbsolute) {
+            if (tail.length > 0) return `\\${tail}`;
+            else return "\\";
+        } else if (tail.length > 0) {
+            return tail;
+        } else {
+            return "";
+        }
+    } else if (isAbsolute) {
+        if (tail.length > 0) return `${device}\\${tail}`;
+        else return `${device}\\`;
+    } else if (tail.length > 0) {
+        return device + tail;
+    } else {
+        return device;
     }
 }
-function assert(expr, msg = "") {
-    if (!expr) {
-        throw new DenoStdInternalError(msg);
+function join(...paths) {
+    if (paths.length === 0) return ".";
+    let joined;
+    let firstPart = null;
+    for(let i = 0; i < paths.length; ++i){
+        const path = paths[i];
+        assertPath(path);
+        if (path.length > 0) {
+            if (joined === undefined) joined = firstPart = path;
+            else joined += `\\${path}`;
+        }
     }
+    if (joined === undefined) return ".";
+    let needsReplace = true;
+    let slashCount = 0;
+    assert(firstPart !== null);
+    if (isPathSeparator(firstPart.charCodeAt(0))) {
+        ++slashCount;
+        const firstLen = firstPart.length;
+        if (firstLen > 1) {
+            if (isPathSeparator(firstPart.charCodeAt(1))) {
+                ++slashCount;
+                if (firstLen > 2) {
+                    if (isPathSeparator(firstPart.charCodeAt(2))) ++slashCount;
+                    else {
+                        needsReplace = false;
+                    }
+                }
+            }
+        }
+    }
+    if (needsReplace) {
+        for(; slashCount < joined.length; ++slashCount){
+            if (!isPathSeparator(joined.charCodeAt(slashCount))) break;
+        }
+        if (slashCount >= 2) joined = `\\${joined.slice(slashCount)}`;
+    }
+    return normalize(joined);
 }
-const sep = "\\";
-const delimiter = ";";
 function resolve(...pathSegments) {
     let resolvedDevice = "";
     let resolvedTail = "";
     let resolvedAbsolute = false;
     for(let i = pathSegments.length - 1; i >= -1; i--){
         let path;
-        const { Deno: Deno1  } = globalThis;
+        const { Deno: Deno1 } = globalThis;
         if (i >= 0) {
             path = pathSegments[i];
         } else if (!resolvedDevice) {
@@ -208,515 +324,18 @@ function resolve(...pathSegments) {
     resolvedTail = normalizeString(resolvedTail, !resolvedAbsolute, "\\", isPathSeparator);
     return resolvedDevice + (resolvedAbsolute ? "\\" : "") + resolvedTail || ".";
 }
-function normalize(path) {
-    assertPath(path);
-    const len = path.length;
-    if (len === 0) return ".";
-    let rootEnd = 0;
-    let device;
-    let isAbsolute = false;
-    const code = path.charCodeAt(0);
-    if (len > 1) {
-        if (isPathSeparator(code)) {
-            isAbsolute = true;
-            if (isPathSeparator(path.charCodeAt(1))) {
-                let j = 2;
-                let last = j;
-                for(; j < len; ++j){
-                    if (isPathSeparator(path.charCodeAt(j))) break;
-                }
-                if (j < len && j !== last) {
-                    const firstPart = path.slice(last, j);
-                    last = j;
-                    for(; j < len; ++j){
-                        if (!isPathSeparator(path.charCodeAt(j))) break;
-                    }
-                    if (j < len && j !== last) {
-                        last = j;
-                        for(; j < len; ++j){
-                            if (isPathSeparator(path.charCodeAt(j))) break;
-                        }
-                        if (j === len) {
-                            return `\\\\${firstPart}\\${path.slice(last)}\\`;
-                        } else if (j !== last) {
-                            device = `\\\\${firstPart}\\${path.slice(last, j)}`;
-                            rootEnd = j;
-                        }
-                    }
-                }
-            } else {
-                rootEnd = 1;
-            }
-        } else if (isWindowsDeviceRoot(code)) {
-            if (path.charCodeAt(1) === 58) {
-                device = path.slice(0, 2);
-                rootEnd = 2;
-                if (len > 2) {
-                    if (isPathSeparator(path.charCodeAt(2))) {
-                        isAbsolute = true;
-                        rootEnd = 3;
-                    }
-                }
-            }
-        }
-    } else if (isPathSeparator(code)) {
-        return "\\";
-    }
-    let tail;
-    if (rootEnd < len) {
-        tail = normalizeString(path.slice(rootEnd), !isAbsolute, "\\", isPathSeparator);
-    } else {
-        tail = "";
-    }
-    if (tail.length === 0 && !isAbsolute) tail = ".";
-    if (tail.length > 0 && isPathSeparator(path.charCodeAt(len - 1))) {
-        tail += "\\";
-    }
-    if (device === undefined) {
-        if (isAbsolute) {
-            if (tail.length > 0) return `\\${tail}`;
-            else return "\\";
-        } else if (tail.length > 0) {
-            return tail;
-        } else {
-            return "";
-        }
-    } else if (isAbsolute) {
-        if (tail.length > 0) return `${device}\\${tail}`;
-        else return `${device}\\`;
-    } else if (tail.length > 0) {
-        return device + tail;
-    } else {
-        return device;
-    }
-}
-function isAbsolute(path) {
-    assertPath(path);
-    const len = path.length;
-    if (len === 0) return false;
-    const code = path.charCodeAt(0);
-    if (isPathSeparator(code)) {
-        return true;
-    } else if (isWindowsDeviceRoot(code)) {
-        if (len > 2 && path.charCodeAt(1) === 58) {
-            if (isPathSeparator(path.charCodeAt(2))) return true;
-        }
-    }
-    return false;
-}
-function join(...paths) {
-    const pathsCount = paths.length;
-    if (pathsCount === 0) return ".";
-    let joined;
-    let firstPart = null;
-    for(let i = 0; i < pathsCount; ++i){
-        const path = paths[i];
-        assertPath(path);
-        if (path.length > 0) {
-            if (joined === undefined) joined = firstPart = path;
-            else joined += `\\${path}`;
-        }
-    }
-    if (joined === undefined) return ".";
-    let needsReplace = true;
-    let slashCount = 0;
-    assert(firstPart != null);
-    if (isPathSeparator(firstPart.charCodeAt(0))) {
-        ++slashCount;
-        const firstLen = firstPart.length;
-        if (firstLen > 1) {
-            if (isPathSeparator(firstPart.charCodeAt(1))) {
-                ++slashCount;
-                if (firstLen > 2) {
-                    if (isPathSeparator(firstPart.charCodeAt(2))) ++slashCount;
-                    else {
-                        needsReplace = false;
-                    }
-                }
-            }
-        }
-    }
-    if (needsReplace) {
-        for(; slashCount < joined.length; ++slashCount){
-            if (!isPathSeparator(joined.charCodeAt(slashCount))) break;
-        }
-        if (slashCount >= 2) joined = `\\${joined.slice(slashCount)}`;
-    }
-    return normalize(joined);
-}
-function relative(from, to) {
-    assertPath(from);
-    assertPath(to);
-    if (from === to) return "";
-    const fromOrig = resolve(from);
-    const toOrig = resolve(to);
-    if (fromOrig === toOrig) return "";
-    from = fromOrig.toLowerCase();
-    to = toOrig.toLowerCase();
-    if (from === to) return "";
-    let fromStart = 0;
-    let fromEnd = from.length;
-    for(; fromStart < fromEnd; ++fromStart){
-        if (from.charCodeAt(fromStart) !== 92) break;
-    }
-    for(; fromEnd - 1 > fromStart; --fromEnd){
-        if (from.charCodeAt(fromEnd - 1) !== 92) break;
-    }
-    const fromLen = fromEnd - fromStart;
-    let toStart = 0;
-    let toEnd = to.length;
-    for(; toStart < toEnd; ++toStart){
-        if (to.charCodeAt(toStart) !== 92) break;
-    }
-    for(; toEnd - 1 > toStart; --toEnd){
-        if (to.charCodeAt(toEnd - 1) !== 92) break;
-    }
-    const toLen = toEnd - toStart;
-    const length = fromLen < toLen ? fromLen : toLen;
-    let lastCommonSep = -1;
-    let i = 0;
-    for(; i <= length; ++i){
-        if (i === length) {
-            if (toLen > length) {
-                if (to.charCodeAt(toStart + i) === 92) {
-                    return toOrig.slice(toStart + i + 1);
-                } else if (i === 2) {
-                    return toOrig.slice(toStart + i);
-                }
-            }
-            if (fromLen > length) {
-                if (from.charCodeAt(fromStart + i) === 92) {
-                    lastCommonSep = i;
-                } else if (i === 2) {
-                    lastCommonSep = 3;
-                }
-            }
-            break;
-        }
-        const fromCode = from.charCodeAt(fromStart + i);
-        const toCode = to.charCodeAt(toStart + i);
-        if (fromCode !== toCode) break;
-        else if (fromCode === 92) lastCommonSep = i;
-    }
-    if (i !== length && lastCommonSep === -1) {
-        return toOrig;
-    }
-    let out = "";
-    if (lastCommonSep === -1) lastCommonSep = 0;
-    for(i = fromStart + lastCommonSep + 1; i <= fromEnd; ++i){
-        if (i === fromEnd || from.charCodeAt(i) === 92) {
-            if (out.length === 0) out += "..";
-            else out += "\\..";
-        }
-    }
-    if (out.length > 0) {
-        return out + toOrig.slice(toStart + lastCommonSep, toEnd);
-    } else {
-        toStart += lastCommonSep;
-        if (toOrig.charCodeAt(toStart) === 92) ++toStart;
-        return toOrig.slice(toStart, toEnd);
-    }
-}
-function toNamespacedPath(path) {
-    if (typeof path !== "string") return path;
-    if (path.length === 0) return "";
-    const resolvedPath = resolve(path);
-    if (resolvedPath.length >= 3) {
-        if (resolvedPath.charCodeAt(0) === 92) {
-            if (resolvedPath.charCodeAt(1) === 92) {
-                const code = resolvedPath.charCodeAt(2);
-                if (code !== 63 && code !== 46) {
-                    return `\\\\?\\UNC\\${resolvedPath.slice(2)}`;
-                }
-            }
-        } else if (isWindowsDeviceRoot(resolvedPath.charCodeAt(0))) {
-            if (resolvedPath.charCodeAt(1) === 58 && resolvedPath.charCodeAt(2) === 92) {
-                return `\\\\?\\${resolvedPath}`;
-            }
-        }
-    }
-    return path;
-}
-function dirname(path) {
-    assertPath(path);
-    const len = path.length;
-    if (len === 0) return ".";
-    let rootEnd = -1;
-    let end = -1;
-    let matchedSlash = true;
-    let offset = 0;
-    const code = path.charCodeAt(0);
-    if (len > 1) {
-        if (isPathSeparator(code)) {
-            rootEnd = offset = 1;
-            if (isPathSeparator(path.charCodeAt(1))) {
-                let j = 2;
-                let last = j;
-                for(; j < len; ++j){
-                    if (isPathSeparator(path.charCodeAt(j))) break;
-                }
-                if (j < len && j !== last) {
-                    last = j;
-                    for(; j < len; ++j){
-                        if (!isPathSeparator(path.charCodeAt(j))) break;
-                    }
-                    if (j < len && j !== last) {
-                        last = j;
-                        for(; j < len; ++j){
-                            if (isPathSeparator(path.charCodeAt(j))) break;
-                        }
-                        if (j === len) {
-                            return path;
-                        }
-                        if (j !== last) {
-                            rootEnd = offset = j + 1;
-                        }
-                    }
-                }
-            }
-        } else if (isWindowsDeviceRoot(code)) {
-            if (path.charCodeAt(1) === 58) {
-                rootEnd = offset = 2;
-                if (len > 2) {
-                    if (isPathSeparator(path.charCodeAt(2))) rootEnd = offset = 3;
-                }
-            }
-        }
-    } else if (isPathSeparator(code)) {
-        return path;
-    }
-    for(let i = len - 1; i >= offset; --i){
-        if (isPathSeparator(path.charCodeAt(i))) {
-            if (!matchedSlash) {
-                end = i;
-                break;
-            }
-        } else {
-            matchedSlash = false;
-        }
-    }
-    if (end === -1) {
-        if (rootEnd === -1) return ".";
-        else end = rootEnd;
-    }
-    return path.slice(0, end);
-}
-function basename(path, ext = "") {
-    if (ext !== undefined && typeof ext !== "string") {
-        throw new TypeError('"ext" argument must be a string');
-    }
-    assertPath(path);
-    let start = 0;
-    let end = -1;
-    let matchedSlash = true;
-    let i;
-    if (path.length >= 2) {
-        const drive = path.charCodeAt(0);
-        if (isWindowsDeviceRoot(drive)) {
-            if (path.charCodeAt(1) === 58) start = 2;
-        }
-    }
-    if (ext !== undefined && ext.length > 0 && ext.length <= path.length) {
-        if (ext.length === path.length && ext === path) return "";
-        let extIdx = ext.length - 1;
-        let firstNonSlashEnd = -1;
-        for(i = path.length - 1; i >= start; --i){
-            const code = path.charCodeAt(i);
-            if (isPathSeparator(code)) {
-                if (!matchedSlash) {
-                    start = i + 1;
-                    break;
-                }
-            } else {
-                if (firstNonSlashEnd === -1) {
-                    matchedSlash = false;
-                    firstNonSlashEnd = i + 1;
-                }
-                if (extIdx >= 0) {
-                    if (code === ext.charCodeAt(extIdx)) {
-                        if (--extIdx === -1) {
-                            end = i;
-                        }
-                    } else {
-                        extIdx = -1;
-                        end = firstNonSlashEnd;
-                    }
-                }
-            }
-        }
-        if (start === end) end = firstNonSlashEnd;
-        else if (end === -1) end = path.length;
-        return path.slice(start, end);
-    } else {
-        for(i = path.length - 1; i >= start; --i){
-            if (isPathSeparator(path.charCodeAt(i))) {
-                if (!matchedSlash) {
-                    start = i + 1;
-                    break;
-                }
-            } else if (end === -1) {
-                matchedSlash = false;
-                end = i + 1;
-            }
-        }
-        if (end === -1) return "";
-        return path.slice(start, end);
-    }
-}
-function extname(path) {
-    assertPath(path);
-    let start = 0;
-    let startDot = -1;
-    let startPart = 0;
-    let end = -1;
-    let matchedSlash = true;
-    let preDotState = 0;
-    if (path.length >= 2 && path.charCodeAt(1) === 58 && isWindowsDeviceRoot(path.charCodeAt(0))) {
-        start = startPart = 2;
-    }
-    for(let i = path.length - 1; i >= start; --i){
-        const code = path.charCodeAt(i);
-        if (isPathSeparator(code)) {
-            if (!matchedSlash) {
-                startPart = i + 1;
-                break;
-            }
-            continue;
-        }
-        if (end === -1) {
-            matchedSlash = false;
-            end = i + 1;
-        }
-        if (code === 46) {
-            if (startDot === -1) startDot = i;
-            else if (preDotState !== 1) preDotState = 1;
-        } else if (startDot !== -1) {
-            preDotState = -1;
-        }
-    }
-    if (startDot === -1 || end === -1 || preDotState === 0 || preDotState === 1 && startDot === end - 1 && startDot === startPart + 1) {
-        return "";
-    }
-    return path.slice(startDot, end);
-}
-function format(pathObject) {
-    if (pathObject === null || typeof pathObject !== "object") {
-        throw new TypeError(`The "pathObject" argument must be of type Object. Received type ${typeof pathObject}`);
-    }
-    return _format("\\", pathObject);
-}
-function parse(path) {
-    assertPath(path);
-    const ret = {
-        root: "",
-        dir: "",
-        base: "",
-        ext: "",
-        name: ""
-    };
-    const len = path.length;
-    if (len === 0) return ret;
-    let rootEnd = 0;
-    let code = path.charCodeAt(0);
-    if (len > 1) {
-        if (isPathSeparator(code)) {
-            rootEnd = 1;
-            if (isPathSeparator(path.charCodeAt(1))) {
-                let j = 2;
-                let last = j;
-                for(; j < len; ++j){
-                    if (isPathSeparator(path.charCodeAt(j))) break;
-                }
-                if (j < len && j !== last) {
-                    last = j;
-                    for(; j < len; ++j){
-                        if (!isPathSeparator(path.charCodeAt(j))) break;
-                    }
-                    if (j < len && j !== last) {
-                        last = j;
-                        for(; j < len; ++j){
-                            if (isPathSeparator(path.charCodeAt(j))) break;
-                        }
-                        if (j === len) {
-                            rootEnd = j;
-                        } else if (j !== last) {
-                            rootEnd = j + 1;
-                        }
-                    }
-                }
-            }
-        } else if (isWindowsDeviceRoot(code)) {
-            if (path.charCodeAt(1) === 58) {
-                rootEnd = 2;
-                if (len > 2) {
-                    if (isPathSeparator(path.charCodeAt(2))) {
-                        if (len === 3) {
-                            ret.root = ret.dir = path;
-                            return ret;
-                        }
-                        rootEnd = 3;
-                    }
-                } else {
-                    ret.root = ret.dir = path;
-                    return ret;
-                }
-            }
-        }
-    } else if (isPathSeparator(code)) {
-        ret.root = ret.dir = path;
-        return ret;
-    }
-    if (rootEnd > 0) ret.root = path.slice(0, rootEnd);
-    let startDot = -1;
-    let startPart = rootEnd;
-    let end = -1;
-    let matchedSlash = true;
-    let i = path.length - 1;
-    let preDotState = 0;
-    for(; i >= rootEnd; --i){
-        code = path.charCodeAt(i);
-        if (isPathSeparator(code)) {
-            if (!matchedSlash) {
-                startPart = i + 1;
-                break;
-            }
-            continue;
-        }
-        if (end === -1) {
-            matchedSlash = false;
-            end = i + 1;
-        }
-        if (code === 46) {
-            if (startDot === -1) startDot = i;
-            else if (preDotState !== 1) preDotState = 1;
-        } else if (startDot !== -1) {
-            preDotState = -1;
-        }
-    }
-    if (startDot === -1 || end === -1 || preDotState === 0 || preDotState === 1 && startDot === end - 1 && startDot === startPart + 1) {
-        if (end !== -1) {
-            ret.base = ret.name = path.slice(startPart, end);
-        }
-    } else {
-        ret.name = path.slice(startPart, startDot);
-        ret.base = path.slice(startPart, end);
-        ret.ext = path.slice(startDot, end);
-    }
-    if (startPart > 0 && startPart !== rootEnd) {
-        ret.dir = path.slice(0, startPart - 1);
-    } else ret.dir = ret.root;
-    return ret;
-}
-function fromFileUrl(url) {
-    url = url instanceof URL ? url : new URL(url);
-    if (url.protocol != "file:") {
-        throw new TypeError("Must be a file URL.");
-    }
-    let path = decodeURIComponent(url.pathname.replace(/\//g, "\\").replace(/%(?![0-9A-Fa-f]{2})/g, "%25")).replace(/^\\*([A-Za-z]:)(\\|$)/, "$1\\");
-    if (url.hostname != "") {
-        path = `\\\\${url.hostname}${path}`;
-    }
-    return path;
+const WHITESPACE_ENCODINGS = {
+    "\u0009": "%09",
+    "\u000A": "%0A",
+    "\u000B": "%0B",
+    "\u000C": "%0C",
+    "\u000D": "%0D",
+    "\u0020": "%20"
+};
+function encodeWhitespace(string) {
+    return string.replaceAll(/[\s]/g, (c)=>{
+        return WHITESPACE_ENCODINGS[c] ?? c;
+    });
 }
 function toFileUrl(path) {
     if (!isAbsolute(path)) {
@@ -725,7 +344,7 @@ function toFileUrl(path) {
     const [, hostname, pathname] = path.match(/^(?:[/\\]{2}([^/\\]+)(?=[/\\](?:[^/\\]|$)))?(.*)/);
     const url = new URL("file:///");
     url.pathname = encodeWhitespace(pathname.replace(/%/g, "%25"));
-    if (hostname != null && hostname != "localhost") {
+    if (hostname !== undefined && hostname !== "localhost") {
         url.hostname = hostname;
         if (!url.hostname) {
             throw new TypeError("Invalid hostname.");
@@ -733,66 +352,26 @@ function toFileUrl(path) {
     }
     return url;
 }
-const mod = {
-    sep: sep,
-    delimiter: delimiter,
-    resolve: resolve,
-    normalize: normalize,
-    isAbsolute: isAbsolute,
-    join: join,
-    relative: relative,
-    toNamespacedPath: toNamespacedPath,
-    dirname: dirname,
-    basename: basename,
-    extname: extname,
-    format: format,
-    parse: parse,
-    fromFileUrl: fromFileUrl,
-    toFileUrl: toFileUrl
-};
-const sep1 = "/";
-const delimiter1 = ":";
-function resolve1(...pathSegments) {
-    let resolvedPath = "";
-    let resolvedAbsolute = false;
-    for(let i = pathSegments.length - 1; i >= -1 && !resolvedAbsolute; i--){
-        let path;
-        if (i >= 0) path = pathSegments[i];
-        else {
-            const { Deno: Deno1  } = globalThis;
-            if (typeof Deno1?.cwd !== "function") {
-                throw new TypeError("Resolved a relative path without a CWD.");
-            }
-            path = Deno1.cwd();
-        }
-        assertPath(path);
-        if (path.length === 0) {
-            continue;
-        }
-        resolvedPath = `${path}/${resolvedPath}`;
-        resolvedAbsolute = path.charCodeAt(0) === CHAR_FORWARD_SLASH;
-    }
-    resolvedPath = normalizeString(resolvedPath, !resolvedAbsolute, "/", isPosixPathSeparator);
-    if (resolvedAbsolute) {
-        if (resolvedPath.length > 0) return `/${resolvedPath}`;
-        else return "/";
-    } else if (resolvedPath.length > 0) return resolvedPath;
-    else return ".";
+function isPosixPathSeparator(code) {
+    return code === 47;
+}
+function fromFileUrl1(url) {
+    url = assertArg(url);
+    return decodeURIComponent(url.pathname.replace(/%(?![0-9A-Fa-f]{2})/g, "%25"));
+}
+function isAbsolute1(path) {
+    assertPath(path);
+    return path.length > 0 && isPosixPathSeparator(path.charCodeAt(0));
 }
 function normalize1(path) {
-    assertPath(path);
-    if (path.length === 0) return ".";
-    const isAbsolute = path.charCodeAt(0) === 47;
-    const trailingSeparator = path.charCodeAt(path.length - 1) === 47;
+    assertArg1(path);
+    const isAbsolute = isPosixPathSeparator(path.charCodeAt(0));
+    const trailingSeparator = isPosixPathSeparator(path.charCodeAt(path.length - 1));
     path = normalizeString(path, !isAbsolute, "/", isPosixPathSeparator);
     if (path.length === 0 && !isAbsolute) path = ".";
     if (path.length > 0 && trailingSeparator) path += "/";
     if (isAbsolute) return `/${path}`;
     return path;
-}
-function isAbsolute1(path) {
-    assertPath(path);
-    return path.length > 0 && path.charCodeAt(0) === 47;
 }
 function join1(...paths) {
     if (paths.length === 0) return ".";
@@ -808,253 +387,32 @@ function join1(...paths) {
     if (!joined) return ".";
     return normalize1(joined);
 }
-function relative1(from, to) {
-    assertPath(from);
-    assertPath(to);
-    if (from === to) return "";
-    from = resolve1(from);
-    to = resolve1(to);
-    if (from === to) return "";
-    let fromStart = 1;
-    const fromEnd = from.length;
-    for(; fromStart < fromEnd; ++fromStart){
-        if (from.charCodeAt(fromStart) !== 47) break;
-    }
-    const fromLen = fromEnd - fromStart;
-    let toStart = 1;
-    const toEnd = to.length;
-    for(; toStart < toEnd; ++toStart){
-        if (to.charCodeAt(toStart) !== 47) break;
-    }
-    const toLen = toEnd - toStart;
-    const length = fromLen < toLen ? fromLen : toLen;
-    let lastCommonSep = -1;
-    let i = 0;
-    for(; i <= length; ++i){
-        if (i === length) {
-            if (toLen > length) {
-                if (to.charCodeAt(toStart + i) === 47) {
-                    return to.slice(toStart + i + 1);
-                } else if (i === 0) {
-                    return to.slice(toStart + i);
-                }
-            } else if (fromLen > length) {
-                if (from.charCodeAt(fromStart + i) === 47) {
-                    lastCommonSep = i;
-                } else if (i === 0) {
-                    lastCommonSep = 0;
-                }
+function resolve1(...pathSegments) {
+    let resolvedPath = "";
+    let resolvedAbsolute = false;
+    for(let i = pathSegments.length - 1; i >= -1 && !resolvedAbsolute; i--){
+        let path;
+        if (i >= 0) path = pathSegments[i];
+        else {
+            const { Deno: Deno1 } = globalThis;
+            if (typeof Deno1?.cwd !== "function") {
+                throw new TypeError("Resolved a relative path without a CWD.");
             }
-            break;
+            path = Deno1.cwd();
         }
-        const fromCode = from.charCodeAt(fromStart + i);
-        const toCode = to.charCodeAt(toStart + i);
-        if (fromCode !== toCode) break;
-        else if (fromCode === 47) lastCommonSep = i;
-    }
-    let out = "";
-    for(i = fromStart + lastCommonSep + 1; i <= fromEnd; ++i){
-        if (i === fromEnd || from.charCodeAt(i) === 47) {
-            if (out.length === 0) out += "..";
-            else out += "/..";
-        }
-    }
-    if (out.length > 0) return out + to.slice(toStart + lastCommonSep);
-    else {
-        toStart += lastCommonSep;
-        if (to.charCodeAt(toStart) === 47) ++toStart;
-        return to.slice(toStart);
-    }
-}
-function toNamespacedPath1(path) {
-    return path;
-}
-function dirname1(path) {
-    assertPath(path);
-    if (path.length === 0) return ".";
-    const hasRoot = path.charCodeAt(0) === 47;
-    let end = -1;
-    let matchedSlash = true;
-    for(let i = path.length - 1; i >= 1; --i){
-        if (path.charCodeAt(i) === 47) {
-            if (!matchedSlash) {
-                end = i;
-                break;
-            }
-        } else {
-            matchedSlash = false;
-        }
-    }
-    if (end === -1) return hasRoot ? "/" : ".";
-    if (hasRoot && end === 1) return "//";
-    return path.slice(0, end);
-}
-function basename1(path, ext = "") {
-    if (ext !== undefined && typeof ext !== "string") {
-        throw new TypeError('"ext" argument must be a string');
-    }
-    assertPath(path);
-    let start = 0;
-    let end = -1;
-    let matchedSlash = true;
-    let i;
-    if (ext !== undefined && ext.length > 0 && ext.length <= path.length) {
-        if (ext.length === path.length && ext === path) return "";
-        let extIdx = ext.length - 1;
-        let firstNonSlashEnd = -1;
-        for(i = path.length - 1; i >= 0; --i){
-            const code = path.charCodeAt(i);
-            if (code === 47) {
-                if (!matchedSlash) {
-                    start = i + 1;
-                    break;
-                }
-            } else {
-                if (firstNonSlashEnd === -1) {
-                    matchedSlash = false;
-                    firstNonSlashEnd = i + 1;
-                }
-                if (extIdx >= 0) {
-                    if (code === ext.charCodeAt(extIdx)) {
-                        if (--extIdx === -1) {
-                            end = i;
-                        }
-                    } else {
-                        extIdx = -1;
-                        end = firstNonSlashEnd;
-                    }
-                }
-            }
-        }
-        if (start === end) end = firstNonSlashEnd;
-        else if (end === -1) end = path.length;
-        return path.slice(start, end);
-    } else {
-        for(i = path.length - 1; i >= 0; --i){
-            if (path.charCodeAt(i) === 47) {
-                if (!matchedSlash) {
-                    start = i + 1;
-                    break;
-                }
-            } else if (end === -1) {
-                matchedSlash = false;
-                end = i + 1;
-            }
-        }
-        if (end === -1) return "";
-        return path.slice(start, end);
-    }
-}
-function extname1(path) {
-    assertPath(path);
-    let startDot = -1;
-    let startPart = 0;
-    let end = -1;
-    let matchedSlash = true;
-    let preDotState = 0;
-    for(let i = path.length - 1; i >= 0; --i){
-        const code = path.charCodeAt(i);
-        if (code === 47) {
-            if (!matchedSlash) {
-                startPart = i + 1;
-                break;
-            }
+        assertPath(path);
+        if (path.length === 0) {
             continue;
         }
-        if (end === -1) {
-            matchedSlash = false;
-            end = i + 1;
-        }
-        if (code === 46) {
-            if (startDot === -1) startDot = i;
-            else if (preDotState !== 1) preDotState = 1;
-        } else if (startDot !== -1) {
-            preDotState = -1;
-        }
+        resolvedPath = `${path}/${resolvedPath}`;
+        resolvedAbsolute = isPosixPathSeparator(path.charCodeAt(0));
     }
-    if (startDot === -1 || end === -1 || preDotState === 0 || preDotState === 1 && startDot === end - 1 && startDot === startPart + 1) {
-        return "";
-    }
-    return path.slice(startDot, end);
-}
-function format1(pathObject) {
-    if (pathObject === null || typeof pathObject !== "object") {
-        throw new TypeError(`The "pathObject" argument must be of type Object. Received type ${typeof pathObject}`);
-    }
-    return _format("/", pathObject);
-}
-function parse1(path) {
-    assertPath(path);
-    const ret = {
-        root: "",
-        dir: "",
-        base: "",
-        ext: "",
-        name: ""
-    };
-    if (path.length === 0) return ret;
-    const isAbsolute = path.charCodeAt(0) === 47;
-    let start;
-    if (isAbsolute) {
-        ret.root = "/";
-        start = 1;
-    } else {
-        start = 0;
-    }
-    let startDot = -1;
-    let startPart = 0;
-    let end = -1;
-    let matchedSlash = true;
-    let i = path.length - 1;
-    let preDotState = 0;
-    for(; i >= start; --i){
-        const code = path.charCodeAt(i);
-        if (code === 47) {
-            if (!matchedSlash) {
-                startPart = i + 1;
-                break;
-            }
-            continue;
-        }
-        if (end === -1) {
-            matchedSlash = false;
-            end = i + 1;
-        }
-        if (code === 46) {
-            if (startDot === -1) startDot = i;
-            else if (preDotState !== 1) preDotState = 1;
-        } else if (startDot !== -1) {
-            preDotState = -1;
-        }
-    }
-    if (startDot === -1 || end === -1 || preDotState === 0 || preDotState === 1 && startDot === end - 1 && startDot === startPart + 1) {
-        if (end !== -1) {
-            if (startPart === 0 && isAbsolute) {
-                ret.base = ret.name = path.slice(1, end);
-            } else {
-                ret.base = ret.name = path.slice(startPart, end);
-            }
-        }
-    } else {
-        if (startPart === 0 && isAbsolute) {
-            ret.name = path.slice(1, startDot);
-            ret.base = path.slice(1, end);
-        } else {
-            ret.name = path.slice(startPart, startDot);
-            ret.base = path.slice(startPart, end);
-        }
-        ret.ext = path.slice(startDot, end);
-    }
-    if (startPart > 0) ret.dir = path.slice(0, startPart - 1);
-    else if (isAbsolute) ret.dir = "/";
-    return ret;
-}
-function fromFileUrl1(url) {
-    url = url instanceof URL ? url : new URL(url);
-    if (url.protocol != "file:") {
-        throw new TypeError("Must be a file URL.");
-    }
-    return decodeURIComponent(url.pathname.replace(/%(?![0-9A-Fa-f]{2})/g, "%25"));
+    resolvedPath = normalizeString(resolvedPath, !resolvedAbsolute, "/", isPosixPathSeparator);
+    if (resolvedAbsolute) {
+        if (resolvedPath.length > 0) return `/${resolvedPath}`;
+        else return "/";
+    } else if (resolvedPath.length > 0) return resolvedPath;
+    else return ".";
 }
 function toFileUrl1(path) {
     if (!isAbsolute1(path)) {
@@ -1064,119 +422,538 @@ function toFileUrl1(path) {
     url.pathname = encodeWhitespace(path.replace(/%/g, "%25").replace(/\\/g, "%5C"));
     return url;
 }
-const mod1 = {
-    sep: sep1,
-    delimiter: delimiter1,
-    resolve: resolve1,
-    normalize: normalize1,
-    isAbsolute: isAbsolute1,
-    join: join1,
-    relative: relative1,
-    toNamespacedPath: toNamespacedPath1,
-    dirname: dirname1,
-    basename: basename1,
-    extname: extname1,
-    format: format1,
-    parse: parse1,
-    fromFileUrl: fromFileUrl1,
-    toFileUrl: toFileUrl1
-};
-const path = isWindows ? mod : mod1;
-const { join: join2 , normalize: normalize2  } = path;
-const path1 = isWindows ? mod : mod1;
-const { basename: basename2 , delimiter: delimiter2 , dirname: dirname2 , extname: extname2 , format: format2 , fromFileUrl: fromFileUrl2 , isAbsolute: isAbsolute2 , join: join3 , normalize: normalize3 , parse: parse2 , relative: relative2 , resolve: resolve2 , sep: sep2 , toFileUrl: toFileUrl2 , toNamespacedPath: toNamespacedPath2  } = path1;
-const { Deno: Deno1  } = globalThis;
-typeof Deno1?.noColor === "boolean" ? Deno1.noColor : true;
+const osType = (()=>{
+    const { Deno: Deno1 } = globalThis;
+    if (typeof Deno1?.build?.os === "string") {
+        return Deno1.build.os;
+    }
+    const { navigator } = globalThis;
+    if (navigator?.appVersion?.includes?.("Win")) {
+        return "windows";
+    }
+    return "linux";
+})();
+const isWindows = osType === "windows";
+function fromFileUrl2(url) {
+    return isWindows ? fromFileUrl(url) : fromFileUrl1(url);
+}
+function join2(...paths) {
+    return isWindows ? join(...paths) : join1(...paths);
+}
+function normalize2(path) {
+    return isWindows ? normalize(path) : normalize1(path);
+}
+function resolve2(...pathSegments) {
+    return isWindows ? resolve(...pathSegments) : resolve1(...pathSegments);
+}
+function toFileUrl2(path) {
+    return isWindows ? toFileUrl(path) : toFileUrl1(path);
+}
+const { Deno: Deno1 } = globalThis;
+typeof Deno1?.noColor === "boolean" ? Deno1.noColor : false;
 new RegExp([
     "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
-    "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))"
+    "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TXZcf-nq-uy=><~]))"
 ].join("|"), "g");
-const { hasOwn  } = Object;
+const { hasOwn } = Object;
 class TextLineStream extends TransformStream {
-    #allowCR;
-    #buf = "";
-    constructor(options){
+    #currentLine = "";
+    constructor(options = {
+        allowCR: false
+    }){
         super({
-            transform: (chunk, controller)=>this.#handle(chunk, controller),
-            flush: (controller)=>this.#handle("\r\n", controller)
-        });
-        this.#allowCR = options?.allowCR ?? false;
-    }
-    #handle(chunk, controller) {
-        chunk = this.#buf + chunk;
-        for(;;){
-            const lfIndex = chunk.indexOf("\n");
-            if (this.#allowCR) {
-                const crIndex = chunk.indexOf("\r");
-                if (crIndex !== -1 && crIndex !== chunk.length - 1 && (lfIndex === -1 || lfIndex - 1 > crIndex)) {
-                    controller.enqueue(chunk.slice(0, crIndex));
-                    chunk = chunk.slice(crIndex + 1);
-                    continue;
+            transform: (chars, controller)=>{
+                chars = this.#currentLine + chars;
+                while(true){
+                    const lfIndex = chars.indexOf("\n");
+                    const crIndex = options.allowCR ? chars.indexOf("\r") : -1;
+                    if (crIndex !== -1 && crIndex !== chars.length - 1 && (lfIndex === -1 || lfIndex - 1 > crIndex)) {
+                        controller.enqueue(chars.slice(0, crIndex));
+                        chars = chars.slice(crIndex + 1);
+                        continue;
+                    }
+                    if (lfIndex === -1) break;
+                    const endIndex = chars[lfIndex - 1] === "\r" ? lfIndex - 1 : lfIndex;
+                    controller.enqueue(chars.slice(0, endIndex));
+                    chars = chars.slice(lfIndex + 1);
                 }
+                this.#currentLine = chars;
+            },
+            flush: (controller)=>{
+                if (this.#currentLine === "") return;
+                const currentLine = options.allowCR && this.#currentLine.endsWith("\r") ? this.#currentLine.slice(0, -1) : this.#currentLine;
+                controller.enqueue(currentLine);
             }
-            if (lfIndex !== -1) {
-                let crOrLfIndex = lfIndex;
-                if (chunk[lfIndex - 1] === "\r") {
-                    crOrLfIndex--;
-                }
-                controller.enqueue(chunk.slice(0, crOrLfIndex));
-                chunk = chunk.slice(lfIndex + 1);
+        });
+    }
+}
+const originalJSONParse = globalThis.JSON.parse;
+class JSONCParser {
+    #whitespace = new Set(" \t\r\n");
+    #numberEndToken = new Set([
+        ..."[]{}:,/",
+        ...this.#whitespace
+    ]);
+    #text;
+    #length;
+    #tokenized;
+    #options;
+    constructor(text, options){
+        this.#text = `${text}`;
+        this.#length = this.#text.length;
+        this.#tokenized = this.#tokenize();
+        this.#options = options;
+    }
+    parse() {
+        const token = this.#getNext();
+        const res = this.#parseJsonValue(token);
+        const { done, value } = this.#tokenized.next();
+        if (!done) {
+            throw new SyntaxError(buildErrorMessage(value));
+        }
+        return res;
+    }
+    #getNext() {
+        const { done, value } = this.#tokenized.next();
+        if (done) {
+            throw new SyntaxError("Unexpected end of JSONC input");
+        }
+        return value;
+    }
+    *#tokenize() {
+        for(let i = 0; i < this.#length; i++){
+            if (this.#whitespace.has(this.#text[i])) {
                 continue;
             }
-            break;
+            if (this.#text[i] === "/" && this.#text[i + 1] === "*") {
+                i += 2;
+                let hasEndOfComment = false;
+                for(; i < this.#length; i++){
+                    if (this.#text[i] === "*" && this.#text[i + 1] === "/") {
+                        hasEndOfComment = true;
+                        break;
+                    }
+                }
+                if (!hasEndOfComment) {
+                    throw new SyntaxError("Unexpected end of JSONC input");
+                }
+                i++;
+                continue;
+            }
+            if (this.#text[i] === "/" && this.#text[i + 1] === "/") {
+                i += 2;
+                for(; i < this.#length; i++){
+                    if (this.#text[i] === "\n" || this.#text[i] === "\r") {
+                        break;
+                    }
+                }
+                continue;
+            }
+            switch(this.#text[i]){
+                case "{":
+                    yield {
+                        type: "BeginObject",
+                        position: i
+                    };
+                    break;
+                case "}":
+                    yield {
+                        type: "EndObject",
+                        position: i
+                    };
+                    break;
+                case "[":
+                    yield {
+                        type: "BeginArray",
+                        position: i
+                    };
+                    break;
+                case "]":
+                    yield {
+                        type: "EndArray",
+                        position: i
+                    };
+                    break;
+                case ":":
+                    yield {
+                        type: "NameSeparator",
+                        position: i
+                    };
+                    break;
+                case ",":
+                    yield {
+                        type: "ValueSeparator",
+                        position: i
+                    };
+                    break;
+                case '"':
+                    {
+                        const startIndex = i;
+                        let shouldEscapeNext = false;
+                        i++;
+                        for(; i < this.#length; i++){
+                            if (this.#text[i] === '"' && !shouldEscapeNext) {
+                                break;
+                            }
+                            shouldEscapeNext = this.#text[i] === "\\" && !shouldEscapeNext;
+                        }
+                        yield {
+                            type: "String",
+                            sourceText: this.#text.substring(startIndex, i + 1),
+                            position: startIndex
+                        };
+                        break;
+                    }
+                default:
+                    {
+                        const startIndex = i;
+                        for(; i < this.#length; i++){
+                            if (this.#numberEndToken.has(this.#text[i])) {
+                                break;
+                            }
+                        }
+                        i--;
+                        yield {
+                            type: "NullOrTrueOrFalseOrNumber",
+                            sourceText: this.#text.substring(startIndex, i + 1),
+                            position: startIndex
+                        };
+                    }
+            }
         }
-        this.#buf = chunk;
+    }
+    #parseJsonValue(value) {
+        switch(value.type){
+            case "BeginObject":
+                return this.#parseObject();
+            case "BeginArray":
+                return this.#parseArray();
+            case "NullOrTrueOrFalseOrNumber":
+                return this.#parseNullOrTrueOrFalseOrNumber(value);
+            case "String":
+                return this.#parseString(value);
+            default:
+                throw new SyntaxError(buildErrorMessage(value));
+        }
+    }
+    #parseObject() {
+        const target = {};
+        for(let isFirst = true;; isFirst = false){
+            const token1 = this.#getNext();
+            if ((isFirst || this.#options.allowTrailingComma) && token1.type === "EndObject") {
+                return target;
+            }
+            if (token1.type !== "String") {
+                throw new SyntaxError(buildErrorMessage(token1));
+            }
+            const key = this.#parseString(token1);
+            const token2 = this.#getNext();
+            if (token2.type !== "NameSeparator") {
+                throw new SyntaxError(buildErrorMessage(token2));
+            }
+            const token3 = this.#getNext();
+            Object.defineProperty(target, key, {
+                value: this.#parseJsonValue(token3),
+                writable: true,
+                enumerable: true,
+                configurable: true
+            });
+            const token4 = this.#getNext();
+            if (token4.type === "EndObject") {
+                return target;
+            }
+            if (token4.type !== "ValueSeparator") {
+                throw new SyntaxError(buildErrorMessage(token4));
+            }
+        }
+    }
+    #parseArray() {
+        const target = [];
+        for(let isFirst = true;; isFirst = false){
+            const token1 = this.#getNext();
+            if ((isFirst || this.#options.allowTrailingComma) && token1.type === "EndArray") {
+                return target;
+            }
+            target.push(this.#parseJsonValue(token1));
+            const token2 = this.#getNext();
+            if (token2.type === "EndArray") {
+                return target;
+            }
+            if (token2.type !== "ValueSeparator") {
+                throw new SyntaxError(buildErrorMessage(token2));
+            }
+        }
+    }
+    #parseString(value) {
+        let parsed;
+        try {
+            parsed = originalJSONParse(value.sourceText);
+        } catch  {
+            throw new SyntaxError(buildErrorMessage(value));
+        }
+        assert(typeof parsed === "string");
+        return parsed;
+    }
+    #parseNullOrTrueOrFalseOrNumber(value) {
+        if (value.sourceText === "null") {
+            return null;
+        }
+        if (value.sourceText === "true") {
+            return true;
+        }
+        if (value.sourceText === "false") {
+            return false;
+        }
+        let parsed;
+        try {
+            parsed = originalJSONParse(value.sourceText);
+        } catch  {
+            throw new SyntaxError(buildErrorMessage(value));
+        }
+        assert(typeof parsed === "number");
+        return parsed;
     }
 }
-const re = [];
-const src = [];
-let R = 0;
-const NUMERICIDENTIFIER = R++;
-src[NUMERICIDENTIFIER] = "0|[1-9]\\d*";
-const NONNUMERICIDENTIFIER = R++;
-src[NONNUMERICIDENTIFIER] = "\\d*[a-zA-Z-][a-zA-Z0-9-]*";
-const MAINVERSION = R++;
-const nid = src[NUMERICIDENTIFIER];
-src[MAINVERSION] = `(${nid})\\.(${nid})\\.(${nid})`;
-const PRERELEASEIDENTIFIER = R++;
-src[PRERELEASEIDENTIFIER] = "(?:" + src[NUMERICIDENTIFIER] + "|" + src[NONNUMERICIDENTIFIER] + ")";
-const PRERELEASE = R++;
-src[PRERELEASE] = "(?:-(" + src[PRERELEASEIDENTIFIER] + "(?:\\." + src[PRERELEASEIDENTIFIER] + ")*))";
-const BUILDIDENTIFIER = R++;
-src[BUILDIDENTIFIER] = "[0-9A-Za-z-]+";
-const BUILD = R++;
-src[BUILD] = "(?:\\+(" + src[BUILDIDENTIFIER] + "(?:\\." + src[BUILDIDENTIFIER] + ")*))";
-const FULL = R++;
-const FULLPLAIN = "v?" + src[MAINVERSION] + src[PRERELEASE] + "?" + src[BUILD] + "?";
-src[FULL] = "^" + FULLPLAIN + "$";
-const GTLT = R++;
-src[GTLT] = "((?:<|>)?=?)";
-const XRANGEIDENTIFIER = R++;
-src[XRANGEIDENTIFIER] = src[NUMERICIDENTIFIER] + "|x|X|\\*";
-const XRANGEPLAIN = R++;
-src[XRANGEPLAIN] = "[v=\\s]*(" + src[XRANGEIDENTIFIER] + ")" + "(?:\\.(" + src[XRANGEIDENTIFIER] + ")" + "(?:\\.(" + src[XRANGEIDENTIFIER] + ")" + "(?:" + src[PRERELEASE] + ")?" + src[BUILD] + "?" + ")?)?";
-const XRANGE = R++;
-src[XRANGE] = "^" + src[GTLT] + "\\s*" + src[XRANGEPLAIN] + "$";
-const LONETILDE = R++;
-src[LONETILDE] = "(?:~>?)";
-const TILDE = R++;
-src[TILDE] = "^" + src[LONETILDE] + src[XRANGEPLAIN] + "$";
-const LONECARET = R++;
-src[LONECARET] = "(?:\\^)";
-const CARET = R++;
-src[CARET] = "^" + src[LONECARET] + src[XRANGEPLAIN] + "$";
-const COMPARATOR = R++;
-src[COMPARATOR] = "^" + src[GTLT] + "\\s*(" + FULLPLAIN + ")$|^$";
-const HYPHENRANGE = R++;
-src[HYPHENRANGE] = "^\\s*(" + src[XRANGEPLAIN] + ")" + "\\s+-\\s+" + "(" + src[XRANGEPLAIN] + ")" + "\\s*$";
-const STAR = R++;
-src[STAR] = "(<|>)?=?\\s*\\*";
-for(let i = 0; i < R; i++){
-    if (!re[i]) {
-        re[i] = new RegExp(src[i]);
+function buildErrorMessage({ type, sourceText, position }) {
+    let token = "";
+    switch(type){
+        case "BeginObject":
+            token = "{";
+            break;
+        case "EndObject":
+            token = "}";
+            break;
+        case "BeginArray":
+            token = "[";
+            break;
+        case "EndArray":
+            token = "]";
+            break;
+        case "NameSeparator":
+            token = ":";
+            break;
+        case "ValueSeparator":
+            token = ",";
+            break;
+        case "NullOrTrueOrFalseOrNumber":
+        case "String":
+            token = 30 < sourceText.length ? `${sourceText.slice(0, 30)}...` : sourceText;
+            break;
+        default:
+            throw new Error("unreachable");
+    }
+    return `Unexpected token ${token} in JSONC at position ${position}`;
+}
+new TextEncoder();
+new TextEncoder().encode("0123456789abcdef");
+new TextEncoder();
+new TextDecoder();
+function delay(ms, options = {}) {
+    const { signal, persistent } = options;
+    if (signal?.aborted) return Promise.reject(signal.reason);
+    return new Promise((resolve, reject)=>{
+        const abort = ()=>{
+            clearTimeout(i);
+            reject(signal?.reason);
+        };
+        const done = ()=>{
+            signal?.removeEventListener("abort", abort);
+            resolve();
+        };
+        const i = setTimeout(done, ms);
+        signal?.addEventListener("abort", abort, {
+            once: true
+        });
+        if (persistent === false) {
+            try {
+                Deno.unrefTimer(i);
+            } catch (error) {
+                if (!(error instanceof ReferenceError)) {
+                    throw error;
+                }
+                console.error("`persistent` option is only available in Deno");
+            }
+        }
+    });
+}
+var _computedKey;
+_computedKey = Symbol.asyncIterator;
+class MuxAsyncIterator {
+    #iteratorCount = 0;
+    #yields = [];
+    #throws = [];
+    #signal = Promise.withResolvers();
+    add(iterable) {
+        ++this.#iteratorCount;
+        this.#callIteratorNext(iterable[Symbol.asyncIterator]());
+    }
+    async #callIteratorNext(iterator) {
+        try {
+            const { value, done } = await iterator.next();
+            if (done) {
+                --this.#iteratorCount;
+            } else {
+                this.#yields.push({
+                    iterator,
+                    value
+                });
+            }
+        } catch (e) {
+            this.#throws.push(e);
+        }
+        this.#signal.resolve();
+    }
+    async *iterate() {
+        while(this.#iteratorCount > 0){
+            await this.#signal.promise;
+            for (const { iterator, value } of this.#yields){
+                yield value;
+                this.#callIteratorNext(iterator);
+            }
+            if (this.#throws.length) {
+                for (const e of this.#throws){
+                    throw e;
+                }
+                this.#throws.length = 0;
+            }
+            this.#yields.length = 0;
+            this.#signal = Promise.withResolvers();
+        }
+    }
+    [_computedKey]() {
+        return this.iterate();
     }
 }
-const noColor = globalThis.Deno?.noColor ?? true;
+function compareNumber(a, b) {
+    if (isNaN(a) || isNaN(b)) throw new Error("Comparison against non-numbers");
+    return a === b ? 0 : a < b ? -1 : 1;
+}
+function checkIdentifier(v1 = [], v2 = []) {
+    if (v1.length && !v2.length) return -1;
+    if (!v1.length && v2.length) return 1;
+    return 0;
+}
+function compareIdentifier(v1 = [], v2 = []) {
+    const length = Math.max(v1.length, v2.length);
+    for(let i = 0; i < length; i++){
+        const a = v1[i];
+        const b = v2[i];
+        if (a === undefined && b === undefined) return 0;
+        if (b === undefined) return 1;
+        if (a === undefined) return -1;
+        if (typeof a === "string" && typeof b === "number") return 1;
+        if (typeof a === "number" && typeof b === "string") return -1;
+        if (a < b) return -1;
+        if (a > b) return 1;
+    }
+    return 0;
+}
+const NUMERIC_IDENTIFIER = "0|[1-9]\\d*";
+const NON_NUMERIC_IDENTIFIER = "\\d*[a-zA-Z-][a-zA-Z0-9-]*";
+const VERSION_CORE = `(?<major>${NUMERIC_IDENTIFIER})\\.(?<minor>${NUMERIC_IDENTIFIER})\\.(?<patch>${NUMERIC_IDENTIFIER})`;
+const PRERELEASE_IDENTIFIER = `(?:${NUMERIC_IDENTIFIER}|${NON_NUMERIC_IDENTIFIER})`;
+const PRERELEASE = `(?:-(?<prerelease>${PRERELEASE_IDENTIFIER}(?:\\.${PRERELEASE_IDENTIFIER})*))`;
+const BUILD_IDENTIFIER = "[0-9A-Za-z-]+";
+const BUILD = `(?:\\+(?<buildmetadata>${BUILD_IDENTIFIER}(?:\\.${BUILD_IDENTIFIER})*))`;
+const FULL_VERSION = `v?${VERSION_CORE}${PRERELEASE}?${BUILD}?`;
+const FULL_REGEXP = new RegExp(`^${FULL_VERSION}$`);
+const COMPARATOR = "(?:<|>)?=?";
+const WILDCARD_IDENTIFIER = `x|X|\\*`;
+const XRANGE_IDENTIFIER = `${NUMERIC_IDENTIFIER}|${WILDCARD_IDENTIFIER}`;
+const XRANGE = `[v=\\s]*(?<major>${XRANGE_IDENTIFIER})(?:\\.(?<minor>${XRANGE_IDENTIFIER})(?:\\.(?<patch>${XRANGE_IDENTIFIER})${PRERELEASE}?${BUILD}?)?)?`;
+new RegExp(`^(?<operator>~>?|\\^|${COMPARATOR})\\s*${XRANGE}$`);
+new RegExp(`^(?<operator>${COMPARATOR})\\s*(${FULL_VERSION})$|^$`);
+function isValidNumber(value) {
+    return typeof value === "number" && !Number.isNaN(value) && (!Number.isFinite(value) || 0 <= value && value <= Number.MAX_SAFE_INTEGER);
+}
+const NUMERIC_IDENTIFIER_REGEXP = new RegExp(`^${NUMERIC_IDENTIFIER}$`);
+function parsePrerelease(prerelease) {
+    return prerelease.split(".").filter(Boolean).map((id)=>{
+        if (NUMERIC_IDENTIFIER_REGEXP.test(id)) {
+            const number = Number(id);
+            if (isValidNumber(number)) return number;
+        }
+        return id;
+    });
+}
+function parseBuild(buildmetadata) {
+    return buildmetadata.split(".").filter(Boolean);
+}
+function parseNumber(input, errorMessage) {
+    const number = Number(input);
+    if (!isValidNumber(number)) throw new TypeError(errorMessage);
+    return number;
+}
+function compare(s0, s1) {
+    if (s0 === s1) return 0;
+    return compareNumber(s0.major, s1.major) || compareNumber(s0.minor, s1.minor) || compareNumber(s0.patch, s1.patch) || checkIdentifier(s0.prerelease, s1.prerelease) || compareIdentifier(s0.prerelease, s1.prerelease);
+}
+({
+    major: Number.POSITIVE_INFINITY,
+    minor: Number.POSITIVE_INFINITY,
+    patch: Number.POSITIVE_INFINITY,
+    prerelease: [],
+    build: []
+});
+const MIN = {
+    major: 0,
+    minor: 0,
+    patch: 0,
+    prerelease: [],
+    build: []
+};
+({
+    major: Number.NEGATIVE_INFINITY,
+    minor: Number.POSITIVE_INFINITY,
+    patch: Number.POSITIVE_INFINITY,
+    prerelease: [],
+    build: []
+});
+const ANY = {
+    major: Number.NaN,
+    minor: Number.NaN,
+    patch: Number.NaN,
+    prerelease: [],
+    build: []
+};
+({
+    operator: "",
+    ...ANY,
+    semver: ANY
+});
+({
+    operator: "<",
+    ...MIN,
+    semver: MIN
+});
+function parse(version) {
+    if (typeof version !== "string") {
+        throw new TypeError(`version must be a string`);
+    }
+    if (version.length > 256) {
+        throw new TypeError(`version is longer than ${256} characters`);
+    }
+    version = version.trim();
+    const groups = version.match(FULL_REGEXP)?.groups;
+    if (!groups) throw new TypeError(`Invalid Version: ${version}`);
+    const major = parseNumber(groups.major, "Invalid major version");
+    const minor = parseNumber(groups.minor, "Invalid minor version");
+    const patch = parseNumber(groups.patch, "Invalid patch version");
+    const prerelease = groups.prerelease ? parsePrerelease(groups.prerelease) : [];
+    const build = groups.buildmetadata ? parseBuild(groups.buildmetadata) : [];
+    return {
+        major,
+        minor,
+        patch,
+        prerelease,
+        build
+    };
+}
+function greaterOrEqual(s0, s1) {
+    return compare(s0, s1) >= 0;
+}
+const { Deno: Deno2 } = globalThis;
+const noColor = typeof Deno2?.noColor === "boolean" ? Deno2.noColor : true;
 let enabled = !noColor;
 function setColorEnabled(value) {
     if (noColor) {
@@ -1454,13 +1231,13 @@ function bgRgb24(str, color) {
     ], 49));
 }
 const ANSI_PATTERN = new RegExp([
-    "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
-    "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))"
+    "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
+    "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))"
 ].join("|"), "g");
 function stripColor(string) {
     return string.replace(ANSI_PATTERN, "");
 }
-const mod2 = {
+const mod = {
     setColorEnabled: setColorEnabled,
     getColorEnabled: getColorEnabled,
     reset: reset,
@@ -2084,7 +1861,7 @@ const __default = [
         0xe01ef
     ]
 ];
-function wcswidth(str, { nul =0 , control =0  } = {}) {
+function wcswidth(str, { nul = 0, control = 0 } = {}) {
     const opts = {
         nul,
         control
@@ -2098,7 +1875,7 @@ function wcswidth(str, { nul =0 , control =0  } = {}) {
     }
     return s;
 }
-function wcwidth(ucs, { nul =0 , control =0  } = {}) {
+function wcwidth(ucs, { nul = 0, control = 0 } = {}) {
     if (ucs === 0) return nul;
     if (ucs < 32 || ucs >= 0x7f && ucs < 0xa0) return control;
     if (bisearch(ucs)) return 0;
@@ -2117,7 +1894,7 @@ function bisearch(ucs) {
     }
     return false;
 }
-function ansiRegex({ onlyFirst =false  } = {}) {
+function ansiRegex({ onlyFirst = false } = {}) {
     const pattern = [
         "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
         "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))"
@@ -2296,7 +2073,7 @@ function goRightSync(x = 1, writer = Deno.stdout) {
 function goToSync(x, y, writer = Deno.stdout) {
     writeSync(ESC + y + ";" + x + HOME, writer);
 }
-const mod3 = await async function() {
+const mod1 = await async function() {
     return {
         ESC: ESC,
         SAVE: SAVE,
@@ -3661,30 +3438,50 @@ if ((await Deno.permissions.query({
     supported = supported && (!!Deno.env.get("CI") || Deno.env.get("TERM") === "xterm-256color");
 }
 const main = {
-    info: mod2.blue("ℹ"),
-    success: mod2.green("✔"),
-    warning: mod2.yellow("⚠"),
-    error: mod2.red("✖")
+    info: mod.blue("ℹ"),
+    success: mod.green("✔"),
+    warning: mod.yellow("⚠"),
+    error: mod.red("✖")
 };
 const fallbacks = {
-    info: mod2.blue("i"),
-    success: mod2.green("√"),
-    warning: mod2.yellow("‼"),
-    error: mod2.red("×")
+    info: mod.blue("i"),
+    success: mod.green("√"),
+    warning: mod.yellow("‼"),
+    error: mod.red("×")
 };
 const symbols = supported ? main : fallbacks;
 const encoder1 = new TextEncoder();
 const colormap = {
-    black: mod2.black,
-    red: mod2.red,
-    green: mod2.green,
-    yellow: mod2.yellow,
-    blue: mod2.blue,
-    magenta: mod2.magenta,
-    cyan: mod2.cyan,
-    white: mod2.white,
-    gray: mod2.gray
+    black: mod.black,
+    red: mod.red,
+    green: mod.green,
+    yellow: mod.yellow,
+    blue: mod.blue,
+    magenta: mod.magenta,
+    cyan: mod.cyan,
+    white: mod.white,
+    gray: mod.gray
 };
+function wait(opts) {
+    if (typeof opts === "string") {
+        opts = {
+            text: opts
+        };
+    }
+    return new Spinner({
+        text: opts.text,
+        prefix: opts.prefix ?? "",
+        color: opts.color ?? mod.cyan,
+        spinner: opts.spinner ?? "dots",
+        hideCursor: opts.hideCursor ?? true,
+        indent: opts.indent ?? 0,
+        interval: opts.interval ?? 100,
+        stream: opts.stream ?? Deno.stdout,
+        enabled: true,
+        discardStdin: true,
+        interceptConsole: opts.interceptConsole ?? true
+    });
+}
 class Spinner {
     #opts;
     isSpinning;
@@ -3709,17 +3506,52 @@ class Spinner {
         this.#frameIndex = 0;
         this.#linesToClear = 0;
         this.#linesCount = 1;
-        this.#enabled = typeof opts.enabled === "boolean" ? opts.enabled : mod3.isInteractive(this.#stream);
+        this.#enabled = typeof opts.enabled === "boolean" ? opts.enabled : mod1.isInteractive(this.#stream);
         if (opts.hideCursor) {
             addEventListener("unload", ()=>{
-                mod3.showCursorSync(this.#stream);
+                mod1.showCursorSync(this.#stream);
             });
+        }
+        if (opts.interceptConsole) {
+            this.#interceptConsole();
         }
     }
     #spinner = __default1.dots;
-    #color = mod2.cyan;
+    #color = mod.cyan;
     #text = "";
     #prefix = "";
+    #interceptConsole() {
+        const methods = [
+            "log",
+            "warn",
+            "error",
+            "info",
+            "debug",
+            "time",
+            "timeEnd",
+            "trace",
+            "dir",
+            "assert",
+            "count",
+            "countReset",
+            "table",
+            "dirxml",
+            "timeLog"
+        ];
+        for (const method of methods){
+            const original = console[method];
+            console[method] = (...args)=>{
+                if (this.isSpinning) {
+                    this.stop();
+                    this.clear();
+                    original(...args);
+                    this.start();
+                } else {
+                    original(...args);
+                }
+            };
+        }
+    }
     set spinner(spin) {
         this.#frameIndex = 0;
         if (typeof spin === "string") this.#spinner = __default1[spin];
@@ -3761,8 +3593,9 @@ class Spinner {
         }
         if (this.isSpinning) return this;
         if (this.#opts.hideCursor) {
-            mod3.hideCursorSync(this.#stream);
+            mod1.hideCursorSync(this.#stream);
         }
+        this.isSpinning = true;
         this.render();
         this.#id = setInterval(this.render.bind(this), this.interval);
         return this;
@@ -3774,7 +3607,7 @@ class Spinner {
         this.#linesToClear = this.#linesCount;
     }
     frame() {
-        const { frames  } = this.#spinner;
+        const { frames } = this.#spinner;
         let frame = frames[this.#frameIndex];
         frame = this.#color(frame);
         this.#frameIndex = ++this.#frameIndex % frames.length;
@@ -3785,20 +3618,20 @@ class Spinner {
     clear() {
         if (!this.#enabled) return;
         for(let i = 0; i < this.#linesToClear; i++){
-            mod3.goUpSync(1, this.#stream);
-            mod3.clearLineSync(this.#stream);
-            mod3.goRightSync(this.indent - 1, this.#stream);
+            mod1.goUpSync(1, this.#stream);
+            mod1.clearLineSync(this.#stream);
+            mod1.goRightSync(this.indent - 1, this.#stream);
         }
         this.#linesToClear = 0;
     }
     updateLines() {
         let columns = 80;
         try {
-            columns = Deno.consoleSize(this.#stream.rid)?.columns ?? columns;
+            columns = Deno.consoleSize().columns ?? columns;
         } catch  {}
         const fullPrefixText = typeof this.prefix === "string" ? this.prefix + "-" : "";
-        this.#linesCount = mod3.stripAnsi(fullPrefixText + "--" + this.text).split("\n").reduce((count, line)=>{
-            return count + Math.max(1, Math.ceil(mod3.wcswidth(line) / columns));
+        this.#linesCount = mod1.stripAnsi(fullPrefixText + "--" + this.text).split("\n").reduce((count, line)=>{
+            return count + Math.max(1, Math.ceil(mod1.wcswidth(line) / columns));
         }, 0);
     }
     stop() {
@@ -3807,8 +3640,9 @@ class Spinner {
         this.#id = -1;
         this.#frameIndex = 0;
         this.clear();
+        this.isSpinning = false;
         if (this.#opts.hideCursor) {
-            mod3.showCursorSync(this.#stream);
+            mod1.showCursorSync(this.#stream);
         }
     }
     stopAndPersist(options = {}) {
@@ -3817,7 +3651,7 @@ class Spinner {
         const text = options.text || this.text;
         const fullText = typeof text === "string" ? " " + text : "";
         this.stop();
-        console.log(`${fullPrefix}${options.symbol || " "}${fullText}`);
+        this.write(`${fullPrefix}${options.symbol || " "}${fullText}\n`);
     }
     succeed(text) {
         return this.stopAndPersist({
@@ -3847,7 +3681,7 @@ class Spinner {
 async function parseEntrypoint(entrypoint, root, diagnosticName = "entrypoint") {
     let entrypointSpecifier;
     try {
-        if (entrypoint.startsWith("https://") || entrypoint.startsWith("http://") || entrypoint.startsWith("file://")) {
+        if (isURL(entrypoint)) {
             entrypointSpecifier = new URL(entrypoint);
         } else {
             entrypointSpecifier = toFileUrl2(resolve2(root ?? Deno.cwd(), entrypoint));
@@ -3858,12 +3692,47 @@ async function parseEntrypoint(entrypoint, root, diagnosticName = "entrypoint") 
     if (entrypointSpecifier.protocol == "file:") {
         try {
             await Deno.lstat(entrypointSpecifier);
-        } catch (err1) {
-            throw `Failed to open ${diagnosticName} file at '${entrypointSpecifier}': ${err1.message}`;
+        } catch (err) {
+            throw `Failed to open ${diagnosticName} file at '${entrypointSpecifier}': ${err.message}`;
         }
     }
     return entrypointSpecifier;
 }
+function isURL(entrypoint) {
+    return entrypoint.startsWith("https://") || entrypoint.startsWith("http://") || entrypoint.startsWith("file://");
+}
+const VERSION = "1.12.0";
+let current = null;
+function wait1(param) {
+    if (typeof param === "string") {
+        param = {
+            text: param
+        };
+    }
+    param.interceptConsole = false;
+    current = wait({
+        stream: Deno.stderr,
+        ...param
+    });
+    return current;
+}
+function interruptSpinner() {
+    current?.stop();
+    const interrupt = new Interrupt(current);
+    current = null;
+    return interrupt;
+}
+class Interrupt {
+    #spinner;
+    constructor(spinner){
+        this.#spinner = spinner;
+    }
+    resume() {
+        current = this.#spinner;
+        this.#spinner?.start();
+    }
+}
+const USER_AGENT = `DeployCTL/${VERSION} (${Deno.build.os} ${Deno.osRelease()}; ${Deno.build.arch})`;
 class APIError extends Error {
     code;
     xDenoRay;
@@ -3882,6 +3751,9 @@ class APIError extends Error {
         return error;
     }
 }
+function endpoint() {
+    return Deno.env.get("DEPLOY_API_ENDPOINT") ?? "https://dash.deno.com";
+}
 class API {
     #endpoint;
     #authorization;
@@ -3890,28 +3762,45 @@ class API {
         this.#endpoint = endpoint;
     }
     static fromToken(token) {
-        const endpoint = Deno.env.get("DEPLOY_API_ENDPOINT") ?? "https://dash.deno.com";
-        return new API(`Bearer ${token}`, endpoint);
+        return new API(`Bearer ${token}`, endpoint());
     }
-    async #request(path2, opts = {}) {
-        const url = `${this.#endpoint}/api${path2}`;
+    static withTokenProvisioner(provisioner) {
+        return new API(provisioner, endpoint());
+    }
+    async request(path, opts = {}) {
+        const url = `${this.#endpoint}/api${path}`;
         const method = opts.method ?? "GET";
-        const body = opts.body !== undefined ? opts.body instanceof FormData ? opts.body : JSON.stringify(opts.body) : undefined;
+        const body = typeof opts.body === "string" || opts.body instanceof FormData ? opts.body : JSON.stringify(opts.body);
+        const authorization = typeof this.#authorization === "string" ? this.#authorization : `Bearer ${await this.#authorization.get() ?? await this.#authorization.provision()}`;
+        const sudo = Deno.env.get("SUDO");
         const headers = {
-            "Accept": "application/json",
-            "Authorization": this.#authorization,
+            "User-Agent": USER_AGENT,
+            "Accept": opts.accept ?? "application/json",
+            "Authorization": authorization,
             ...opts.body !== undefined ? opts.body instanceof FormData ? {} : {
                 "Content-Type": "application/json"
+            } : {},
+            ...sudo ? {
+                ["x-deploy-sudo"]: sudo
             } : {}
         };
-        return await fetch(url, {
+        let res = await fetch(url, {
             method,
             headers,
             body
         });
+        if (res.status === 401 && typeof this.#authorization === "object") {
+            headers.Authorization = `Bearer ${await this.#authorization.provision()}`;
+            res = await fetch(url, {
+                method,
+                headers,
+                body
+            });
+        }
+        return res;
     }
-    async #requestJson(path11, opts1) {
-        const res = await this.#request(path11, opts1);
+    async #requestJson(path, opts) {
+        const res = await this.request(path, opts);
         if (res.headers.get("Content-Type") !== "application/json") {
             const text = await res.text();
             throw new Error(`Expected JSON, got '${text}'`);
@@ -3923,21 +3812,54 @@ class API {
         }
         return json;
     }
-    async *#requestStream(path21, opts2) {
-        const res1 = await this.#request(path21, opts2);
-        if (res1.status !== 200) {
-            const json1 = await res1.json();
-            const xDenoRay1 = res1.headers.get("x-deno-ray");
-            throw new APIError(json1.code, json1.message, xDenoRay1);
+    async #requestStream(path, opts) {
+        const res = await this.request(path, opts);
+        if (res.status !== 200) {
+            const json = await res.json();
+            const xDenoRay = res.headers.get("x-deno-ray");
+            throw new APIError(json.code, json.message, xDenoRay);
         }
-        if (res1.body === null) {
+        if (res.body === null) {
             throw new Error("Stream ended unexpectedly");
         }
-        const lines = res1.body.pipeThrough(new TextDecoderStream()).pipeThrough(new TextLineStream());
-        for await (const line of lines){
-            if (line === "") return;
-            yield JSON.parse(line);
+        const lines = res.body.pipeThrough(new TextDecoderStream()).pipeThrough(new TextLineStream());
+        return async function*() {
+            for await (const line of lines){
+                if (line === "") return;
+                yield line;
+            }
+        }();
+    }
+    async #requestJsonStream(path, opts) {
+        const stream = await this.#requestStream(path, opts);
+        return async function*() {
+            for await (const line of stream){
+                yield JSON.parse(line);
+            }
+        }();
+    }
+    async getOrganizationByName(name) {
+        const organizations = await this.#requestJson(`/organizations`);
+        for (const org of organizations){
+            if (org.name === name) {
+                return org;
+            }
         }
+    }
+    async getOrganizationById(id) {
+        return await this.#requestJson(`/organizations/${id}`);
+    }
+    async createOrganization(name) {
+        const body = {
+            name
+        };
+        return await this.#requestJson(`/organizations`, {
+            method: "POST",
+            body
+        });
+    }
+    async listOrganizations() {
+        return await this.#requestJson(`/organizations`);
     }
     async getProject(id) {
         try {
@@ -3949,9 +3871,60 @@ class API {
             throw err;
         }
     }
-    async getDeployments(projectId) {
+    async createProject(name, organizationId, envs) {
+        const body = {
+            name,
+            organizationId,
+            envs
+        };
+        return await this.#requestJson(`/projects/`, {
+            method: "POST",
+            body
+        });
+    }
+    async renameProject(id, newName) {
+        const body = {
+            name: newName
+        };
+        await this.#requestJson(`/projects/${id}`, {
+            method: "PATCH",
+            body
+        });
+    }
+    async deleteProject(id) {
         try {
-            return await this.#requestJson(`/projects/${projectId}/deployments/`);
+            await this.#requestJson(`/projects/${id}`, {
+                method: "DELETE"
+            });
+            return true;
+        } catch (err) {
+            if (err instanceof APIError && err.code === "projectNotFound") {
+                return false;
+            }
+            throw err;
+        }
+    }
+    async listProjects(orgId) {
+        const org = await this.#requestJson(`/organizations/${orgId}`);
+        return org.projects;
+    }
+    async getDomains(projectId) {
+        return await this.#requestJson(`/projects/${projectId}/domains`);
+    }
+    async listDeployments(projectId, page, limit) {
+        const query = new URLSearchParams();
+        if (page !== undefined) {
+            query.set("page", page.toString());
+        }
+        if (limit !== undefined) {
+            query.set("limit", limit.toString());
+        }
+        try {
+            const [list, paging] = await this.#requestJson(`/projects/${projectId}/deployments?${query}`);
+            return {
+                list,
+                paging
+            };
         } catch (err) {
             if (err instanceof APIError && err.code === "projectNotFound") {
                 return null;
@@ -3959,8 +3932,64 @@ class API {
             throw err;
         }
     }
+    async *listAllDeployments(projectId) {
+        let totalPages = 1;
+        let page = 0;
+        while(totalPages > page){
+            const [deployments, paging] = await this.#requestJson(`/projects/${projectId}/deployments/?limit=50&page=${page}`);
+            for (const deployment of deployments){
+                yield deployment;
+            }
+            totalPages = paging.totalPages;
+            page = paging.page + 1;
+        }
+    }
+    async getDeployment(deploymentId) {
+        try {
+            return await this.#requestJson(`/deployments/${deploymentId}`);
+        } catch (err) {
+            if (err instanceof APIError && err.code === "deploymentNotFound") {
+                return null;
+            }
+            throw err;
+        }
+    }
+    async deleteDeployment(deploymentId) {
+        try {
+            await this.#requestJson(`/v1/deployments/${deploymentId}`, {
+                method: "DELETE"
+            });
+            return true;
+        } catch (err) {
+            if (err instanceof APIError && err.code === "deploymentNotFound") {
+                return false;
+            }
+            throw err;
+        }
+    }
+    async redeployDeployment(deploymentId, redeployParams) {
+        try {
+            return await this.#requestJson(`/v1/deployments/${deploymentId}/redeploy?internal=true`, {
+                method: "POST",
+                body: redeployParams
+            });
+        } catch (err) {
+            if (err instanceof APIError && err.code === "deploymentNotFound") {
+                return null;
+            }
+            throw err;
+        }
+    }
     getLogs(projectId, deploymentId) {
-        return this.#requestStream(`/projects/${projectId}/deployments/${deploymentId}/logs/`);
+        return this.#requestJsonStream(`/projects/${projectId}/deployments/${deploymentId}/logs/`, {
+            accept: "application/x-ndjson"
+        });
+    }
+    async queryLogs(projectId, deploymentId, params) {
+        const searchParams = new URLSearchParams({
+            params: JSON.stringify(params)
+        });
+        return await this.#requestJson(`/projects/${projectId}/deployments/${deploymentId}/query_logs?${searchParams.toString()}`);
     }
     async projectNegotiateAssets(id, manifest) {
         return await this.#requestJson(`/projects/${id}/assets/negotiate`, {
@@ -3976,7 +4005,7 @@ class API {
                 bytes
             ]));
         }
-        return this.#requestStream(`/projects/${projectId}/deployment_with_assets`, {
+        return this.#requestJsonStream(`/projects/${projectId}/deployment_with_assets`, {
             method: "POST",
             body: form
         });
@@ -3989,10 +4018,58 @@ class API {
                 bytes
             ]));
         }
-        return this.#requestStream(`/projects/${projectId}/deployment_github_actions`, {
+        return this.#requestJsonStream(`/projects/${projectId}/deployment_github_actions`, {
             method: "POST",
             body: form
         });
+    }
+    getMetadata() {
+        return this.#requestJson("/meta");
+    }
+    async streamMetering(project) {
+        const streamGen = ()=>this.#requestStream(`/projects/${project}/stats`);
+        let stream = await streamGen();
+        return async function*() {
+            for(;;){
+                try {
+                    for await (const line of stream){
+                        try {
+                            yield JSON.parse(line);
+                        } catch  {}
+                    }
+                } catch (error) {
+                    const interrupt = interruptSpinner();
+                    const spinner = wait1(`Error: ${error}. Reconnecting...`).start();
+                    await delay(5_000);
+                    stream = await streamGen();
+                    spinner.stop();
+                    interrupt.resume();
+                }
+            }
+        }();
+    }
+    async getProjectDatabases(project) {
+        try {
+            return await this.#requestJson(`/projects/${project}/databases`);
+        } catch (err) {
+            if (err instanceof APIError && err.code === "projectNotFound") {
+                return null;
+            }
+            throw err;
+        }
+    }
+    async getDeploymentCrons(projectId, deploymentId) {
+        return await this.#requestJson(`/projects/${projectId}/deployments/${deploymentId}/crons`);
+    }
+    async getProjectCrons(projectId) {
+        try {
+            return await this.#requestJson(`/projects/${projectId}/deployments/latest/crons`);
+        } catch (err) {
+            if (err instanceof APIError && err.code === "deploymentNotFound") {
+                return null;
+            }
+            throw err;
+        }
     }
 }
 async function calculateGitSha1(bytes) {
@@ -4006,10 +4083,10 @@ async function calculateGitSha1(bytes) {
     return hashHex;
 }
 function include(path, include, exclude) {
-    if (include.length && !include.some((pattern)=>path.startsWith(pattern))) {
+    if (include.length && !include.some((pattern)=>pattern.test(normalize2(path)))) {
         return false;
     }
-    if (exclude.length && exclude.some((pattern)=>path.startsWith(pattern))) {
+    if (exclude.length && exclude.some((pattern)=>pattern.test(normalize2(path)))) {
         return false;
     }
     return true;
@@ -4017,12 +4094,9 @@ function include(path, include, exclude) {
 async function walk(cwd, dir, files, options) {
     const entries = {};
     for await (const file of Deno.readDir(dir)){
-        const path = join3(dir, file.name);
+        const path = join2(dir, file.name);
         const relative = path.slice(cwd.length);
-        // Do not test directories, because --include=foo/bar must include the directory foo
-        if (!file.isDirectory && 
-            // .slice(1) removes the leading slash
-            !include(relative.slice(1), options.include, options.exclude)) {
+        if (!file.isDirectory && !include(path.slice(cwd.length + 1), options.include, options.exclude)) {
             continue;
         }
         let entry;
@@ -4036,7 +4110,7 @@ async function walk(cwd, dir, files, options) {
             };
             files.set(gitSha1, path);
         } else if (file.isDirectory) {
-            if (relative === "/.git" || relative.endsWith("/node_modules")) continue;
+            if (relative === "/.git") continue;
             entry = {
                 kind: "directory",
                 entries: await walk(cwd, path, files, options)
@@ -4057,5 +4131,13 @@ async function walk(cwd, dir, files, options) {
 export { parseEntrypoint as parseEntrypoint };
 export { API as API, APIError as APIError };
 export { walk as walk };
-export { fromFileUrl2 as fromFileUrl, resolve2 as resolve, normalize3 as normalize };
+export { fromFileUrl2 as fromFileUrl, normalize2 as normalize, resolve2 as resolve };
+function isTerminal(stream) {
+    if (greaterOrEqual(parse(Deno.version.deno), parse("1.40.0"))) {
+        return stream.isTerminal();
+    } else {
+        return Deno.isatty(stream.rid);
+    }
+}
+export { isTerminal as isTerminal };
 

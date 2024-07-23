@@ -17,6 +17,11 @@ Returns: `ProxyAgent`
 Extends: [`AgentOptions`](Agent.md#parameter-agentoptions)
 
 * **uri** `string` (required) - It can be passed either by a string or a object containing `uri` as string.
+* **token** `string` (optional) - It can be passed by a string of token for authentication.
+* **auth** `string` (**deprecated**) - Use token.
+* **clientFactory** `(origin: URL, opts: Object) => Dispatcher` (optional) - Default: `(origin, opts) => new Pool(origin, opts)`
+* **requestTls** `BuildOptions` (optional) - Options object passed when creating the underlying socket via the connector builder for the request. See [TLS](https://nodejs.org/api/tls.html#tlsconnectoptions-callback).
+* **proxyTls** `BuildOptions` (optional) - Options object passed when creating the underlying socket via the connector builder for the proxy server. See [TLS](https://nodejs.org/api/tls.html#tlsconnectoptions-callback).
 
 Examples:
 
@@ -71,6 +76,27 @@ console.log('response received', statusCode) // response received 200
 
 for await (const data of body) {
   console.log('data', data.toString('utf8')) // data foo
+}
+```
+
+#### Example - Basic Proxy Request with authentication
+
+```js
+import { setGlobalDispatcher, request, ProxyAgent } from 'undici';
+
+const proxyAgent = new ProxyAgent({
+  uri: 'my.proxy.server',
+  // token: 'Bearer xxxx'
+  token: `Basic ${Buffer.from('username:password').toString('base64')}`
+});
+setGlobalDispatcher(proxyAgent);
+
+const { statusCode, body } = await request('http://localhost:3000/foo');
+
+console.log('response received', statusCode); // response received 200
+
+for await (const data of body) {
+  console.log('data', data.toString('utf8')); // data foo
 }
 ```
 
