@@ -2,8 +2,6 @@
 // deno-lint-ignore-file
 // This code was bundled using `deno task build-action` and it's not recommended to edit it manually
 
-import "./shim.js";
-
 function assertPath(path) {
     if (typeof path !== "string") {
         throw new TypeError(`Path must be a string. Received ${JSON.stringify(path)}`);
@@ -3734,7 +3732,7 @@ class Interrupt {
         this.#spinner?.start();
     }
 }
-const USER_AGENT = `DeployCTL/${VERSION} (${Deno.build.os}; ${Deno.build.arch})`;
+const USER_AGENT = `DeployCTL/${VERSION} (${Deno.build.os} ${Deno.osRelease()}; ${Deno.build.arch})`;
 class APIError extends Error {
     code;
     xDenoRay;
