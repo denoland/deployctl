@@ -76,10 +76,10 @@ async function main() {
   const assets = new Map();
   const entries = await walk(cwd, cwd, assets, {
     include: include.flatMap((i) => i.split(",")).map((pattern) =>
-      normalize(pattern)
+      new RegExp(normalize(pattern))
     ),
     exclude: exclude.flatMap((e) => e.split(",")).map((pattern) =>
-      normalize(pattern)
+      new RegExp(normalize(pattern))
     ),
   });
   core.debug(`Discovered ${assets.size} assets`);
