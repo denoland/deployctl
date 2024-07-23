@@ -4131,7 +4131,7 @@ async function walk(cwd, dir, files, options) {
 export { parseEntrypoint as parseEntrypoint };
 export { API as API, APIError as APIError };
 export { walk as walk };
-export { fromFileUrl2 as fromFileUrl, resolve2 as resolve };
+export { fromFileUrl2 as fromFileUrl, normalize2 as normalize, resolve2 as resolve };
 function isTerminal(stream) {
     if (greaterOrEqual(parse(Deno.version.deno), parse("1.40.0"))) {
         return stream.isTerminal();
