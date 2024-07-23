@@ -2,6 +2,8 @@
 // deno-lint-ignore-file
 // This code was bundled using `deno task build-action` and it's not recommended to edit it manually
 
+import "./shim.js";
+
 function assertPath(path) {
     if (typeof path !== "string") {
         throw new TypeError(`Path must be a string. Received ${JSON.stringify(path)}`);
