@@ -18,30 +18,34 @@ npm i undici
 ## Benchmarks
 
 The benchmark is a simple `hello world` [example](benchmarks/benchmark.js) using a
-number of unix sockets (connections) with a pipelining depth of 10 running on Node 16.
-The benchmarks below have the [simd](https://github.com/WebAssembly/simd) feature enabled.
+number of unix sockets (connections) with a pipelining depth of 10 running on Node 20.6.0.
 
 ### Connections 1
 
+
 | Tests               | Samples |        Result | Tolerance | Difference with slowest |
 |---------------------|---------|---------------|-----------|-------------------------|
-| http - no keepalive |      15 |  4.63 req/sec |  ± 2.77 % |                       - |
-| http - keepalive    |      10 |  4.81 req/sec |  ± 2.16 % |                + 3.94 % |
-| undici - stream     |      25 | 62.22 req/sec |  ± 2.67 % |             + 1244.58 % |
-| undici - dispatch   |      15 | 64.33 req/sec |  ± 2.47 % |             + 1290.24 % |
-| undici - request    |      15 | 66.08 req/sec |  ± 2.48 % |             + 1327.88 % |
-| undici - pipeline   |      10 | 66.13 req/sec |  ± 1.39 % |             + 1329.08 % |
+| http - no keepalive |      15 |  5.32 req/sec |  ± 2.61 % |                       - |
+| http - keepalive    |      10 |  5.35 req/sec |  ± 2.47 % |                + 0.44 % |
+| undici - fetch      |      15 | 41.85 req/sec |  ± 2.49 % |              + 686.04 % |
+| undici - pipeline   |      40 | 50.36 req/sec |  ± 2.77 % |              + 845.92 % |
+| undici - stream     |      15 | 60.58 req/sec |  ± 2.75 % |             + 1037.72 % |
+| undici - request    |      10 | 61.19 req/sec |  ± 2.60 % |             + 1049.24 % |
+| undici - dispatch   |      20 | 64.84 req/sec |  ± 2.81 % |             + 1117.81 % |
+
 
 ### Connections 50
 
 | Tests               | Samples |           Result | Tolerance | Difference with slowest |
 |---------------------|---------|------------------|-----------|-------------------------|
-| http - no keepalive |      50 |  3546.49 req/sec |  ± 2.90 % |                       - |
-| http - keepalive    |      15 |  5692.67 req/sec |  ± 2.48 % |               + 60.52 % |
-| undici - pipeline   |      25 |  8478.71 req/sec |  ± 2.62 % |              + 139.07 % |
-| undici - request    |      20 |  9766.66 req/sec |  ± 2.79 % |              + 175.39 % |
-| undici - stream     |      15 | 10109.74 req/sec |  ± 2.94 % |              + 185.06 % |
-| undici - dispatch   |      25 | 10949.73 req/sec |  ± 2.54 % |              + 208.75 % |
+| undici - fetch      |      30 |  2107.19 req/sec |  ± 2.69 % |                       - |
+| http - no keepalive |      10 |  2698.90 req/sec |  ± 2.68 % |               + 28.08 % |
+| http - keepalive    |      10 |  4639.49 req/sec |  ± 2.55 % |              + 120.17 % |
+| undici - pipeline   |      40 |  6123.33 req/sec |  ± 2.97 % |              + 190.59 % |
+| undici - stream     |      50 |  9426.51 req/sec |  ± 2.92 % |              + 347.35 % |
+| undici - request    |      10 | 10162.88 req/sec |  ± 2.13 % |              + 382.29 % |
+| undici - dispatch   |      50 | 11191.11 req/sec |  ± 2.98 % |              + 431.09 % |
+
 
 ## Quick Start
 
@@ -178,10 +182,6 @@ Implements [fetch](https://fetch.spec.whatwg.org/#fetch-method).
 
 Only supported on Node 16.8+.
 
-This is [experimental](https://nodejs.org/api/documentation.html#documentation_stability_index) and is not yet fully compliant with the Fetch Standard.
-We plan to ship breaking changes to this feature until it is out of experimental.
-Help us improve the test coverage by following instructions at [nodejs/undici/#951](https://github.com/nodejs/undici/issues/951).
-
 Basic usage example:
 
 ```js
@@ -234,8 +234,14 @@ const data = {
   },
 }
 
-await fetch('https://example.com', { body: data, method: 'POST' })
+await fetch('https://example.com', { body: data, method: 'POST', duplex: 'half' })
 ```
+
+#### `request.duplex`
+
+- half
+
+In this implementation of fetch, `request.duplex` must be set if `request.body` is `ReadableStream` or `Async Iterables`. And fetch requests are currently always be full duplex. More detail refer to [Fetch Standard.](https://fetch.spec.whatwg.org/#dom-requestinit-duplex)
 
 #### `response.body`
 
@@ -403,6 +409,18 @@ implementations in Deno and Cloudflare Workers.
 
 Refs: https://fetch.spec.whatwg.org/#atomic-http-redirect-handling
 
+## Workarounds
+
+### Network address family autoselection.
+
+If you experience problem when connecting to a remote server that is resolved by your DNS servers to a IPv6 (AAAA record)
+first, there are chances that your local router or ISP might have problem connecting to IPv6 networks. In that case
+undici will throw an error with code `UND_ERR_CONNECT_TIMEOUT`. 
+
+If the target server resolves to both a IPv6 and IPv4 (A records) address and you are using a compatible Node version 
+(18.3.0 and above), you can fix the problem by providing the `autoSelectFamily` option (support by both `undici.request`
+and `undici.Agent`) which will enable the family autoselection algorithm when establishing the connection.
+
 ## Collaborators
 
 * [__Daniele Belardi__](https://github.com/dnlup), <https://www.npmjs.com/~dnlup>
@@ -418,6 +436,7 @@ Refs: https://fetch.spec.whatwg.org/#atomic-http-redirect-handling
 * [__Ethan Arrowood__](https://github.com/ethan-arrowood), <https://www.npmjs.com/~ethan_arrowood>
 * [__Matteo Collina__](https://github.com/mcollina), <https://www.npmjs.com/~matteo.collina>
 * [__Robert Nagy__](https://github.com/ronag), <https://www.npmjs.com/~ronag>
+* [__Matthew Aitken__](https://github.com/KhafraDev), <https://www.npmjs.com/~khaf>
 
 ## License
 

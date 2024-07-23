@@ -5,6 +5,7 @@ const {
   NotSupportedError
 } = require('./errors')
 const assert = require('assert')
+const { kHTTP2BuildRequest, kHTTP2CopyHeaders, kHTTP1BuildRequest } = require('./symbols')
 const util = require('./util')
 
 // tokenRegExp and headerCharRegex have been lifted from
@@ -34,10 +35,6 @@ const channels = {}
 
 let extractBody
 
-const nodeVersion = process.versions.node.split('.')
-const nodeMajor = Number(nodeVersion[0])
-const nodeMinor = Number(nodeVersion[1])
-
 try {
   const diagnosticsChannel = require('diagnostics_channel')
   channels.create = diagnosticsChannel.channel('undici:request:create')
@@ -65,7 +62,9 @@ class Request {
     upgrade,
     headersTimeout,
     bodyTimeout,
-    throwOnError
+    reset,
+    throwOnError,
+    expectContinue
   }, handler) {
     if (typeof path !== 'string') {
       throw new InvalidArgumentError('path must be a string')
@@ -97,6 +96,14 @@ class Request {
       throw new InvalidArgumentError('invalid bodyTimeout')
     }
 
+    if (reset != null && typeof reset !== 'boolean') {
+      throw new InvalidArgumentError('invalid reset')
+    }
+
+    if (expectContinue != null && typeof expectContinue !== 'boolean') {
+      throw new InvalidArgumentError('invalid expectContinue')
+    }
+
     this.headersTimeout = headersTimeout
 
     this.bodyTimeout = bodyTimeout
@@ -105,10 +112,29 @@ class Request {
 
     this.method = method
 
+    this.abort = null
+
     if (body == null) {
       this.body = null
     } else if (util.isStream(body)) {
       this.body = body
+
+      const rState = this.body._readableState
+      if (!rState || !rState.autoDestroy) {
+        this.endHandler = function autoDestroy () {
+          util.destroy(this)
+        }
+        this.body.on('end', this.endHandler)
+      }
+
+      this.errorHandler = err => {
+        if (this.abort) {
+          this.abort(err)
+        } else {
+          this.error = err
+        }
+      }
+      this.body.on('error', this.errorHandler)
     } else if (util.isBuffer(body)) {
       this.body = body.byteLength ? body : null
     } else if (ArrayBuffer.isView(body)) {
@@ -139,6 +165,8 @@ class Request {
 
     this.blocking = blocking == null ? false : blocking
 
+    this.reset = reset == null ? null : reset
+
     this.host = null
 
     this.contentLength = null
@@ -146,6 +174,9 @@ class Request {
     this.contentType = null
 
     this.headers = ''
+
+    // Only for H2
+    this.expectContinue = expectContinue != null ? expectContinue : false
 
     if (Array.isArray(headers)) {
       if (headers.length % 2 !== 0) {
@@ -165,7 +196,7 @@ class Request {
     }
 
     if (util.isFormDataLike(this.body)) {
-      if (nodeMajor < 16 || (nodeMajor === 16 && nodeMinor < 8)) {
+      if (util.nodeMajor < 16 || (util.nodeMajor === 16 && util.nodeMinor < 8)) {
         throw new InvalidArgumentError('Form-Data bodies are only supported in node v16.8 and newer.')
       }
 
@@ -179,6 +210,7 @@ class Request {
         this.headers += `content-type: ${contentType}\r\n`
       }
       this.body = bodyStream.stream
+      this.contentLength = bodyStream.length
     } else if (util.isBlobLike(body) && this.contentType == null && body.type) {
       this.contentType = body.type
       this.headers += `content-type: ${body.type}\r\n`
@@ -198,9 +230,9 @@ class Request {
   onBodySent (chunk) {
     if (this[kHandler].onBodySent) {
       try {
-        this[kHandler].onBodySent(chunk)
+        return this[kHandler].onBodySent(chunk)
       } catch (err) {
-        this.onError(err)
+        this.abort(err)
       }
     }
   }
@@ -209,13 +241,26 @@ class Request {
     if (channels.bodySent.hasSubscribers) {
       channels.bodySent.publish({ request: this })
     }
+
+    if (this[kHandler].onRequestSent) {
+      try {
+        return this[kHandler].onRequestSent()
+      } catch (err) {
+        this.abort(err)
+      }
+    }
   }
 
   onConnect (abort) {
     assert(!this.aborted)
     assert(!this.completed)
 
-    return this[kHandler].onConnect(abort)
+    if (this.error) {
+      abort(this.error)
+    } else {
+      this.abort = abort
+      return this[kHandler].onConnect(abort)
+    }
   }
 
   onHeaders (statusCode, headers, resume, statusText) {
@@ -226,14 +271,23 @@ class Request {
       channels.headers.publish({ request: this, response: { statusCode, headers, statusText } })
     }
 
-    return this[kHandler].onHeaders(statusCode, headers, resume, statusText)
+    try {
+      return this[kHandler].onHeaders(statusCode, headers, resume, statusText)
+    } catch (err) {
+      this.abort(err)
+    }
   }
 
   onData (chunk) {
     assert(!this.aborted)
     assert(!this.completed)
 
-    return this[kHandler].onData(chunk)
+    try {
+      return this[kHandler].onData(chunk)
+    } catch (err) {
+      this.abort(err)
+      return false
+    }
   }
 
   onUpgrade (statusCode, headers, socket) {
@@ -244,16 +298,26 @@ class Request {
   }
 
   onComplete (trailers) {
+    this.onFinally()
+
     assert(!this.aborted)
 
     this.completed = true
     if (channels.trailers.hasSubscribers) {
       channels.trailers.publish({ request: this, trailers })
     }
-    return this[kHandler].onComplete(trailers)
+
+    try {
+      return this[kHandler].onComplete(trailers)
+    } catch (err) {
+      // TODO (fix): This might be a bad idea?
+      this.onError(err)
+    }
   }
 
   onError (error) {
+    this.onFinally()
+
     if (channels.error.hasSubscribers) {
       channels.error.publish({ request: this, error })
     }
@@ -262,17 +326,95 @@ class Request {
       return
     }
     this.aborted = true
+
     return this[kHandler].onError(error)
   }
 
+  onFinally () {
+    if (this.errorHandler) {
+      this.body.off('error', this.errorHandler)
+      this.errorHandler = null
+    }
+
+    if (this.endHandler) {
+      this.body.off('end', this.endHandler)
+      this.endHandler = null
+    }
+  }
+
+  // TODO: adjust to support H2
   addHeader (key, value) {
     processHeader(this, key, value)
     return this
   }
+
+  static [kHTTP1BuildRequest] (origin, opts, handler) {
+    // TODO: Migrate header parsing here, to make Requests
+    // HTTP agnostic
+    return new Request(origin, opts, handler)
+  }
+
+  static [kHTTP2BuildRequest] (origin, opts, handler) {
+    const headers = opts.headers
+    opts = { ...opts, headers: null }
+
+    const request = new Request(origin, opts, handler)
+
+    request.headers = {}
+
+    if (Array.isArray(headers)) {
+      if (headers.length % 2 !== 0) {
+        throw new InvalidArgumentError('headers array must be even')
+      }
+      for (let i = 0; i < headers.length; i += 2) {
+        processHeader(request, headers[i], headers[i + 1], true)
+      }
+    } else if (headers && typeof headers === 'object') {
+      const keys = Object.keys(headers)
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i]
+        processHeader(request, key, headers[key], true)
+      }
+    } else if (headers != null) {
+      throw new InvalidArgumentError('headers must be an object or an array')
+    }
+
+    return request
+  }
+
+  static [kHTTP2CopyHeaders] (raw) {
+    const rawHeaders = raw.split('\r\n')
+    const headers = {}
+
+    for (const header of rawHeaders) {
+      const [key, value] = header.split(': ')
+
+      if (value == null || value.length === 0) continue
+
+      if (headers[key]) headers[key] += `,${value}`
+      else headers[key] = value
+    }
+
+    return headers
+  }
 }
 
-function processHeader (request, key, val) {
+function processHeaderValue (key, val, skipAppend) {
   if (val && typeof val === 'object') {
+    throw new InvalidArgumentError(`invalid ${key} header`)
+  }
+
+  val = val != null ? `${val}` : ''
+
+  if (headerCharRegex.exec(val) !== null) {
+    throw new InvalidArgumentError(`invalid ${key} header`)
+  }
+
+  return skipAppend ? val : `${key}: ${val}\r\n`
+}
+
+function processHeader (request, key, val, skipAppend = false) {
+  if (val && (typeof val === 'object' && !Array.isArray(val))) {
     throw new InvalidArgumentError(`invalid ${key} header`)
   } else if (val === undefined) {
     return
@@ -283,6 +425,9 @@ function processHeader (request, key, val) {
     key.length === 4 &&
     key.toLowerCase() === 'host'
   ) {
+    if (headerCharRegex.exec(val) !== null) {
+      throw new InvalidArgumentError(`invalid ${key} header`)
+    }
     // Consumed by Client
     request.host = val
   } else if (
@@ -297,11 +442,11 @@ function processHeader (request, key, val) {
   } else if (
     request.contentType === null &&
     key.length === 12 &&
-    key.toLowerCase() === 'content-type' &&
-    headerCharRegex.exec(val) === null
+    key.toLowerCase() === 'content-type'
   ) {
     request.contentType = val
-    request.headers += `${key}: ${val}\r\n`
+    if (skipAppend) request.headers[key] = processHeaderValue(key, val, skipAppend)
+    else request.headers += processHeaderValue(key, val)
   } else if (
     key.length === 17 &&
     key.toLowerCase() === 'transfer-encoding'
@@ -311,7 +456,12 @@ function processHeader (request, key, val) {
     key.length === 10 &&
     key.toLowerCase() === 'connection'
   ) {
-    throw new InvalidArgumentError('invalid connection header')
+    const value = typeof val === 'string' ? val.toLowerCase() : null
+    if (value !== 'close' && value !== 'keep-alive') {
+      throw new InvalidArgumentError('invalid connection header')
+    } else if (value === 'close') {
+      request.reset = true
+    }
   } else if (
     key.length === 10 &&
     key.toLowerCase() === 'keep-alive'
@@ -329,10 +479,20 @@ function processHeader (request, key, val) {
     throw new NotSupportedError('expect header not supported')
   } else if (tokenRegExp.exec(key) === null) {
     throw new InvalidArgumentError('invalid header key')
-  } else if (headerCharRegex.exec(val) !== null) {
-    throw new InvalidArgumentError(`invalid ${key} header`)
   } else {
-    request.headers += `${key}: ${val}\r\n`
+    if (Array.isArray(val)) {
+      for (let i = 0; i < val.length; i++) {
+        if (skipAppend) {
+          if (request.headers[key]) request.headers[key] += `,${processHeaderValue(key, val[i], skipAppend)}`
+          else request.headers[key] = processHeaderValue(key, val[i], skipAppend)
+        } else {
+          request.headers += processHeaderValue(key, val[i])
+        }
+      }
+    } else {
+      if (skipAppend) request.headers[key] = processHeaderValue(key, val, skipAppend)
+      else request.headers += processHeaderValue(key, val)
+    }
   }
 }
 
