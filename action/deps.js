@@ -3734,7 +3734,7 @@ class Interrupt {
         this.#spinner?.start();
     }
 }
-const USER_AGENT = `DeployCTL/${VERSION} (${Deno.build.os} ${Deno.osRelease()}; ${Deno.build.arch})`;
+const USER_AGENT = `DeployCTL/${VERSION} (${Deno.build.os}; ${Deno.build.arch})`;
 class APIError extends Error {
     code;
     xDenoRay;
