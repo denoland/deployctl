@@ -1,12 +1,6 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import {
-  fromFileUrl,
-  globToRegExp,
-  isGlob,
-  normalize,
-  type Spinner,
-} from "../../deps.ts";
+import { fromFileUrl, type Spinner } from "../../deps.ts";
 import { envVarsFromArgs } from "../utils/env_vars.ts";
 import { wait } from "../utils/spinner.ts";
 import configFile from "../config_file.ts";
@@ -14,7 +8,7 @@ import { error } from "../error.ts";
 import { API, APIError, endpoint } from "../utils/api.ts";
 import type { ManifestEntry } from "../utils/api_types.ts";
 import { parseEntrypoint } from "../utils/entrypoint.ts";
-import { walk } from "../utils/walk.ts";
+import { convertPatternToRegExp, walk } from "../utils/walk.ts";
 import TokenProvisioner from "../utils/access_token.ts";
 import type { Args as RawArgs } from "../args.ts";
 import organization from "../utils/organization.ts";
@@ -280,18 +274,8 @@ async function deploy(opts: DeployOpts): Promise<void> {
     wait("").start().info(`Uploading all files from the current dir (${cwd})`);
     const assetSpinner = wait("Finding static assets...").start();
     const assets = new Map<string, string>();
-    const include = opts.include.map((pattern) =>
-      isGlob(pattern)
-        // slice is used to remove the end-of-string anchor '$'
-        ? RegExp(globToRegExp(normalize(pattern)).toString().slice(1, -2))
-        : RegExp(`^${normalize(pattern)}`)
-    );
-    const exclude = opts.exclude.map((pattern) =>
-      isGlob(pattern)
-        // slice is used to remove the end-of-string anchor '$'
-        ? RegExp(globToRegExp(normalize(pattern)).toString().slice(1, -2))
-        : RegExp(`^${normalize(pattern)}`)
-    );
+    const include = opts.include.map(convertPatternToRegExp);
+    const exclude = opts.exclude.map(convertPatternToRegExp);
     const entries = await walk(cwd, cwd, assets, { include, exclude });
     assetSpinner.succeed(
       `Found ${assets.size} asset${assets.size === 1 ? "" : "s"}.`,
