@@ -352,6 +352,253 @@ function toFileUrl(path) {
     }
     return url;
 }
+const regExpEscapeChars = [
+    "!",
+    "$",
+    "(",
+    ")",
+    "*",
+    "+",
+    ".",
+    "=",
+    "?",
+    "[",
+    "\\",
+    "^",
+    "{",
+    "|"
+];
+const rangeEscapeChars = [
+    "-",
+    "\\",
+    "]"
+];
+function _globToRegExp(c, glob, { extended = true, globstar: globstarOption = true, caseInsensitive = false } = {}) {
+    if (glob === "") {
+        return /(?!)/;
+    }
+    let newLength = glob.length;
+    for(; newLength > 1 && c.seps.includes(glob[newLength - 1]); newLength--);
+    glob = glob.slice(0, newLength);
+    let regExpString = "";
+    for(let j = 0; j < glob.length;){
+        let segment = "";
+        const groupStack = [];
+        let inRange = false;
+        let inEscape = false;
+        let endsWithSep = false;
+        let i = j;
+        for(; i < glob.length && !c.seps.includes(glob[i]); i++){
+            if (inEscape) {
+                inEscape = false;
+                const escapeChars = inRange ? rangeEscapeChars : regExpEscapeChars;
+                segment += escapeChars.includes(glob[i]) ? `\\${glob[i]}` : glob[i];
+                continue;
+            }
+            if (glob[i] === c.escapePrefix) {
+                inEscape = true;
+                continue;
+            }
+            if (glob[i] === "[") {
+                if (!inRange) {
+                    inRange = true;
+                    segment += "[";
+                    if (glob[i + 1] === "!") {
+                        i++;
+                        segment += "^";
+                    } else if (glob[i + 1] === "^") {
+                        i++;
+                        segment += "\\^";
+                    }
+                    continue;
+                } else if (glob[i + 1] === ":") {
+                    let k = i + 1;
+                    let value = "";
+                    while(glob[k + 1] !== undefined && glob[k + 1] !== ":"){
+                        value += glob[k + 1];
+                        k++;
+                    }
+                    if (glob[k + 1] === ":" && glob[k + 2] === "]") {
+                        i = k + 2;
+                        if (value === "alnum") segment += "\\dA-Za-z";
+                        else if (value === "alpha") segment += "A-Za-z";
+                        else if (value === "ascii") segment += "\x00-\x7F";
+                        else if (value === "blank") segment += "\t ";
+                        else if (value === "cntrl") segment += "\x00-\x1F\x7F";
+                        else if (value === "digit") segment += "\\d";
+                        else if (value === "graph") segment += "\x21-\x7E";
+                        else if (value === "lower") segment += "a-z";
+                        else if (value === "print") segment += "\x20-\x7E";
+                        else if (value === "punct") {
+                            segment += "!\"#$%&'()*+,\\-./:;<=>?@[\\\\\\]^_‘{|}~";
+                        } else if (value === "space") segment += "\\s\v";
+                        else if (value === "upper") segment += "A-Z";
+                        else if (value === "word") segment += "\\w";
+                        else if (value === "xdigit") segment += "\\dA-Fa-f";
+                        continue;
+                    }
+                }
+            }
+            if (glob[i] === "]" && inRange) {
+                inRange = false;
+                segment += "]";
+                continue;
+            }
+            if (inRange) {
+                if (glob[i] === "\\") {
+                    segment += `\\\\`;
+                } else {
+                    segment += glob[i];
+                }
+                continue;
+            }
+            if (glob[i] === ")" && groupStack.length > 0 && groupStack[groupStack.length - 1] !== "BRACE") {
+                segment += ")";
+                const type = groupStack.pop();
+                if (type === "!") {
+                    segment += c.wildcard;
+                } else if (type !== "@") {
+                    segment += type;
+                }
+                continue;
+            }
+            if (glob[i] === "|" && groupStack.length > 0 && groupStack[groupStack.length - 1] !== "BRACE") {
+                segment += "|";
+                continue;
+            }
+            if (glob[i] === "+" && extended && glob[i + 1] === "(") {
+                i++;
+                groupStack.push("+");
+                segment += "(?:";
+                continue;
+            }
+            if (glob[i] === "@" && extended && glob[i + 1] === "(") {
+                i++;
+                groupStack.push("@");
+                segment += "(?:";
+                continue;
+            }
+            if (glob[i] === "?") {
+                if (extended && glob[i + 1] === "(") {
+                    i++;
+                    groupStack.push("?");
+                    segment += "(?:";
+                } else {
+                    segment += ".";
+                }
+                continue;
+            }
+            if (glob[i] === "!" && extended && glob[i + 1] === "(") {
+                i++;
+                groupStack.push("!");
+                segment += "(?!";
+                continue;
+            }
+            if (glob[i] === "{") {
+                groupStack.push("BRACE");
+                segment += "(?:";
+                continue;
+            }
+            if (glob[i] === "}" && groupStack[groupStack.length - 1] === "BRACE") {
+                groupStack.pop();
+                segment += ")";
+                continue;
+            }
+            if (glob[i] === "," && groupStack[groupStack.length - 1] === "BRACE") {
+                segment += "|";
+                continue;
+            }
+            if (glob[i] === "*") {
+                if (extended && glob[i + 1] === "(") {
+                    i++;
+                    groupStack.push("*");
+                    segment += "(?:";
+                } else {
+                    const prevChar = glob[i - 1];
+                    let numStars = 1;
+                    while(glob[i + 1] === "*"){
+                        i++;
+                        numStars++;
+                    }
+                    const nextChar = glob[i + 1];
+                    if (globstarOption && numStars === 2 && [
+                        ...c.seps,
+                        undefined
+                    ].includes(prevChar) && [
+                        ...c.seps,
+                        undefined
+                    ].includes(nextChar)) {
+                        segment += c.globstar;
+                        endsWithSep = true;
+                    } else {
+                        segment += c.wildcard;
+                    }
+                }
+                continue;
+            }
+            segment += regExpEscapeChars.includes(glob[i]) ? `\\${glob[i]}` : glob[i];
+        }
+        if (groupStack.length > 0 || inRange || inEscape) {
+            segment = "";
+            for (const c of glob.slice(j, i)){
+                segment += regExpEscapeChars.includes(c) ? `\\${c}` : c;
+                endsWithSep = false;
+            }
+        }
+        regExpString += segment;
+        if (!endsWithSep) {
+            regExpString += i < glob.length ? c.sep : c.sepMaybe;
+            endsWithSep = true;
+        }
+        while(c.seps.includes(glob[i]))i++;
+        if (!(i > j)) {
+            throw new Error("Assertion failure: i > j (potential infinite loop)");
+        }
+        j = i;
+    }
+    regExpString = `^${regExpString}$`;
+    return new RegExp(regExpString, caseInsensitive ? "i" : "");
+}
+const constants = {
+    sep: "(?:\\\\|/)+",
+    sepMaybe: "(?:\\\\|/)*",
+    seps: [
+        "\\",
+        "/"
+    ],
+    globstar: "(?:[^\\\\/]*(?:\\\\|/|$)+)*",
+    wildcard: "[^\\\\/]*",
+    escapePrefix: "`"
+};
+function globToRegExp(glob, options = {}) {
+    return _globToRegExp(constants, glob, options);
+}
+function isGlob(str) {
+    const chars = {
+        "{": "}",
+        "(": ")",
+        "[": "]"
+    };
+    const regex = /\\(.)|(^!|\*|\?|[\].+)]\?|\[[^\\\]]+\]|\{[^\\}]+\}|\(\?[:!=][^\\)]+\)|\([^|]+\|[^\\)]+\))/;
+    if (str === "") {
+        return false;
+    }
+    let match;
+    while(match = regex.exec(str)){
+        if (match[2]) return true;
+        let idx = match.index + match[0].length;
+        const open = match[1];
+        const close = open ? chars[open] : null;
+        if (open && close) {
+            const n = str.indexOf(close, idx);
+            if (n !== -1) {
+                idx = n + 1;
+            }
+        }
+        str = str.slice(idx);
+    }
+    return false;
+}
 function isPosixPathSeparator(code) {
     return code === 47;
 }
@@ -422,6 +669,19 @@ function toFileUrl1(path) {
     url.pathname = encodeWhitespace(path.replace(/%/g, "%25").replace(/\\/g, "%5C"));
     return url;
 }
+const constants1 = {
+    sep: "/+",
+    sepMaybe: "/*",
+    seps: [
+        "/"
+    ],
+    globstar: "(?:[^/]*(?:/|$)+)*",
+    wildcard: "[^/]*",
+    escapePrefix: "\\"
+};
+function globToRegExp1(glob, options = {}) {
+    return _globToRegExp(constants1, glob, options);
+}
 const osType = (()=>{
     const { Deno: Deno1 } = globalThis;
     if (typeof Deno1?.build?.os === "string") {
@@ -448,6 +708,9 @@ function resolve2(...pathSegments) {
 }
 function toFileUrl2(path) {
     return isWindows ? toFileUrl(path) : toFileUrl1(path);
+}
+function globToRegExp2(glob, options = {}) {
+    return options.os === "windows" || !options.os && isWindows ? globToRegExp(glob, options) : globToRegExp1(glob, options);
 }
 const { Deno: Deno1 } = globalThis;
 typeof Deno1?.noColor === "boolean" ? Deno1.noColor : false;
@@ -4145,10 +4408,13 @@ async function walk(cwd, dir, files, options) {
     }
     return entries;
 }
+function convertPatternToRegExp(pattern) {
+    return isGlob(pattern) ? new RegExp(globToRegExp2(normalize2(pattern)).toString().slice(1, -2)) : new RegExp(`^${normalize2(pattern)}`);
+}
 export { parseEntrypoint as parseEntrypoint };
 export { API as API, APIError as APIError };
-export { walk as walk };
-export { fromFileUrl2 as fromFileUrl, normalize2 as normalize, resolve2 as resolve };
+export { convertPatternToRegExp as convertPatternToRegExp, walk as walk };
+export { fromFileUrl2 as fromFileUrl, resolve2 as resolve };
 function isTerminal(stream) {
     if (greaterOrEqual(parse(Deno.version.deno), parse("1.40.0"))) {
         return stream.isTerminal();
