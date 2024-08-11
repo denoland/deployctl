@@ -18,6 +18,12 @@ jobs:
         os: [macOS-latest, windows-latest, ubuntu-22.04-xl]
 
     steps:
+      # Some test cases are sensitive to line endings. Disable autocrlf on
+      # Windows to ensure consistent behavior.
+      - name: Disable autocrlf
+        if: runner.os == 'Windows'
+        run: git config --global core.autocrlf false
+
       - name: Setup repo
         uses: actions/checkout@v3
 
