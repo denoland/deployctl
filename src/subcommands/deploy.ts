@@ -1,6 +1,6 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { fromFileUrl, relative, type Spinner } from "../../deps.ts";
+import { fromFileUrl, relative, type Spinner, yellow } from "../../deps.ts";
 import { envVarsFromArgs } from "../utils/env_vars.ts";
 import { wait } from "../utils/spinner.ts";
 import configFile from "../config_file.ts";
@@ -311,7 +311,9 @@ async function deploy(opts: DeployOpts): Promise<void> {
       )
     ) {
       wait("").start().warn(
-        `Config file ${opts.config} not found in the assets to be uploaded; any import map settings in the config file will not be applied during deployment. If this is not your intention, please check --include and --exclude options to make sure the config file is included.`,
+        yellow(
+          `Config file ${opts.config} not found in the assets to be uploaded; any import map settings in the config file will not be applied during deployment. If this is not your intention, please check --include and --exclude options to make sure the config file is included.`,
+        ),
       );
     }
 
