@@ -202,6 +202,53 @@ Deno.test({
           ],
         },
       },
+      {
+        name: "complex",
+        input: {
+          testdir: "complex",
+          include: [],
+          exclude: [],
+        },
+        expected: {
+          entries: {
+            "a.txt": {
+              kind: "file",
+              gitSha1: "78981922613b2afb6025042ff6bd878ac1994e85",
+              size: 2,
+            },
+            "inner1": {
+              kind: "directory",
+              entries: {
+                "b.txt": {
+                  kind: "file",
+                  gitSha1: "61780798228d17af2d34fce4cfbdf35556832472",
+                  size: 2,
+                },
+              },
+            },
+            "inner2": {
+              kind: "directory",
+              entries: {
+                "b.txt": {
+                  kind: "file",
+                  gitSha1: "61780798228d17af2d34fce4cfbdf35556832472",
+                  size: 2,
+                },
+              },
+            },
+          },
+          containedEntries: ["a.txt", "inner1/b.txt", "inner2/b.txt"],
+          notContainedEntries: [
+            "b.txt",
+            "inner1/a.txt",
+            "inner2/a.txt",
+            ".git",
+            "deno.json",
+            "inner1",
+            "inner2",
+          ],
+        },
+      },
     ];
 
     for (const test of tests) {
