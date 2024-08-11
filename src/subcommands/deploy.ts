@@ -6,7 +6,6 @@ import { wait } from "../utils/spinner.ts";
 import configFile from "../config_file.ts";
 import { error } from "../error.ts";
 import { API, APIError, endpoint } from "../utils/api.ts";
-import type { ManifestEntry } from "../utils/api_types.ts";
 import { parseEntrypoint } from "../utils/entrypoint.ts";
 import { convertPatternToRegExp, walk } from "../utils/walk.ts";
 import TokenProvisioner from "../utils/access_token.ts";
@@ -87,7 +86,6 @@ OPTIONS:
 
 export interface Args {
   help: boolean;
-  static: boolean;
   prod: boolean;
   exclude: string[];
   include: string[];
@@ -107,7 +105,6 @@ export default async function (rawArgs: RawArgs): Promise<void> {
     : null;
   const args: Args = {
     help: !!rawArgs.help,
-    static: !!rawArgs.static,
     prod: !!rawArgs.prod,
     token: rawArgs.token ? String(rawArgs.token) : null,
     project: rawArgs.project ? String(rawArgs.project) : null,
@@ -149,7 +146,6 @@ export default async function (rawArgs: RawArgs): Promise<void> {
       ? null
       : await parseEntrypoint(args.importMap, undefined, "import map")
         .catch((e) => error(e)),
-    static: args.static,
     prod: args.prod,
     token: args.token,
     project: args.project,
@@ -168,7 +164,6 @@ export default async function (rawArgs: RawArgs): Promise<void> {
 interface DeployOpts {
   entrypoint: string;
   importMapUrl: URL | null;
-  static: boolean;
   prod: boolean;
   exclude: string[];
   include: string[];
@@ -266,45 +261,40 @@ async function deploy(opts: DeployOpts): Promise<void> {
   }
 
   let uploadSpinner: Spinner | null = null;
+  wait("").start().info(`Uploading all files from the current dir (${cwd})`);
+  const assetSpinner = wait("Finding static assets...").start();
+  const assets = new Map<string, string>();
+  const include = opts.include.map(convertPatternToRegExp);
+  const exclude = opts.exclude.map(convertPatternToRegExp);
+  const entries = await walk(cwd, cwd, assets, { include, exclude });
+  assetSpinner.succeed(
+    `Found ${assets.size} asset${assets.size === 1 ? "" : "s"}.`,
+  );
+
+  uploadSpinner = wait("Determining assets to upload...").start();
+  const neededHashes = await api.projectNegotiateAssets(project.id, {
+    entries,
+  });
+
   const files = [];
-  let manifest: { entries: Record<string, ManifestEntry> } | undefined =
-    undefined;
-
-  if (opts.static) {
-    wait("").start().info(`Uploading all files from the current dir (${cwd})`);
-    const assetSpinner = wait("Finding static assets...").start();
-    const assets = new Map<string, string>();
-    const include = opts.include.map(convertPatternToRegExp);
-    const exclude = opts.exclude.map(convertPatternToRegExp);
-    const entries = await walk(cwd, cwd, assets, { include, exclude });
-    assetSpinner.succeed(
-      `Found ${assets.size} asset${assets.size === 1 ? "" : "s"}.`,
-    );
-
-    uploadSpinner = wait("Determining assets to upload...").start();
-    const neededHashes = await api.projectNegotiateAssets(project.id, {
-      entries,
-    });
-
-    for (const hash of neededHashes) {
-      const path = assets.get(hash);
-      if (path === undefined) {
-        error(`Asset ${hash} not found.`);
-      }
-      const data = await Deno.readFile(path);
-      files.push(data);
+  for (const hash of neededHashes) {
+    const path = assets.get(hash);
+    if (path === undefined) {
+      error(`Asset ${hash} not found.`);
     }
-    if (files.length === 0) {
-      uploadSpinner.succeed("No new assets to upload.");
-      uploadSpinner = null;
-    } else {
-      uploadSpinner.text = `${files.length} new asset${
-        files.length === 1 ? "" : "s"
-      } to upload.`;
-    }
-
-    manifest = { entries };
+    const data = await Deno.readFile(path);
+    files.push(data);
   }
+  if (files.length === 0) {
+    uploadSpinner.succeed("No new assets to upload.");
+    uploadSpinner = null;
+  } else {
+    uploadSpinner.text = `${files.length} new asset${
+      files.length === 1 ? "" : "s"
+    } to upload.`;
+  }
+
+  const manifest = { entries };
 
   if (opts.dryRun) {
     uploadSpinner?.succeed(uploadSpinner?.text);
