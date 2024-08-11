@@ -4354,7 +4354,15 @@ function include(path, include, exclude) {
     }
     return true;
 }
-async function walk(cwd, dir, files, options) {
+async function walk(cwd, dir, options) {
+    const hashPathMap = new Map();
+    const manifestEntries = await walkInner(cwd, dir, hashPathMap, options);
+    return {
+        manifestEntries,
+        hashPathMap
+    };
+}
+async function walkInner(cwd, dir, hashPathMap, options) {
     const entries = {};
     for await (const file of Deno.readDir(dir)){
         const path = join2(dir, file.name);
@@ -4371,12 +4379,12 @@ async function walk(cwd, dir, files, options) {
                 gitSha1,
                 size: data.byteLength
             };
-            files.set(gitSha1, path);
+            hashPathMap.set(gitSha1, path);
         } else if (file.isDirectory) {
             if (relative === "/.git") continue;
             entry = {
                 kind: "directory",
-                entries: await walk(cwd, path, files, options)
+                entries: await walkInner(cwd, path, hashPathMap, options)
             };
         } else if (file.isSymlink) {
             const target = await Deno.readLink(path);
