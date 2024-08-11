@@ -1,4 +1,5 @@
 import { globToRegExp, isGlob, join, normalize } from "../../deps.ts";
+import { unreachable } from "../../tests/deps.ts";
 import type { ManifestEntry } from "./api_types.ts";
 
 /** Calculate git object hash, like `git hash-object` does. */
@@ -97,4 +98,42 @@ export function convertPatternToRegExp(pattern: string): RegExp {
     // slice is used to remove the end-of-string anchor '$'
     ? new RegExp(globToRegExp(normalize(pattern)).toString().slice(1, -2))
     : new RegExp(`^${normalize(pattern)}`);
+}
+
+/**
+ * Determines if the manifest contains the entry at the given relative path.
+ *
+ * @param manifestEntries manifest entries to search
+ * @param entryRelativePathToLookup a relative path to look up in the manifest
+ * @returns `true` if the manifest contains the entry at the given relative path
+ */
+export function containsEntryInManifest(
+  manifestEntries: Record<string, ManifestEntry>,
+  entryRelativePathToLookup: string,
+): boolean {
+  for (const [entryName, entry] of Object.entries(manifestEntries)) {
+    switch (entry.kind) {
+      case "file":
+      case "symlink": {
+        if (entryName === entryRelativePathToLookup) {
+          return true;
+        }
+        break;
+      }
+      case "directory": {
+        if (!entryRelativePathToLookup.startsWith(entryName)) {
+          break;
+        }
+
+        const relativePath = entryRelativePathToLookup.slice(
+          entryName.length + 1,
+        );
+        return containsEntryInManifest(entry.entries, relativePath);
+      }
+      default:
+        unreachable();
+    }
+  }
+
+  return false;
 }
