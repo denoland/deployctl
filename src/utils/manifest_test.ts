@@ -208,7 +208,7 @@ Deno.test({
       await t.step({
         name: test.name,
         fn: async () => {
-          const entries = await walk(
+          const { manifestEntries } = await walk(
             join(
               fromFileUrl(dirname(import.meta.url)),
               "manifest_testdata",
@@ -219,16 +219,15 @@ Deno.test({
               "manifest_testdata",
               test.input.testdir,
             ),
-            new Map(),
             {
               include: test.input.include.map(convertPatternToRegExp),
               exclude: test.input.exclude.map(convertPatternToRegExp),
             },
           );
-          assertEquals(entries, test.expected.entries);
+          assertEquals(manifestEntries, test.expected.entries);
 
           for (const entry of test.expected.containedEntries) {
-            const contained = containsEntryInManifest(entries, entry);
+            const contained = containsEntryInManifest(manifestEntries, entry);
             assert(
               contained,
               `Expected ${entry} to be contained in the manifest`,
@@ -236,7 +235,7 @@ Deno.test({
           }
 
           for (const entry of test.expected.notContainedEntries) {
-            const contained = containsEntryInManifest(entries, entry);
+            const contained = containsEntryInManifest(manifestEntries, entry);
             assertFalse(
               contained,
               `Expected ${entry} to *not* be contained in the manifest`,

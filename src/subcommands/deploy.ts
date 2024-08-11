@@ -8,7 +8,7 @@ import { error } from "../error.ts";
 import { API, APIError, endpoint } from "../utils/api.ts";
 import type { ManifestEntry } from "../utils/api_types.ts";
 import { parseEntrypoint } from "../utils/entrypoint.ts";
-import { convertPatternToRegExp, walk } from "../utils/walk.ts";
+import { convertPatternToRegExp, walk } from "../utils/manifest.ts";
 import TokenProvisioner from "../utils/access_token.ts";
 import type { Args as RawArgs } from "../args.ts";
 import organization from "../utils/organization.ts";
@@ -273,10 +273,13 @@ async function deploy(opts: DeployOpts): Promise<void> {
   if (opts.static) {
     wait("").start().info(`Uploading all files from the current dir (${cwd})`);
     const assetSpinner = wait("Finding static assets...").start();
-    const assets = new Map<string, string>();
     const include = opts.include.map(convertPatternToRegExp);
     const exclude = opts.exclude.map(convertPatternToRegExp);
-    const entries = await walk(cwd, cwd, assets, { include, exclude });
+    const { manifestEntries: entries, hashPathMap: assets } = await walk(
+      cwd,
+      cwd,
+      { include, exclude },
+    );
     assetSpinner.succeed(
       `Found ${assets.size} asset${assets.size === 1 ? "" : "s"}.`,
     );

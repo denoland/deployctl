@@ -39,7 +39,25 @@ function include(
 export async function walk(
   cwd: string,
   dir: string,
-  files: Map<string, string>,
+  options: { include: RegExp[]; exclude: RegExp[] },
+): Promise<
+  {
+    manifestEntries: Record<string, ManifestEntry>;
+    hashPathMap: Map<string, string>;
+  }
+> {
+  const hashPathMap = new Map<string, string>();
+  const manifestEntries = await walkInner(cwd, dir, hashPathMap, options);
+  return {
+    manifestEntries,
+    hashPathMap,
+  };
+}
+
+async function walkInner(
+  cwd: string,
+  dir: string,
+  hashPathMap: Map<string, string>,
   options: { include: RegExp[]; exclude: RegExp[] },
 ): Promise<Record<string, ManifestEntry>> {
   const entries: Record<string, ManifestEntry> = {};
@@ -66,12 +84,12 @@ export async function walk(
         gitSha1,
         size: data.byteLength,
       };
-      files.set(gitSha1, path);
+      hashPathMap.set(gitSha1, path);
     } else if (file.isDirectory) {
       if (relative === "/.git") continue;
       entry = {
         kind: "directory",
-        entries: await walk(cwd, path, files, options),
+        entries: await walkInner(cwd, path, hashPathMap, options),
       };
     } else if (file.isSymlink) {
       const target = await Deno.readLink(path);
