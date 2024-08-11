@@ -5,7 +5,7 @@ import {
   containsEntryInManifest,
   convertPatternToRegExp,
   walk,
-} from "./walk.ts";
+} from "./manifest.ts";
 
 Deno.test({
   name: "convertPatternToRegExp",
@@ -211,12 +211,12 @@ Deno.test({
           const entries = await walk(
             join(
               fromFileUrl(dirname(import.meta.url)),
-              "walk_testdata",
+              "manifest_testdata",
               test.input.testdir,
             ),
             join(
               fromFileUrl(dirname(import.meta.url)),
-              "walk_testdata",
+              "manifest_testdata",
               test.input.testdir,
             ),
             new Map(),
