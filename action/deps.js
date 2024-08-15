@@ -4020,9 +4020,23 @@ function endpoint() {
 class API {
     #endpoint;
     #authorization;
-    constructor(authorization, endpoint){
+    #config;
+    constructor(authorization, endpoint, config){
         this.#authorization = authorization;
         this.#endpoint = endpoint;
+        const DEFAULT_CONFIG = {
+            alwaysPrintXDenoRay: false,
+            logger: {
+                debug: (m)=>console.debug(m),
+                info: (m)=>console.info(m),
+                notice: (m)=>console.log(m),
+                warning: (m)=>console.warn(m),
+                error: (m)=>console.error(m)
+            }
+        };
+        this.#config = DEFAULT_CONFIG;
+        this.#config.alwaysPrintXDenoRay = config?.alwaysPrintXDenoRay ?? DEFAULT_CONFIG.alwaysPrintXDenoRay;
+        this.#config.logger = config?.logger ?? DEFAULT_CONFIG.logger;
     }
     static fromToken(token) {
         return new API(`Bearer ${token}`, endpoint());
@@ -4052,6 +4066,9 @@ class API {
             headers,
             body
         });
+        if (this.#config.alwaysPrintXDenoRay) {
+            this.#config.logger.notice(`x-deno-ray: ${res.headers.get("x-deno-ray")}`);
+        }
         if (res.status === 401 && typeof this.#authorization === "object") {
             headers.Authorization = `Bearer ${await this.#authorization.provision()}`;
             res = await fetch(url, {
