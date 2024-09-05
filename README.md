@@ -3,6 +3,11 @@
 `deployctl` is the command line tool for Deno Deploy. This repository also
 contains the `denoland/deployctl` GitHub Action.
 
+## Prerequisite
+
+You need to have Deno 1.41.1+ installed (latest version is recommended; just run
+`deno upgrade`)
+
 ## Install
 
 ```shell

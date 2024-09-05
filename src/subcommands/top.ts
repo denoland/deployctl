@@ -1,12 +1,12 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { Args } from "../args.ts";
+import type { Args } from "../args.ts";
 import { API } from "../utils/api.ts";
 import TokenProvisioner from "../utils/access_token.ts";
 import { wait } from "../utils/spinner.ts";
 import { delay, encodeHex, tty } from "../../deps.ts";
 import { error } from "../error.ts";
-import { ProjectStats } from "../utils/api_types.ts";
+import type { ProjectStats } from "../utils/api_types.ts";
 import { sha256 } from "../utils/hashing_encoding.ts";
 import { isTerminal } from "../utils/mod.ts";
 

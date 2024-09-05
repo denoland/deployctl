@@ -1,5 +1,5 @@
-import { join, normalize } from "../../deps.ts";
-import { ManifestEntry } from "./api_types.ts";
+import { globToRegExp, isGlob, join, normalize } from "../../deps.ts";
+import type { ManifestEntry } from "./api_types.ts";
 
 /** Calculate git object hash, like `git hash-object` does. */
 export async function calculateGitSha1(bytes: Uint8Array) {
@@ -84,4 +84,17 @@ export async function walk(
     entries[file.name] = entry;
   }
   return entries;
+}
+
+/**
+ * Converts a file path pattern, which may be a glob, to a RegExp instance.
+ *
+ * @param pattern file path pattern which may be a glob
+ * @returns a RegExp instance that is equivalent to the given pattern
+ */
+export function convertPatternToRegExp(pattern: string): RegExp {
+  return isGlob(pattern)
+    // slice is used to remove the end-of-string anchor '$'
+    ? new RegExp(globToRegExp(normalize(pattern)).toString().slice(1, -2))
+    : new RegExp(`^${normalize(pattern)}`);
 }

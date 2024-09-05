@@ -1,4 +1,4 @@
-import { Args } from "../args.ts";
+import type { Args } from "../args.ts";
 import { API, isTerminal } from "../utils/mod.ts";
 import TokenProvisioner from "../utils/access_token.ts";
 import { error } from "../error.ts";
@@ -14,7 +14,7 @@ Get the details of an organization:
 
 Create a project in an organization:
 
-    deployctl --method=POST --body='{"name": "my-project"}' organizations/04f19625-35d3-4c05-857e-bcaa3b0af374/projects
+    deployctl api --method=POST --body='{"name": "my-project"}' organizations/04f19625-35d3-4c05-857e-bcaa3b0af374/projects
 
 You can find the specification of the API in https://apidocs.deno.com
 

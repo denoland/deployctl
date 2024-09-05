@@ -1,5 +1,5 @@
 import { dotenv } from "../../deps.ts";
-import { Args } from "../args.ts";
+import type { Args } from "../args.ts";
 
 /**
  * Obtain the env variables provided by the user with the --env and --env-file options.

@@ -24,7 +24,7 @@ jobs:
       - name: Setup Deno
         uses: denoland/setup-deno@v1
         with:
-          deno-version: ${{ matrix.deno == 'old' && '1.40.0' || (matrix.deno == 'stable' && '1.x' || matrix.deno) }}
+          deno-version: ${{ matrix.deno == 'old' && '1.41.1' || (matrix.deno == 'stable' && '1.x' || matrix.deno) }}
 
       - run: deno --version
 
@@ -42,3 +42,8 @@ jobs:
 
       - name: Run tests
         run: deno task test
+
+      - name: action/deps.js up-to-date
+        run: |
+          deno run --allow-read --allow-env --allow-net ./tools/bundle.ts ./src/utils/mod.ts > ./action/latest.deps.js
+          diff ./action/latest.deps.js ./action/deps.js

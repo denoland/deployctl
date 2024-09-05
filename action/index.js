@@ -4,8 +4,8 @@ import "./shim.js";
 import {
   API,
   APIError,
+  convertPatternToRegExp,
   fromFileUrl,
-  normalize,
   parseEntrypoint,
   resolve,
   walk,
@@ -73,18 +73,23 @@ async function main() {
   }
 
   core.debug(`Discovering assets in "${cwd}"`);
+  const includes = include.flatMap((i) => i.split(","));
+  const excludes = exclude.flatMap((e) => e.split(","));
+  // Exclude node_modules by default unless explicitly specified
+  if (!includes.some((i) => i.includes("node_modules"))) {
+    excludes.push("**/node_modules");
+  }
   const assets = new Map();
   const entries = await walk(cwd, cwd, assets, {
-    include: include.flatMap((i) => i.split(",")).map((pattern) =>
-      normalize(pattern)
-    ),
-    exclude: exclude.flatMap((e) => e.split(",")).map((pattern) =>
-      normalize(pattern)
-    ),
+    include: includes.map(convertPatternToRegExp),
+    exclude: excludes.map(convertPatternToRegExp),
   });
   core.debug(`Discovered ${assets.size} assets`);
 
-  const api = new API(`GitHubOIDC ${token}`, ORIGIN);
+  const api = new API(`GitHubOIDC ${token}`, ORIGIN, {
+    alwaysPrintDenoRay: true,
+    logger: core,
+  });
 
   const neededHashes = await api.projectNegotiateAssets(projectId, {
     entries,
@@ -114,7 +119,7 @@ async function main() {
     manifest,
     event: github.context.payload,
   };
-  const progress = api.gitHubActionsDeploy(projectId, req, files);
+  const progress = await api.gitHubActionsDeploy(projectId, req, files);
   let deployment;
   for await (const event of progress) {
     switch (event.type) {
