@@ -1,8 +1,4 @@
-import {
-  type Spinner,
-  type SpinnerOptions,
-  wait as innerWait,
-} from "../../deps.ts";
+import { cyan, Spinner, type SpinnerOptions } from "../../deps.ts";
 
 let current: Spinner | null = null;
 
@@ -10,8 +6,20 @@ export function wait(param: string | SpinnerOptions) {
   if (typeof param === "string") {
     param = { text: param };
   }
-  param.interceptConsole = false;
-  current = innerWait({ stream: Deno.stderr, ...param });
+
+  current = new Spinner({
+    text: param.text,
+    prefix: param.prefix ?? "",
+    color: param.color ?? cyan,
+    spinner: param.spinner ?? "dots",
+    hideCursor: param.hideCursor ?? true,
+    indent: param.indent ?? 0,
+    interval: param.interval ?? 100,
+    stream: param.stream ?? Deno.stderr,
+    enabled: !Deno.env.get("CI"),
+    discardStdin: true,
+    interceptConsole: false,
+  });
   return current;
 }
 
