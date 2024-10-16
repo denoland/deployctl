@@ -25,6 +25,7 @@
     "@std/jsonc": "jsr:@std/jsonc@0.217",
     "@std/encoding": "jsr:@std/encoding@0.217",
     "@std/async": "jsr:@std/async@0.217",
-    "@std/dotenv": "jsr:@std/dotenv@0.217"
+    "@std/dotenv": "jsr:@std/dotenv@0.217",
+    "@std/semver": "jsr:@std/semver@0.217"
   }
 }

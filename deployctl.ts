@@ -2,7 +2,10 @@
 
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { semverGreaterThanOrEquals, semverParse } from "./deps.ts";
+import {
+  greaterOrEqual as semverGreaterThanOrEquals,
+  parse as semverParse,
+} from "@std/semver";
 import { setColorEnabled } from "@std/fmt/colors";
 import { type Args, parseArgs } from "./src/args.ts";
 import { error } from "./src/error.ts";

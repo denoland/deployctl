@@ -167,6 +167,7 @@
       "jsr:@std/fmt@0.217",
       "jsr:@std/jsonc@0.217",
       "jsr:@std/path@0.217",
+      "jsr:@std/semver@0.217",
       "jsr:@std/streams@0.217"
     ]
   }
