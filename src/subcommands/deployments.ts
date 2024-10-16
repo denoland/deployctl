@@ -22,7 +22,7 @@ import {
   yellow,
 } from "@std/fmt/colors";
 import type { Spinner } from "@denosaurs/wait";
-import { tty } from "../../deps.ts";
+import * as tty from "@denosaurs/tty";
 import { fromFileUrl } from "@std/path/from_file_url";
 import { error } from "../error.ts";
 import { isTerminal } from "../utils/mod.ts";

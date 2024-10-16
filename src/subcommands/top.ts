@@ -4,7 +4,7 @@ import type { Args } from "../args.ts";
 import { API } from "../utils/api.ts";
 import TokenProvisioner from "../utils/access_token.ts";
 import { wait } from "../utils/spinner.ts";
-import { tty } from "../../deps.ts";
+import * as tty from "@denosaurs/tty";
 import { delay } from "@std/async/delay";
 import { encodeHex } from "@std/encoding/hex";
 import { error } from "../error.ts";

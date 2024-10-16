@@ -160,6 +160,7 @@
   },
   "workspace": {
     "dependencies": [
+      "jsr:@denosaurs/tty@0.2.1",
       "jsr:@denosaurs/wait@0.2.2",
       "jsr:@std/async@0.217",
       "jsr:@std/dotenv@0.217",
