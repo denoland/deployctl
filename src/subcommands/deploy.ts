@@ -1,6 +1,6 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import type { Spinner } from "../../deps.ts";
+import type { Spinner } from "@denosaurs/wait";
 import { fromFileUrl } from "@std/path/from_file_url";
 import { envVarsFromArgs } from "../utils/env_vars.ts";
 import { wait } from "../utils/spinner.ts";

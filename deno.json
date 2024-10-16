@@ -26,6 +26,7 @@
     "@std/encoding": "jsr:@std/encoding@0.217",
     "@std/async": "jsr:@std/async@0.217",
     "@std/dotenv": "jsr:@std/dotenv@0.217",
-    "@std/semver": "jsr:@std/semver@0.217"
+    "@std/semver": "jsr:@std/semver@0.217",
+    "@denosaurs/wait": "jsr:@denosaurs/wait@0.2.2"
   }
 }
