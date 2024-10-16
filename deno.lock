@@ -160,7 +160,8 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@std/fmt@0.217"
+      "jsr:@std/fmt@0.217",
+      "jsr:@std/path@0.217"
     ]
   }
 }

@@ -1,7 +1,7 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
 import { magenta } from "@std/fmt/colors";
-import { basename } from "../deps.ts";
+import { basename } from "@std/path/basename";
 import { API, APIError, endpoint } from "./utils/api.ts";
 import TokenProvisioner from "./utils/access_token.ts";
 import { wait } from "./utils/spinner.ts";

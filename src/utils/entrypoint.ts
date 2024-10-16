@@ -1,4 +1,4 @@
-import { resolve, toFileUrl } from "../../deps.ts";
+import { resolve, toFileUrl } from "@std/path";
 
 /**
  * Parses the entrypoint to a URL.

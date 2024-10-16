@@ -18,6 +18,7 @@
     "version-match": "deno run --allow-read --allow-env ./tools/version_match.ts"
   },
   "imports": {
-    "@std/fmt": "jsr:@std/fmt@0.217"
+    "@std/fmt": "jsr:@std/fmt@0.217",
+    "@std/path": "jsr:@std/path@0.217"
   }
 }

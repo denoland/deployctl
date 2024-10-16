@@ -3,7 +3,7 @@ import { semverGreaterThanOrEquals, semverParse } from "../../deps.ts";
 export { parseEntrypoint } from "./entrypoint.ts";
 export { API, APIError } from "./api.ts";
 export { convertPatternToRegExp, walk } from "./walk.ts";
-export { fromFileUrl, resolve } from "../../deps.ts";
+export { fromFileUrl, resolve } from "@std/path";
 
 // deno-lint-ignore no-explicit-any
 export function isTerminal(stream: any) {

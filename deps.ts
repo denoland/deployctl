@@ -1,19 +1,6 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
 // std
-export {
-  basename,
-  dirname,
-  extname,
-  fromFileUrl,
-  globToRegExp,
-  isGlob,
-  join,
-  normalize,
-  relative,
-  resolve,
-  toFileUrl,
-} from "jsr:@std/path@0.217";
 export { parse } from "jsr:@std/flags@0.217";
 export { TextLineStream } from "jsr:@std/streams@0.217/text_line_stream";
 export * as JSONC from "jsr:@std/jsonc@0.217";

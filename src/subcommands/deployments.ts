@@ -21,7 +21,8 @@ import {
   stripAnsiCode,
   yellow,
 } from "@std/fmt/colors";
-import { fromFileUrl, type Spinner, tty } from "../../deps.ts";
+import { type Spinner, tty } from "../../deps.ts";
+import { fromFileUrl } from "@std/path/from_file_url";
 import { error } from "../error.ts";
 import { isTerminal } from "../utils/mod.ts";
 import { renderCron } from "../utils/crons.ts";
