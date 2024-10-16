@@ -1,4 +1,4 @@
-import { assertEquals } from "../../tests/deps.ts";
+import { assertEquals } from "@std/assert/assert_equals";
 import { convertPatternToRegExp } from "./walk.ts";
 
 Deno.test({
