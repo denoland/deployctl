@@ -14,16 +14,6 @@ export {
   resolve,
   toFileUrl,
 } from "jsr:@std/path@0.217";
-export {
-  bold,
-  cyan,
-  green,
-  magenta,
-  red,
-  setColorEnabled,
-  stripAnsiCode,
-  yellow,
-} from "jsr:@std/fmt@0.217/colors";
 export { parse } from "jsr:@std/flags@0.217";
 export { TextLineStream } from "jsr:@std/streams@0.217/text_line_stream";
 export * as JSONC from "jsr:@std/jsonc@0.217";

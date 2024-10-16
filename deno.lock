@@ -157,5 +157,10 @@
     "https://raw.githubusercontent.com/denosaurs/wait/453df8babdd72c59d865c5a616c5b04ee1154b9f/log_symbols.ts": "cdf2d0aa44754d10fddd55999e933886a4d753f2acfc1219f629427ccc776ac7",
     "https://raw.githubusercontent.com/denosaurs/wait/453df8babdd72c59d865c5a616c5b04ee1154b9f/mod.ts": "cfe3274f577013eb17199b9af74bb76cf2cbef225b91b5d2eee651c4906a1fcb",
     "https://raw.githubusercontent.com/denosaurs/wait/453df8babdd72c59d865c5a616c5b04ee1154b9f/spinners.ts": "289346d54f8d6152a5dcd67b67e47784cf9b7a8a8f6f0b6dc041ebc2ef6bb76c"
+  },
+  "workspace": {
+    "dependencies": [
+      "jsr:@std/fmt@0.217"
+    ]
   }
 }

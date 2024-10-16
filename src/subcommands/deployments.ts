@@ -15,15 +15,13 @@ import type {
 import {
   bold,
   cyan,
-  fromFileUrl,
   green,
   magenta,
   red,
-  type Spinner,
   stripAnsiCode,
-  tty,
   yellow,
-} from "../../deps.ts";
+} from "@std/fmt/colors";
+import { fromFileUrl, type Spinner, tty } from "../../deps.ts";
 import { error } from "../error.ts";
 import { isTerminal } from "../utils/mod.ts";
 import { renderCron } from "../utils/crons.ts";

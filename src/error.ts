@@ -1,4 +1,4 @@
-import { bold, red } from "../deps.ts";
+import { bold, red } from "@std/fmt/colors";
 
 export function printError(message: string) {
   console.error(red(`${bold("error")}: ${message}`));

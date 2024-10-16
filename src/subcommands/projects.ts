@@ -3,7 +3,7 @@ import { API, APIError, endpoint } from "../utils/api.ts";
 import TokenProvisioner from "../utils/access_token.ts";
 import { wait } from "../utils/spinner.ts";
 import type { Organization, Project } from "../utils/api_types.ts";
-import { bold, green, magenta, red } from "../../deps.ts";
+import { bold, green, magenta, red } from "@std/fmt/colors";
 import { error } from "../error.ts";
 import organization from "../utils/organization.ts";
 import { renderCron } from "../utils/crons.ts";
