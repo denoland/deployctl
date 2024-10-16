@@ -1,7 +1,6 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
 // std
-export { delay } from "jsr:@std/async@0.217";
 export * as dotenv from "jsr:@std/dotenv@0.217";
 
 // x/semver

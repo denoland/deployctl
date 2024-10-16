@@ -23,6 +23,7 @@
     "@std/flags": "jsr:@std/flags@0.217",
     "@std/streams": "jsr:@std/streams@0.217",
     "@std/jsonc": "jsr:@std/jsonc@0.217",
-    "@std/encoding": "jsr:@std/encoding@0.217"
+    "@std/encoding": "jsr:@std/encoding@0.217",
+    "@std/async": "jsr:@std/async@0.217"
   }
 }

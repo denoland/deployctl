@@ -160,6 +160,7 @@
   },
   "workspace": {
     "dependencies": [
+      "jsr:@std/async@0.217",
       "jsr:@std/encoding@0.217",
       "jsr:@std/flags@0.217",
       "jsr:@std/fmt@0.217",
