@@ -3,6 +3,7 @@ import { error } from "../error.ts";
 import { endpoint, USER_AGENT } from "./api.ts";
 import tokenStorage from "./token_storage.ts";
 import { base64url, sha256 } from "./hashing_encoding.ts";
+import { stringify as stringifyError } from "../error.ts";
 
 export default {
   get: tokenStorage.get,
@@ -76,7 +77,7 @@ async function provision(): Promise<string> {
       wait("").start().warn(
         "Unexpected error while trying to open the authorization URL in your default browser. Please report it at https://github.com/denoland/deployctl/issues/new.",
       );
-      wait({ text: "", indent: 3 }).start().fail(error.toString());
+      wait({ text: "", indent: 3 }).start().fail(stringifyError(error));
     }
   }
   if (open == undefined) {

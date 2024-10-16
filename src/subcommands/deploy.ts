@@ -206,7 +206,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
     try {
       project = await api.createProject(opts.project, org?.id);
     } catch (e) {
-      error(e.message);
+      error(e);
     }
     projectCreationSpinner.succeed(`Created new project '${opts.project}'.`);
     wait({ text: "", indent: 3 }).start().info(
