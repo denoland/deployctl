@@ -1,8 +1,5 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-// std
-export * as dotenv from "jsr:@std/dotenv@0.217";
-
 // x/semver
 export {
   canParse as semverValid,
