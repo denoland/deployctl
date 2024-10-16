@@ -19,6 +19,7 @@
   },
   "imports": {
     "@std/fmt": "jsr:@std/fmt@0.217",
-    "@std/path": "jsr:@std/path@0.217"
+    "@std/path": "jsr:@std/path@0.217",
+    "@std/flags": "jsr:@std/flags@0.217"
   }
 }
