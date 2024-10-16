@@ -1,7 +1,6 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
 // std
-export { TextLineStream } from "jsr:@std/streams@0.217/text_line_stream";
 export * as JSONC from "jsr:@std/jsonc@0.217";
 export { encodeHex } from "jsr:@std/encoding@0.217/hex";
 export { delay } from "jsr:@std/async@0.217";

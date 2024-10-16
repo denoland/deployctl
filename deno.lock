@@ -162,7 +162,8 @@
     "dependencies": [
       "jsr:@std/flags@0.217",
       "jsr:@std/fmt@0.217",
-      "jsr:@std/path@0.217"
+      "jsr:@std/path@0.217",
+      "jsr:@std/streams@0.217"
     ]
   }
 }

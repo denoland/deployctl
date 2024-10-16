@@ -1,4 +1,5 @@
-import { delay, TextLineStream } from "../../deps.ts";
+import { delay } from "../../deps.ts";
+import { TextLineStream } from "@std/streams/text_line_stream";
 import { VERSION } from "../version.ts";
 
 import type {
