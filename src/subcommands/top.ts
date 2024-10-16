@@ -10,7 +10,6 @@ import { encodeHex } from "@std/encoding/hex";
 import { error } from "../error.ts";
 import type { ProjectStats } from "../utils/api_types.ts";
 import { sha256 } from "../utils/hashing_encoding.ts";
-import { isTerminal } from "../utils/mod.ts";
 import { stringify as stringifyError } from "../error.ts";
 
 const help = `
@@ -62,7 +61,7 @@ export default async function topSubcommand(args: Args) {
       format = args.format;
       break;
     case undefined:
-      format = isTerminal(Deno.stdout) ? "table" : "json";
+      format = Deno.stdout.isTerminal() ? "table" : "json";
       break;
     default:
       error(

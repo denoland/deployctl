@@ -21,7 +21,6 @@ import { fetchReleases, getConfigPaths } from "./src/utils/info.ts";
 import configFile from "./src/config_file.ts";
 import inferConfig from "./src/config_inference.ts";
 import { wait } from "./src/utils/spinner.ts";
-import { isTerminal } from "./src/utils/mod.ts";
 
 const help = `deployctl ${VERSION}
 Command line tool for Deno Deploy.
@@ -55,7 +54,7 @@ const args = parseArgs(Deno.args);
 
 setColoring(args);
 
-if (isTerminal(Deno.stdin)) {
+if (Deno.stdin.isTerminal()) {
   let latestVersion;
   // Get the path to the update information json file.
   const { updatePath } = getConfigPaths();
@@ -183,7 +182,7 @@ function setColoring(args: Args) {
 }
 
 function setAutoColoring() {
-  if (isTerminal(Deno.stdout)) {
+  if (Deno.stdout.isTerminal()) {
     setColorEnabled(true);
   } else {
     setColorEnabled(false);
