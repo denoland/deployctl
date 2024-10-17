@@ -75,3 +75,9 @@ jobs:
           project: happy-rat-64
           root: action/tests
           entrypoint: always_exclude_node_modules/main.ts
+      - name: data URL entrypoint
+        uses: ./
+        with:
+          project: happy-rat-64
+          root: action/tests
+          entrypoint: "data:,Deno.serve(() => new Response())"

@@ -3962,7 +3962,7 @@ async function parseEntrypoint(entrypoint, root, diagnosticName = "entrypoint") 
     return entrypointSpecifier;
 }
 function isURL(entrypoint) {
-    return entrypoint.startsWith("https://") || entrypoint.startsWith("http://") || entrypoint.startsWith("file://");
+    return entrypoint.startsWith("https://") || entrypoint.startsWith("http://") || entrypoint.startsWith("file://") || entrypoint.startsWith("data:");
 }
 const VERSION = "1.12.0";
 let current = null;
