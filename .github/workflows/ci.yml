@@ -49,5 +49,8 @@ jobs:
 
       - name: action/deps.js up-to-date
         run: |
+          # @deno/emit doesn't work if JSR modules are not in the cache.
+          # This is a workaround to cache the JSR modules beforehand.
+          deno cache ./src/utils/mod.ts
           deno run --allow-read --allow-env --allow-net ./tools/bundle.ts ./src/utils/mod.ts > ./action/latest.deps.js
           diff ./action/latest.deps.js ./action/deps.js
