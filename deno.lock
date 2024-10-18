@@ -1,9 +1,9 @@
 {
   "version": "4",
   "specifiers": {
+    "jsr:@deno/cache-dir@0.13.0": "0.13.0",
     "jsr:@deno/cache-dir@0.8": "0.8.0",
-    "jsr:@deno/emit@0.43.1": "0.43.1",
-    "jsr:@deno/graph@~0.69.7": "0.69.10",
+    "jsr:@deno/emit@0.45.0": "0.45.0",
     "jsr:@denosaurs/tty@0.2.1": "0.2.1",
     "jsr:@denosaurs/tty@~0.2.1": "0.2.1",
     "jsr:@denosaurs/wait@0.2.2": "0.2.2",
@@ -11,15 +11,19 @@
     "jsr:@std/assert@0.223": "0.223.0",
     "jsr:@std/assert@~0.218.2": "0.218.2",
     "jsr:@std/async@0.217": "0.217.0",
+    "jsr:@std/bytes@0.223": "0.223.0",
     "jsr:@std/bytes@~0.218.2": "0.218.2",
     "jsr:@std/dotenv@0.217": "0.217.0",
     "jsr:@std/encoding@0.217": "0.217.0",
     "jsr:@std/flags@0.217": "0.217.0",
     "jsr:@std/flags@0.217.0": "0.217.0",
     "jsr:@std/fmt@0.217": "0.217.0",
+    "jsr:@std/fmt@0.223": "0.223.0",
     "jsr:@std/fmt@1": "1.0.2",
     "jsr:@std/fmt@~0.218.2": "0.218.2",
+    "jsr:@std/fs@0.223": "0.223.0",
     "jsr:@std/fs@~0.218.2": "0.218.2",
+    "jsr:@std/io@0.223": "0.223.0",
     "jsr:@std/io@~0.218.2": "0.218.2",
     "jsr:@std/json@0.217": "0.217.0",
     "jsr:@std/jsonc@0.217": "0.217.0",
@@ -35,22 +39,28 @@
     "@deno/cache-dir@0.8.0": {
       "integrity": "e87e80a404958f6350d903e6238b72afb92468378b0b32111f7a1e4916ac7fe7",
       "dependencies": [
-        "jsr:@deno/graph",
         "jsr:@std/fmt@~0.218.2",
-        "jsr:@std/fs",
-        "jsr:@std/io",
+        "jsr:@std/fs@~0.218.2",
+        "jsr:@std/io@~0.218.2",
         "jsr:@std/path@~0.218.2"
       ]
     },
-    "@deno/emit@0.43.1": {
-      "integrity": "4abb1a899b0126990f764e545341f3be592cae80a86faac8365d8076a24177ac",
+    "@deno/cache-dir@0.13.0": {
+      "integrity": "0501f1a0c0125635a7ddace1da0181cd64ce0ab7a34834bdc3e8ca7986d2dc6a",
       "dependencies": [
-        "jsr:@deno/cache-dir",
+        "jsr:@std/fmt@0.223",
+        "jsr:@std/fs@0.223",
+        "jsr:@std/io@0.223",
         "jsr:@std/path@0.223"
       ]
     },
-    "@deno/graph@0.69.10": {
-      "integrity": "38fe22ac5686f6ece5daeec5a4df65c6314d7d32adcc33f77917a13cfaffa26f"
+    "@deno/emit@0.45.0": {
+      "integrity": "b59d632e61dbe4be7e9e61235f02ad08ff124c714c31deb080c4de778da1894d",
+      "dependencies": [
+        "jsr:@deno/cache-dir@0.13.0",
+        "jsr:@deno/cache-dir@0.8",
+        "jsr:@std/path@0.223"
+      ]
     },
     "@denosaurs/tty@0.2.1": {
       "integrity": "f1fc651cc9021c90bf230a45c6eb893c26a54fae6a855e9cd26aad0083d772dd"
@@ -83,6 +93,9 @@
     "@std/bytes@0.218.2": {
       "integrity": "91fe54b232dcca73856b79a817247f4a651dbb60d51baafafb6408c137241670"
     },
+    "@std/bytes@0.223.0": {
+      "integrity": "84b75052cd8680942c397c2631318772b295019098f40aac5c36cead4cba51a8"
+    },
     "@std/dotenv@0.217.0": {
       "integrity": "e65cbbf669f482c320b2f94d0a2fc536f1fcd06afdcfa4fde358129a18d1d428"
     },
@@ -101,17 +114,30 @@
     "@std/fmt@0.218.2": {
       "integrity": "99526449d2505aa758b6cbef81e7dd471d8b28ec0dcb1491d122b284c548788a"
     },
+    "@std/fmt@0.223.0": {
+      "integrity": "6deb37794127dfc7d7bded2586b9fc6f5d50e62a8134846608baf71ffc1a5208"
+    },
     "@std/fmt@1.0.2": {
       "integrity": "87e9dfcdd3ca7c066e0c3c657c1f987c82888eb8103a3a3baa62684ffeb0f7a7"
     },
     "@std/fs@0.218.2": {
       "integrity": "dd9431453f7282e8c577cc22c9e6d036055a9a980b5549f887d6012969fabcca"
     },
+    "@std/fs@0.223.0": {
+      "integrity": "3b4b0550b2c524cbaaa5a9170c90e96cbb7354e837ad1bdaf15fc9df1ae9c31c"
+    },
     "@std/io@0.218.2": {
       "integrity": "c64fbfa087b7c9d4d386c5672f291f607d88cb7d44fc299c20c713e345f2785f",
       "dependencies": [
         "jsr:@std/assert@~0.218.2",
-        "jsr:@std/bytes"
+        "jsr:@std/bytes@~0.218.2"
+      ]
+    },
+    "@std/io@0.223.0": {
+      "integrity": "2d8c3c2ab3a515619b90da2c6ff5ea7b75a94383259ef4d02116b228393f84f1",
+      "dependencies": [
+        "jsr:@std/assert@0.223",
+        "jsr:@std/bytes@0.223"
       ]
     },
     "@std/json@0.217.0": {
@@ -165,6 +191,8 @@
   },
   "workspace": {
     "dependencies": [
+      "jsr:@deno/cache-dir@0.13.0",
+      "jsr:@deno/emit@0.45.0",
       "jsr:@denosaurs/tty@0.2.1",
       "jsr:@denosaurs/wait@0.2.2",
       "jsr:@std/assert@0.217",

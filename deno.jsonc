@@ -19,17 +19,23 @@
   },
   "imports": {
     "@std/fmt": "jsr:@std/fmt@0.217",
+    "@std/fmt/colors": "jsr:@std/fmt@0.217/colors",
     "@std/path": "jsr:@std/path@0.217",
     "@std/flags": "jsr:@std/flags@0.217",
     "@std/streams": "jsr:@std/streams@0.217",
+    "@std/streams/text_line_stream": "jsr:@std/streams@0.217/text_line_stream",
     "@std/jsonc": "jsr:@std/jsonc@0.217",
     "@std/encoding": "jsr:@std/encoding@0.217",
     "@std/async": "jsr:@std/async@0.217",
+    "@std/async/delay": "jsr:@std/async@0.217/delay",
     "@std/dotenv": "jsr:@std/dotenv@0.217",
     "@std/semver": "jsr:@std/semver@0.217",
     "@std/assert": "jsr:@std/assert@0.217",
     "@denosaurs/wait": "jsr:@denosaurs/wait@0.2.2",
     "@denosaurs/tty": "jsr:@denosaurs/tty@0.2.1",
-    "@deno/emit": "jsr:@deno/emit@0.43.1"
+    "@deno/emit": "jsr:@deno/emit@0.45.0",
+    // To make @deno/emit use the latest version of @deno/cache-dir.
+    // Needed until https://github.com/denoland/deno_emit/pull/192 lands
+    "jsr:@deno/cache-dir@0.8": "jsr:@deno/cache-dir@0.13.0"
   }
 }
