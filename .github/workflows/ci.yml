@@ -17,9 +17,6 @@ jobs:
         deno: [old, stable, canary]
         os: [macOS-latest, windows-latest, ubuntu-22.04-xl]
 
-    env:
-      DENO_FUTURE: ${{ matrix.deno == 'old' && '1' || '0' }}
-
     steps:
       - name: Setup repo
         uses: actions/checkout@v3
@@ -28,7 +25,7 @@ jobs:
         uses: denoland/setup-deno@v1
         with:
           # Make sure to keep this in sync with the one defined in version.ts
-          deno-version: ${{ matrix.deno == 'old' && '1.46.0' || (matrix.deno == 'stable' && '2.x' || matrix.deno) }}
+          deno-version: ${{ matrix.deno == 'old' && '2.0.0' || (matrix.deno == 'stable' && '2.x' || matrix.deno) }}
 
       - run: deno --version
 
