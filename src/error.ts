@@ -8,22 +8,45 @@ export function error(err: unknown): never {
   Deno.exit(1);
 }
 
-export function stringify(err: unknown): string {
+export type StringifyOptions = {
+  verbose: boolean;
+};
+
+const DEFAULT_STRINGIFY_OPTIONS: StringifyOptions = {
+  verbose: false,
+};
+
+export function stringify(
+  err: unknown,
+  options?: Partial<StringifyOptions>,
+): string {
+  const opts = options === undefined
+    ? DEFAULT_STRINGIFY_OPTIONS
+    : { ...DEFAULT_STRINGIFY_OPTIONS, ...options };
+
   if (err instanceof Error) {
-    return stringifyError(err);
+    if (opts.verbose) {
+      return stringifyErrorLong(err);
+    } else {
+      return stringifyErrorShort(err);
+    }
   }
 
   if (typeof err === "string") {
     return err;
   }
 
-  return JSON.stringify(err, null, 2);
+  return JSON.stringify(err);
 }
 
-function stringifyError(err: Error): string {
+function stringifyErrorShort(err: Error): string {
+  return `${err.name}: ${err.message}`;
+}
+
+function stringifyErrorLong(err: Error): string {
   const cause = err.cause === undefined
     ? ""
-    : `\nCaused by ${stringify(err.cause)}`;
+    : `\nCaused by ${stringify(err.cause, { verbose: true })}`;
 
   if (!err.stack) {
     return `${err.name}: ${err.message}${cause}`;
