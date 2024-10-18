@@ -14,7 +14,7 @@
   },
   "tasks": {
     "test": "deno test -A --unstable tests/ src/",
-    "build-action": "deno run --allow-read --allow-env ./tools/bundle.ts ./src/utils/mod.ts > ./action/deps.js",
+    "build-action": "deno run --allow-read --allow-write --allow-net=jsr.io:443 --allow-env ./tools/bundle.ts ./src/utils/mod.ts > ./action/deps.js",
     "version-match": "deno run --allow-read --allow-env ./tools/version_match.ts"
   },
   "imports": {
@@ -29,6 +29,7 @@
     "@std/semver": "jsr:@std/semver@0.217",
     "@std/assert": "jsr:@std/assert@0.217",
     "@denosaurs/wait": "jsr:@denosaurs/wait@0.2.2",
-    "@denosaurs/tty": "jsr:@denosaurs/tty@0.2.1"
+    "@denosaurs/tty": "jsr:@denosaurs/tty@0.2.1",
+    "@deno/emit": "jsr:@deno/emit@0.43.1"
   }
 }
