@@ -11,7 +11,7 @@ You need to have Deno 1.41.1+ installed (latest version is recommended; just run
 ## Install
 
 ```shell
-deno install -Arf jsr:@deno/deployctl
+deno install -gArf jsr:@deno/deployctl
 ```
 
 ## Usage
