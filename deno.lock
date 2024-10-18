@@ -3,6 +3,7 @@
   "specifiers": {
     "jsr:@deno/cache-dir@0.8": "0.8.0",
     "jsr:@deno/emit@0.43.1": "0.43.1",
+    "jsr:@deno/graph@~0.69.7": "0.69.10",
     "jsr:@denosaurs/tty@0.2.1": "0.2.1",
     "jsr:@denosaurs/tty@~0.2.1": "0.2.1",
     "jsr:@denosaurs/wait@0.2.2": "0.2.2",
@@ -34,6 +35,7 @@
     "@deno/cache-dir@0.8.0": {
       "integrity": "e87e80a404958f6350d903e6238b72afb92468378b0b32111f7a1e4916ac7fe7",
       "dependencies": [
+        "jsr:@deno/graph",
         "jsr:@std/fmt@~0.218.2",
         "jsr:@std/fs",
         "jsr:@std/io",
@@ -46,6 +48,9 @@
         "jsr:@deno/cache-dir",
         "jsr:@std/path@0.223"
       ]
+    },
+    "@deno/graph@0.69.10": {
+      "integrity": "38fe22ac5686f6ece5daeec5a4df65c6314d7d32adcc33f77917a13cfaffa26f"
     },
     "@denosaurs/tty@0.2.1": {
       "integrity": "f1fc651cc9021c90bf230a45c6eb893c26a54fae6a855e9cd26aad0083d772dd"
