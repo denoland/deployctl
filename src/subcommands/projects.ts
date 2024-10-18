@@ -265,7 +265,9 @@ async function createProject(args: Args): Promise<void> {
     );
   } catch (error) {
     spinner.fail(
-      `Cannot create the project '${args.project}': ${stringifyError(error)}`,
+      `Cannot create the project '${args.project}': ${
+        stringifyError(error, { verbose: true })
+      }`,
     );
   }
 }
@@ -315,7 +317,7 @@ async function renameProject(args: Args): Promise<void> {
   } catch (error) {
     spinner.fail(
       `Cannot rename the project '${currentName}' to '${newName}': ${
-        stringifyError(error)
+        stringifyError(error, { verbose: true })
       }`,
     );
   }

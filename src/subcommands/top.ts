@@ -81,7 +81,7 @@ export default async function topSubcommand(args: Args) {
   } catch (err) {
     spinner.fail(
       `Failed to connect to the stats stream of project '${args.project}': ${
-        stringifyError(err)
+        stringifyError(err, { verbose: true })
       }`,
     );
     return Deno.exit(1);

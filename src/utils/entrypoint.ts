@@ -23,7 +23,7 @@ export async function parseEntrypoint(
     }`;
   }
 
-  if (entrypointSpecifier.protocol == "file:") {
+  if (entrypointSpecifier.protocol === "file:") {
     try {
       await Deno.lstat(entrypointSpecifier);
     } catch (err) {
