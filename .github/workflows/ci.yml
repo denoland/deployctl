@@ -27,7 +27,8 @@ jobs:
       - name: Setup Deno
         uses: denoland/setup-deno@v1
         with:
-          # Make sure to keep this in sync with the one defined in version.ts
+          # Make sure to keep this in sync with the one defined in version.ts.
+          # Also don't forget to update README.md.
           deno-version: ${{ matrix.deno == 'old' && '1.46.0' || (matrix.deno == 'stable' && '2.x' || matrix.deno) }}
 
       - run: deno --version
