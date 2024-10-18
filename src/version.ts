@@ -1,4 +1,4 @@
 export const VERSION = "1.12.0";
 
 // Make sure to keep this in sync with the "old" version in `ci.yml`
-export const MINIMUM_DENO_VERSION = "1.41.1";
+export const MINIMUM_DENO_VERSION = "1.46.0";
