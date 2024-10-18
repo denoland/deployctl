@@ -17,6 +17,9 @@ jobs:
         deno: [old, stable, canary]
         os: [macOS-latest, windows-latest, ubuntu-22.04-xl]
 
+    env:
+      DENO_FUTURE: ${{ matrix.deno == 'old' && '1' || '0' }}
+
     steps:
       - name: Setup repo
         uses: actions/checkout@v3
