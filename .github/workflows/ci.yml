@@ -17,6 +17,9 @@ jobs:
         deno: [old, stable, canary]
         os: [macOS-latest, windows-latest, ubuntu-22.04-xl]
 
+    env:
+      DENO_FUTURE: ${{ matrix.deno == 'old' && '1' || '0' }}
+
     steps:
       - name: Setup repo
         uses: actions/checkout@v3
@@ -25,7 +28,7 @@ jobs:
         uses: denoland/setup-deno@v1
         with:
           # Make sure to keep this in sync with the one defined in version.ts
-          deno-version: ${{ matrix.deno == 'old' && '2.0.0' || (matrix.deno == 'stable' && '2.x' || matrix.deno) }}
+          deno-version: ${{ matrix.deno == 'old' && '1.46.0' || (matrix.deno == 'stable' && '2.x' || matrix.deno) }}
 
       - run: deno --version
 
@@ -41,13 +44,14 @@ jobs:
         if: runner.os == 'Linux' && matrix.deno == 'stable'
         run: deno check deployctl.ts
 
-      - name: Run tests
-        run: deno task test
-
       - name: action/deps.js up-to-date
+        if: runner.os == 'Linux' && matrix.deno == 'stable'
         run: |
           # @deno/emit doesn't work if JSR modules are not in the cache.
           # This is a workaround to cache the JSR modules beforehand.
           deno cache ./src/utils/mod.ts
           deno run --allow-read --allow-env --allow-net ./tools/bundle.ts ./src/utils/mod.ts > ./action/latest.deps.js
           diff ./action/latest.deps.js ./action/deps.js
+
+      - name: Run tests
+        run: deno task test
