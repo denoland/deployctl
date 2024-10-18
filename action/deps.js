@@ -728,11 +728,11 @@ function stringify(err) {
     return JSON.stringify(err, null, 2);
 }
 function stringifyError(err) {
-    const cause = err.cause === undefined ? "" : `Caused by ${stringify(err.cause)}`;
+    const cause = err.cause === undefined ? "" : `\nCaused by ${stringify(err.cause)}`;
     if (!err.stack) {
-        return `${err.name}: ${err.message}\n${cause}`;
+        return `${err.name}: ${err.message}${cause}`;
     }
-    return `${err.stack}\n${cause}`;
+    return `${err.stack}${cause}`;
 }
 async function parseEntrypoint(entrypoint, root, diagnosticName = "entrypoint") {
     let entrypointSpecifier;
