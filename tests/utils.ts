@@ -7,28 +7,36 @@ export interface Permissions {
   sys: boolean;
 }
 
-export function deployctl(
+interface DenoOptions extends Permissions {
+  noLock: boolean;
+}
+
+const defaultDenoOptions = {
+  net: true,
+  read: true,
+  write: true,
+  env: true,
+  run: true,
+  sys: true,
+  noLock: false,
+} as const satisfies DenoOptions;
+
+function deployctl(
   args: string[],
-  permissions: Permissions = {
-    net: true,
-    read: true,
-    write: true,
-    env: true,
-    run: true,
-    sys: true,
-  },
+  denoOptions: DenoOptions,
 ): Deno.ChildProcess {
   const deno = [
     Deno.execPath(),
     "run",
   ];
 
-  if (permissions?.net) deno.push("--allow-net");
-  if (permissions?.read) deno.push("--allow-read");
-  if (permissions?.write) deno.push("--allow-write");
-  if (permissions?.env) deno.push("--allow-env");
-  if (permissions?.run) deno.push("--allow-run");
-  if (permissions?.sys) deno.push("--allow-sys");
+  if (denoOptions?.net) deno.push("--allow-net");
+  if (denoOptions?.read) deno.push("--allow-read");
+  if (denoOptions?.write) deno.push("--allow-write");
+  if (denoOptions?.env) deno.push("--allow-env");
+  if (denoOptions?.run) deno.push("--allow-run");
+  if (denoOptions?.sys) deno.push("--allow-sys");
+  if (denoOptions?.noLock) deno.push("--no-lock");
 
   deno.push("--quiet");
 
@@ -57,8 +65,17 @@ export function test(
   fn: (proc: Deno.ChildProcess) => void | Promise<void>,
 ) {
   const name = opts.name ?? ["deployctl", ...opts.args].join(" ");
+  const forwardNoLock = Deno.args.includes("--no-lock");
+  console.log("==============================");
+  console.log(Deno.args);
+  console.log("==============================");
+  const denoOpts = opts.permissions === undefined ? defaultDenoOptions : {
+    ...defaultDenoOptions,
+    ...opts.permissions,
+    noLock: forwardNoLock,
+  };
   Deno.test(name, async () => {
-    const proc = deployctl(opts.args, opts.permissions);
+    const proc = deployctl(opts.args, denoOpts);
     await fn(proc);
   });
 }
