@@ -55,6 +55,4 @@ jobs:
           diff ./action/latest.deps.js ./action/deps.js
 
       - name: Run tests
-        # Deno 1.x does not support lockfile v4, so we force it not to use the
-        # lockfile when testing with Deno 1.x.
-        run: deno test -A ${{ matrix.deno == 'old' && '--no-lock' || '' }} tests/ src/
+        run: deno task test
