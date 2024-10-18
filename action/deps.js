@@ -718,17 +718,33 @@ new RegExp([
     "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
     "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TXZcf-nq-uy=><~]))"
 ].join("|"), "g");
-function stringify(err) {
+const DEFAULT_STRINGIFY_OPTIONS = {
+    verbose: false
+};
+function stringify(err, options) {
+    const opts = options === undefined ? DEFAULT_STRINGIFY_OPTIONS : {
+        ...DEFAULT_STRINGIFY_OPTIONS,
+        ...options
+    };
     if (err instanceof Error) {
-        return stringifyError(err);
+        if (opts.verbose) {
+            return stringifyErrorLong(err);
+        } else {
+            return stringifyErrorShort(err);
+        }
     }
     if (typeof err === "string") {
         return err;
     }
-    return JSON.stringify(err, null, 2);
+    return JSON.stringify(err);
 }
-function stringifyError(err) {
-    const cause = err.cause === undefined ? "" : `\nCaused by ${stringify(err.cause)}`;
+function stringifyErrorShort(err) {
+    return `${err.name}: ${err.message}`;
+}
+function stringifyErrorLong(err) {
+    const cause = err.cause === undefined ? "" : `\nCaused by ${stringify(err.cause, {
+        verbose: true
+    })}`;
     if (!err.stack) {
         return `${err.name}: ${err.message}${cause}`;
     }
@@ -745,7 +761,7 @@ async function parseEntrypoint(entrypoint, root, diagnosticName = "entrypoint") 
     } catch (err) {
         throw `Failed to parse ${diagnosticName} specifier '${entrypoint}': ${stringify(err)}`;
     }
-    if (entrypointSpecifier.protocol == "file:") {
+    if (entrypointSpecifier.protocol === "file:") {
         try {
             await Deno.lstat(entrypointSpecifier);
         } catch (err) {
