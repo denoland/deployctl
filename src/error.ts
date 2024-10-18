@@ -23,11 +23,11 @@ export function stringify(err: unknown): string {
 function stringifyError(err: Error): string {
   const cause = err.cause === undefined
     ? ""
-    : `Caused by ${stringify(err.cause)}`;
+    : `\nCaused by ${stringify(err.cause)}`;
 
   if (!err.stack) {
-    return `${err.name}: ${err.message}\n${cause}`;
+    return `${err.name}: ${err.message}${cause}`;
   }
 
-  return `${err.stack}\n${cause}`;
+  return `${err.stack}${cause}`;
 }
