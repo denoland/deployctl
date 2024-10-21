@@ -718,7 +718,89 @@ new RegExp([
     "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
     "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TXZcf-nq-uy=><~]))"
 ].join("|"), "g");
-const { hasOwn } = Object;
+const DEFAULT_STRINGIFY_OPTIONS = {
+    verbose: false
+};
+function stringify(err, options) {
+    const opts = options === undefined ? DEFAULT_STRINGIFY_OPTIONS : {
+        ...DEFAULT_STRINGIFY_OPTIONS,
+        ...options
+    };
+    if (err instanceof Error) {
+        if (opts.verbose) {
+            return stringifyErrorLong(err);
+        } else {
+            return stringifyErrorShort(err);
+        }
+    }
+    if (typeof err === "string") {
+        return err;
+    }
+    return JSON.stringify(err);
+}
+function stringifyErrorShort(err) {
+    return `${err.name}: ${err.message}`;
+}
+function stringifyErrorLong(err) {
+    const cause = err.cause === undefined ? "" : `\nCaused by ${stringify(err.cause, {
+        verbose: true
+    })}`;
+    if (!err.stack) {
+        return `${err.name}: ${err.message}${cause}`;
+    }
+    return `${err.stack}${cause}`;
+}
+async function parseEntrypoint(entrypoint, root, diagnosticName = "entrypoint") {
+    let entrypointSpecifier;
+    try {
+        if (isURL(entrypoint)) {
+            entrypointSpecifier = new URL(entrypoint);
+        } else {
+            entrypointSpecifier = toFileUrl2(resolve2(root ?? Deno.cwd(), entrypoint));
+        }
+    } catch (err) {
+        throw `Failed to parse ${diagnosticName} specifier '${entrypoint}': ${stringify(err)}`;
+    }
+    if (entrypointSpecifier.protocol === "file:") {
+        try {
+            await Deno.lstat(entrypointSpecifier);
+        } catch (err) {
+            throw `Failed to open ${diagnosticName} file at '${entrypointSpecifier}': ${stringify(err)}`;
+        }
+    }
+    return entrypointSpecifier;
+}
+function isURL(entrypoint) {
+    return entrypoint.startsWith("https://") || entrypoint.startsWith("http://") || entrypoint.startsWith("file://");
+}
+function delay(ms, options = {}) {
+    const { signal, persistent } = options;
+    if (signal?.aborted) return Promise.reject(signal.reason);
+    return new Promise((resolve, reject)=>{
+        const abort = ()=>{
+            clearTimeout(i);
+            reject(signal?.reason);
+        };
+        const done = ()=>{
+            signal?.removeEventListener("abort", abort);
+            resolve();
+        };
+        const i = setTimeout(done, ms);
+        signal?.addEventListener("abort", abort, {
+            once: true
+        });
+        if (persistent === false) {
+            try {
+                Deno.unrefTimer(i);
+            } catch (error) {
+                if (!(error instanceof ReferenceError)) {
+                    throw error;
+                }
+                console.error("`persistent` option is only available in Deno");
+            }
+        }
+    });
+}
 class TextLineStream extends TransformStream {
     #currentLine = "";
     constructor(options = {
@@ -750,483 +832,10 @@ class TextLineStream extends TransformStream {
         });
     }
 }
-const originalJSONParse = globalThis.JSON.parse;
-class JSONCParser {
-    #whitespace = new Set(" \t\r\n");
-    #numberEndToken = new Set([
-        ..."[]{}:,/",
-        ...this.#whitespace
-    ]);
-    #text;
-    #length;
-    #tokenized;
-    #options;
-    constructor(text, options){
-        this.#text = `${text}`;
-        this.#length = this.#text.length;
-        this.#tokenized = this.#tokenize();
-        this.#options = options;
-    }
-    parse() {
-        const token = this.#getNext();
-        const res = this.#parseJsonValue(token);
-        const { done, value } = this.#tokenized.next();
-        if (!done) {
-            throw new SyntaxError(buildErrorMessage(value));
-        }
-        return res;
-    }
-    #getNext() {
-        const { done, value } = this.#tokenized.next();
-        if (done) {
-            throw new SyntaxError("Unexpected end of JSONC input");
-        }
-        return value;
-    }
-    *#tokenize() {
-        for(let i = 0; i < this.#length; i++){
-            if (this.#whitespace.has(this.#text[i])) {
-                continue;
-            }
-            if (this.#text[i] === "/" && this.#text[i + 1] === "*") {
-                i += 2;
-                let hasEndOfComment = false;
-                for(; i < this.#length; i++){
-                    if (this.#text[i] === "*" && this.#text[i + 1] === "/") {
-                        hasEndOfComment = true;
-                        break;
-                    }
-                }
-                if (!hasEndOfComment) {
-                    throw new SyntaxError("Unexpected end of JSONC input");
-                }
-                i++;
-                continue;
-            }
-            if (this.#text[i] === "/" && this.#text[i + 1] === "/") {
-                i += 2;
-                for(; i < this.#length; i++){
-                    if (this.#text[i] === "\n" || this.#text[i] === "\r") {
-                        break;
-                    }
-                }
-                continue;
-            }
-            switch(this.#text[i]){
-                case "{":
-                    yield {
-                        type: "BeginObject",
-                        position: i
-                    };
-                    break;
-                case "}":
-                    yield {
-                        type: "EndObject",
-                        position: i
-                    };
-                    break;
-                case "[":
-                    yield {
-                        type: "BeginArray",
-                        position: i
-                    };
-                    break;
-                case "]":
-                    yield {
-                        type: "EndArray",
-                        position: i
-                    };
-                    break;
-                case ":":
-                    yield {
-                        type: "NameSeparator",
-                        position: i
-                    };
-                    break;
-                case ",":
-                    yield {
-                        type: "ValueSeparator",
-                        position: i
-                    };
-                    break;
-                case '"':
-                    {
-                        const startIndex = i;
-                        let shouldEscapeNext = false;
-                        i++;
-                        for(; i < this.#length; i++){
-                            if (this.#text[i] === '"' && !shouldEscapeNext) {
-                                break;
-                            }
-                            shouldEscapeNext = this.#text[i] === "\\" && !shouldEscapeNext;
-                        }
-                        yield {
-                            type: "String",
-                            sourceText: this.#text.substring(startIndex, i + 1),
-                            position: startIndex
-                        };
-                        break;
-                    }
-                default:
-                    {
-                        const startIndex = i;
-                        for(; i < this.#length; i++){
-                            if (this.#numberEndToken.has(this.#text[i])) {
-                                break;
-                            }
-                        }
-                        i--;
-                        yield {
-                            type: "NullOrTrueOrFalseOrNumber",
-                            sourceText: this.#text.substring(startIndex, i + 1),
-                            position: startIndex
-                        };
-                    }
-            }
-        }
-    }
-    #parseJsonValue(value) {
-        switch(value.type){
-            case "BeginObject":
-                return this.#parseObject();
-            case "BeginArray":
-                return this.#parseArray();
-            case "NullOrTrueOrFalseOrNumber":
-                return this.#parseNullOrTrueOrFalseOrNumber(value);
-            case "String":
-                return this.#parseString(value);
-            default:
-                throw new SyntaxError(buildErrorMessage(value));
-        }
-    }
-    #parseObject() {
-        const target = {};
-        for(let isFirst = true;; isFirst = false){
-            const token1 = this.#getNext();
-            if ((isFirst || this.#options.allowTrailingComma) && token1.type === "EndObject") {
-                return target;
-            }
-            if (token1.type !== "String") {
-                throw new SyntaxError(buildErrorMessage(token1));
-            }
-            const key = this.#parseString(token1);
-            const token2 = this.#getNext();
-            if (token2.type !== "NameSeparator") {
-                throw new SyntaxError(buildErrorMessage(token2));
-            }
-            const token3 = this.#getNext();
-            Object.defineProperty(target, key, {
-                value: this.#parseJsonValue(token3),
-                writable: true,
-                enumerable: true,
-                configurable: true
-            });
-            const token4 = this.#getNext();
-            if (token4.type === "EndObject") {
-                return target;
-            }
-            if (token4.type !== "ValueSeparator") {
-                throw new SyntaxError(buildErrorMessage(token4));
-            }
-        }
-    }
-    #parseArray() {
-        const target = [];
-        for(let isFirst = true;; isFirst = false){
-            const token1 = this.#getNext();
-            if ((isFirst || this.#options.allowTrailingComma) && token1.type === "EndArray") {
-                return target;
-            }
-            target.push(this.#parseJsonValue(token1));
-            const token2 = this.#getNext();
-            if (token2.type === "EndArray") {
-                return target;
-            }
-            if (token2.type !== "ValueSeparator") {
-                throw new SyntaxError(buildErrorMessage(token2));
-            }
-        }
-    }
-    #parseString(value) {
-        let parsed;
-        try {
-            parsed = originalJSONParse(value.sourceText);
-        } catch  {
-            throw new SyntaxError(buildErrorMessage(value));
-        }
-        assert(typeof parsed === "string");
-        return parsed;
-    }
-    #parseNullOrTrueOrFalseOrNumber(value) {
-        if (value.sourceText === "null") {
-            return null;
-        }
-        if (value.sourceText === "true") {
-            return true;
-        }
-        if (value.sourceText === "false") {
-            return false;
-        }
-        let parsed;
-        try {
-            parsed = originalJSONParse(value.sourceText);
-        } catch  {
-            throw new SyntaxError(buildErrorMessage(value));
-        }
-        assert(typeof parsed === "number");
-        return parsed;
-    }
-}
-function buildErrorMessage({ type, sourceText, position }) {
-    let token = "";
-    switch(type){
-        case "BeginObject":
-            token = "{";
-            break;
-        case "EndObject":
-            token = "}";
-            break;
-        case "BeginArray":
-            token = "[";
-            break;
-        case "EndArray":
-            token = "]";
-            break;
-        case "NameSeparator":
-            token = ":";
-            break;
-        case "ValueSeparator":
-            token = ",";
-            break;
-        case "NullOrTrueOrFalseOrNumber":
-        case "String":
-            token = 30 < sourceText.length ? `${sourceText.slice(0, 30)}...` : sourceText;
-            break;
-        default:
-            throw new Error("unreachable");
-    }
-    return `Unexpected token ${token} in JSONC at position ${position}`;
-}
-new TextEncoder();
-new TextEncoder().encode("0123456789abcdef");
-new TextEncoder();
-new TextDecoder();
-function delay(ms, options = {}) {
-    const { signal, persistent } = options;
-    if (signal?.aborted) return Promise.reject(signal.reason);
-    return new Promise((resolve, reject)=>{
-        const abort = ()=>{
-            clearTimeout(i);
-            reject(signal?.reason);
-        };
-        const done = ()=>{
-            signal?.removeEventListener("abort", abort);
-            resolve();
-        };
-        const i = setTimeout(done, ms);
-        signal?.addEventListener("abort", abort, {
-            once: true
-        });
-        if (persistent === false) {
-            try {
-                Deno.unrefTimer(i);
-            } catch (error) {
-                if (!(error instanceof ReferenceError)) {
-                    throw error;
-                }
-                console.error("`persistent` option is only available in Deno");
-            }
-        }
-    });
-}
-var _computedKey;
-_computedKey = Symbol.asyncIterator;
-class MuxAsyncIterator {
-    #iteratorCount = 0;
-    #yields = [];
-    #throws = [];
-    #signal = Promise.withResolvers();
-    add(iterable) {
-        ++this.#iteratorCount;
-        this.#callIteratorNext(iterable[Symbol.asyncIterator]());
-    }
-    async #callIteratorNext(iterator) {
-        try {
-            const { value, done } = await iterator.next();
-            if (done) {
-                --this.#iteratorCount;
-            } else {
-                this.#yields.push({
-                    iterator,
-                    value
-                });
-            }
-        } catch (e) {
-            this.#throws.push(e);
-        }
-        this.#signal.resolve();
-    }
-    async *iterate() {
-        while(this.#iteratorCount > 0){
-            await this.#signal.promise;
-            for (const { iterator, value } of this.#yields){
-                yield value;
-                this.#callIteratorNext(iterator);
-            }
-            if (this.#throws.length) {
-                for (const e of this.#throws){
-                    throw e;
-                }
-                this.#throws.length = 0;
-            }
-            this.#yields.length = 0;
-            this.#signal = Promise.withResolvers();
-        }
-    }
-    [_computedKey]() {
-        return this.iterate();
-    }
-}
-function compareNumber(a, b) {
-    if (isNaN(a) || isNaN(b)) throw new Error("Comparison against non-numbers");
-    return a === b ? 0 : a < b ? -1 : 1;
-}
-function checkIdentifier(v1 = [], v2 = []) {
-    if (v1.length && !v2.length) return -1;
-    if (!v1.length && v2.length) return 1;
-    return 0;
-}
-function compareIdentifier(v1 = [], v2 = []) {
-    const length = Math.max(v1.length, v2.length);
-    for(let i = 0; i < length; i++){
-        const a = v1[i];
-        const b = v2[i];
-        if (a === undefined && b === undefined) return 0;
-        if (b === undefined) return 1;
-        if (a === undefined) return -1;
-        if (typeof a === "string" && typeof b === "number") return 1;
-        if (typeof a === "number" && typeof b === "string") return -1;
-        if (a < b) return -1;
-        if (a > b) return 1;
-    }
-    return 0;
-}
-const NUMERIC_IDENTIFIER = "0|[1-9]\\d*";
-const NON_NUMERIC_IDENTIFIER = "\\d*[a-zA-Z-][a-zA-Z0-9-]*";
-const VERSION_CORE = `(?<major>${NUMERIC_IDENTIFIER})\\.(?<minor>${NUMERIC_IDENTIFIER})\\.(?<patch>${NUMERIC_IDENTIFIER})`;
-const PRERELEASE_IDENTIFIER = `(?:${NUMERIC_IDENTIFIER}|${NON_NUMERIC_IDENTIFIER})`;
-const PRERELEASE = `(?:-(?<prerelease>${PRERELEASE_IDENTIFIER}(?:\\.${PRERELEASE_IDENTIFIER})*))`;
-const BUILD_IDENTIFIER = "[0-9A-Za-z-]+";
-const BUILD = `(?:\\+(?<buildmetadata>${BUILD_IDENTIFIER}(?:\\.${BUILD_IDENTIFIER})*))`;
-const FULL_VERSION = `v?${VERSION_CORE}${PRERELEASE}?${BUILD}?`;
-const FULL_REGEXP = new RegExp(`^${FULL_VERSION}$`);
-const COMPARATOR = "(?:<|>)?=?";
-const WILDCARD_IDENTIFIER = `x|X|\\*`;
-const XRANGE_IDENTIFIER = `${NUMERIC_IDENTIFIER}|${WILDCARD_IDENTIFIER}`;
-const XRANGE = `[v=\\s]*(?<major>${XRANGE_IDENTIFIER})(?:\\.(?<minor>${XRANGE_IDENTIFIER})(?:\\.(?<patch>${XRANGE_IDENTIFIER})${PRERELEASE}?${BUILD}?)?)?`;
-new RegExp(`^(?<operator>~>?|\\^|${COMPARATOR})\\s*${XRANGE}$`);
-new RegExp(`^(?<operator>${COMPARATOR})\\s*(${FULL_VERSION})$|^$`);
-function isValidNumber(value) {
-    return typeof value === "number" && !Number.isNaN(value) && (!Number.isFinite(value) || 0 <= value && value <= Number.MAX_SAFE_INTEGER);
-}
-const NUMERIC_IDENTIFIER_REGEXP = new RegExp(`^${NUMERIC_IDENTIFIER}$`);
-function parsePrerelease(prerelease) {
-    return prerelease.split(".").filter(Boolean).map((id)=>{
-        if (NUMERIC_IDENTIFIER_REGEXP.test(id)) {
-            const number = Number(id);
-            if (isValidNumber(number)) return number;
-        }
-        return id;
-    });
-}
-function parseBuild(buildmetadata) {
-    return buildmetadata.split(".").filter(Boolean);
-}
-function parseNumber(input, errorMessage) {
-    const number = Number(input);
-    if (!isValidNumber(number)) throw new TypeError(errorMessage);
-    return number;
-}
-function compare(s0, s1) {
-    if (s0 === s1) return 0;
-    return compareNumber(s0.major, s1.major) || compareNumber(s0.minor, s1.minor) || compareNumber(s0.patch, s1.patch) || checkIdentifier(s0.prerelease, s1.prerelease) || compareIdentifier(s0.prerelease, s1.prerelease);
-}
-({
-    major: Number.POSITIVE_INFINITY,
-    minor: Number.POSITIVE_INFINITY,
-    patch: Number.POSITIVE_INFINITY,
-    prerelease: [],
-    build: []
-});
-const MIN = {
-    major: 0,
-    minor: 0,
-    patch: 0,
-    prerelease: [],
-    build: []
-};
-({
-    major: Number.NEGATIVE_INFINITY,
-    minor: Number.POSITIVE_INFINITY,
-    patch: Number.POSITIVE_INFINITY,
-    prerelease: [],
-    build: []
-});
-const ANY = {
-    major: Number.NaN,
-    minor: Number.NaN,
-    patch: Number.NaN,
-    prerelease: [],
-    build: []
-};
-({
-    operator: "",
-    ...ANY,
-    semver: ANY
-});
-({
-    operator: "<",
-    ...MIN,
-    semver: MIN
-});
-function parse(version) {
-    if (typeof version !== "string") {
-        throw new TypeError(`version must be a string`);
-    }
-    if (version.length > 256) {
-        throw new TypeError(`version is longer than ${256} characters`);
-    }
-    version = version.trim();
-    const groups = version.match(FULL_REGEXP)?.groups;
-    if (!groups) throw new TypeError(`Invalid Version: ${version}`);
-    const major = parseNumber(groups.major, "Invalid major version");
-    const minor = parseNumber(groups.minor, "Invalid minor version");
-    const patch = parseNumber(groups.patch, "Invalid patch version");
-    const prerelease = groups.prerelease ? parsePrerelease(groups.prerelease) : [];
-    const build = groups.buildmetadata ? parseBuild(groups.buildmetadata) : [];
-    return {
-        major,
-        minor,
-        patch,
-        prerelease,
-        build
-    };
-}
-function greaterOrEqual(s0, s1) {
-    return compare(s0, s1) >= 0;
-}
+const VERSION = "1.12.0";
 const { Deno: Deno2 } = globalThis;
-const noColor = typeof Deno2?.noColor === "boolean" ? Deno2.noColor : true;
+const noColor = typeof Deno2?.noColor === "boolean" ? Deno2.noColor : false;
 let enabled = !noColor;
-function setColorEnabled(value) {
-    if (noColor) {
-        return;
-    }
-    enabled = value;
-}
-function getColorEnabled() {
-    return enabled;
-}
 function code(open, close) {
     return {
         open: `\x1b[${open.join(";")}m`,
@@ -1236,46 +845,6 @@ function code(open, close) {
 }
 function run(str, code) {
     return enabled ? `${code.open}${str.replace(code.regexp, code.open)}${code.close}` : str;
-}
-function reset(str) {
-    return run(str, code([
-        0
-    ], 0));
-}
-function bold(str) {
-    return run(str, code([
-        1
-    ], 22));
-}
-function dim(str) {
-    return run(str, code([
-        2
-    ], 22));
-}
-function italic(str) {
-    return run(str, code([
-        3
-    ], 23));
-}
-function underline(str) {
-    return run(str, code([
-        4
-    ], 24));
-}
-function inverse(str) {
-    return run(str, code([
-        7
-    ], 27));
-}
-function hidden(str) {
-    return run(str, code([
-        8
-    ], 28));
-}
-function strikethrough(str) {
-    return run(str, code([
-        9
-    ], 29));
 }
 function black(str) {
     return run(str, code([
@@ -1325,231 +894,10 @@ function brightBlack(str) {
         90
     ], 39));
 }
-function brightRed(str) {
-    return run(str, code([
-        91
-    ], 39));
-}
-function brightGreen(str) {
-    return run(str, code([
-        92
-    ], 39));
-}
-function brightYellow(str) {
-    return run(str, code([
-        93
-    ], 39));
-}
-function brightBlue(str) {
-    return run(str, code([
-        94
-    ], 39));
-}
-function brightMagenta(str) {
-    return run(str, code([
-        95
-    ], 39));
-}
-function brightCyan(str) {
-    return run(str, code([
-        96
-    ], 39));
-}
-function brightWhite(str) {
-    return run(str, code([
-        97
-    ], 39));
-}
-function bgBlack(str) {
-    return run(str, code([
-        40
-    ], 49));
-}
-function bgRed(str) {
-    return run(str, code([
-        41
-    ], 49));
-}
-function bgGreen(str) {
-    return run(str, code([
-        42
-    ], 49));
-}
-function bgYellow(str) {
-    return run(str, code([
-        43
-    ], 49));
-}
-function bgBlue(str) {
-    return run(str, code([
-        44
-    ], 49));
-}
-function bgMagenta(str) {
-    return run(str, code([
-        45
-    ], 49));
-}
-function bgCyan(str) {
-    return run(str, code([
-        46
-    ], 49));
-}
-function bgWhite(str) {
-    return run(str, code([
-        47
-    ], 49));
-}
-function bgBrightBlack(str) {
-    return run(str, code([
-        100
-    ], 49));
-}
-function bgBrightRed(str) {
-    return run(str, code([
-        101
-    ], 49));
-}
-function bgBrightGreen(str) {
-    return run(str, code([
-        102
-    ], 49));
-}
-function bgBrightYellow(str) {
-    return run(str, code([
-        103
-    ], 49));
-}
-function bgBrightBlue(str) {
-    return run(str, code([
-        104
-    ], 49));
-}
-function bgBrightMagenta(str) {
-    return run(str, code([
-        105
-    ], 49));
-}
-function bgBrightCyan(str) {
-    return run(str, code([
-        106
-    ], 49));
-}
-function bgBrightWhite(str) {
-    return run(str, code([
-        107
-    ], 49));
-}
-function clampAndTruncate(n, max = 255, min = 0) {
-    return Math.trunc(Math.max(Math.min(n, max), min));
-}
-function rgb8(str, color) {
-    return run(str, code([
-        38,
-        5,
-        clampAndTruncate(color)
-    ], 39));
-}
-function bgRgb8(str, color) {
-    return run(str, code([
-        48,
-        5,
-        clampAndTruncate(color)
-    ], 49));
-}
-function rgb24(str, color) {
-    if (typeof color === "number") {
-        return run(str, code([
-            38,
-            2,
-            color >> 16 & 0xff,
-            color >> 8 & 0xff,
-            color & 0xff
-        ], 39));
-    }
-    return run(str, code([
-        38,
-        2,
-        clampAndTruncate(color.r),
-        clampAndTruncate(color.g),
-        clampAndTruncate(color.b)
-    ], 39));
-}
-function bgRgb24(str, color) {
-    if (typeof color === "number") {
-        return run(str, code([
-            48,
-            2,
-            color >> 16 & 0xff,
-            color >> 8 & 0xff,
-            color & 0xff
-        ], 49));
-    }
-    return run(str, code([
-        48,
-        2,
-        clampAndTruncate(color.r),
-        clampAndTruncate(color.g),
-        clampAndTruncate(color.b)
-    ], 49));
-}
-const ANSI_PATTERN = new RegExp([
+new RegExp([
     "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]*)*)?\\u0007)",
-    "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))"
+    "(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TXZcf-nq-uy=><~]))"
 ].join("|"), "g");
-function stripColor(string) {
-    return string.replace(ANSI_PATTERN, "");
-}
-const mod = {
-    setColorEnabled: setColorEnabled,
-    getColorEnabled: getColorEnabled,
-    reset: reset,
-    bold: bold,
-    dim: dim,
-    italic: italic,
-    underline: underline,
-    inverse: inverse,
-    hidden: hidden,
-    strikethrough: strikethrough,
-    black: black,
-    red: red,
-    green: green,
-    yellow: yellow,
-    blue: blue,
-    magenta: magenta,
-    cyan: cyan,
-    white: white,
-    gray: gray,
-    brightBlack: brightBlack,
-    brightRed: brightRed,
-    brightGreen: brightGreen,
-    brightYellow: brightYellow,
-    brightBlue: brightBlue,
-    brightMagenta: brightMagenta,
-    brightCyan: brightCyan,
-    brightWhite: brightWhite,
-    bgBlack: bgBlack,
-    bgRed: bgRed,
-    bgGreen: bgGreen,
-    bgYellow: bgYellow,
-    bgBlue: bgBlue,
-    bgMagenta: bgMagenta,
-    bgCyan: bgCyan,
-    bgWhite: bgWhite,
-    bgBrightBlack: bgBrightBlack,
-    bgBrightRed: bgBrightRed,
-    bgBrightGreen: bgBrightGreen,
-    bgBrightYellow: bgBrightYellow,
-    bgBrightBlue: bgBrightBlue,
-    bgBrightMagenta: bgBrightMagenta,
-    bgBrightCyan: bgBrightCyan,
-    bgBrightWhite: bgBrightWhite,
-    rgb8: rgb8,
-    bgRgb8: bgRgb8,
-    rgb24: rgb24,
-    bgRgb24: bgRgb24,
-    stripColor: stripColor
-};
 const encoder = new TextEncoder();
 function encode(input) {
     return encoder.encode(input);
@@ -2164,23 +1512,12 @@ function ansiRegex({ onlyFirst = false } = {}) {
     ].join("|");
     return new RegExp(pattern, onlyFirst ? undefined : "g");
 }
-async function isInteractiveAsync(stream) {
-    if (await Deno.permissions.query({
-        name: "env"
-    })) {
-        return Deno.isatty(stream.rid) && Deno.env.get("TERM") !== "dumb" && !Deno.env.get("CI");
-    }
-    return Deno.isatty(stream.rid);
-}
 function isInteractive(stream) {
-    return Deno.isatty(stream.rid);
+    return stream.isTerminal();
 }
-const mac = (await Deno.permissions.query({
+(await Deno.permissions.query({
     name: "env"
 })).state === "granted" ? Deno.env.get("TERM_PROGRAM") === "Apple_Terminal" : false;
-async function write(str, writer) {
-    await writer.write(encode(str));
-}
 function writeSync(str, writer) {
     writer.writeSync(encode(str));
 }
@@ -2188,99 +1525,13 @@ function stripAnsi(dirty) {
     return dirty.replace(ansiRegex(), "");
 }
 const ESC = "\u001B[";
-const SAVE = mac ? "\u001B7" : ESC + "s";
-const RESTORE = mac ? "\u001B8" : ESC + "u";
-const POSITION = "6n";
 const HIDE = "?25l";
 const SHOW = "?25h";
-const SCROLL_UP = "T";
-const SCROLL_DOWN = "S";
 const UP = "A";
-const DOWN = "B";
 const RIGHT = "C";
-const LEFT = "D";
-const CLEAR_RIGHT = "0K";
-const CLEAR_LEFT = "1K";
 const CLEAR_LINE = "2K";
-const CLEAR_DOWN = "0J";
-const CLEAR_UP = "1J";
-const CLEAR_SCREEN = "2J";
-const CLEAR = "\u001Bc";
-const NEXT_LINE = "1E";
-const PREV_LINE = "1F";
-const COLUMN = "1G";
-const HOME = "H";
-async function restore(writer = Deno.stdout) {
-    await write(RESTORE, writer);
-}
-async function cursor(action, writer = Deno.stdout) {
-    await write(ESC + action, writer);
-}
-async function position(writer = Deno.stdout) {
-    await cursor(POSITION, writer);
-}
-async function hideCursor(writer = Deno.stdout) {
-    await cursor(HIDE, writer);
-}
-async function showCursor(writer = Deno.stdout) {
-    await cursor(SHOW, writer);
-}
-async function scrollUp(writer = Deno.stdout) {
-    await cursor(SCROLL_UP, writer);
-}
-async function scrollDown(writer = Deno.stdout) {
-    await cursor(SCROLL_DOWN, writer);
-}
-async function clearUp(writer = Deno.stdout) {
-    await cursor(CLEAR_UP, writer);
-}
-async function clearDown(writer = Deno.stdout) {
-    await cursor(CLEAR_DOWN, writer);
-}
-async function clearLeft(writer = Deno.stdout) {
-    await cursor(CLEAR_LEFT, writer);
-}
-async function clearRight(writer = Deno.stdout) {
-    await cursor(CLEAR_RIGHT, writer);
-}
-async function clearLine(writer = Deno.stdout) {
-    await cursor(CLEAR_LINE, writer);
-}
-async function clearScreen(writer = Deno.stdout) {
-    await cursor(CLEAR_SCREEN, writer);
-}
-async function nextLine(writer = Deno.stdout) {
-    await cursor(NEXT_LINE, writer);
-}
-async function prevLine(writer = Deno.stdout) {
-    await cursor(PREV_LINE, writer);
-}
-async function goHome(writer = Deno.stdout) {
-    await cursor(HOME, writer);
-}
-async function goUp(y = 1, writer = Deno.stdout) {
-    await cursor(y + UP, writer);
-}
-async function goDown(y = 1, writer = Deno.stdout) {
-    await cursor(y + DOWN, writer);
-}
-async function goLeft(x = 1, writer = Deno.stdout) {
-    await cursor(x + LEFT, writer);
-}
-async function goRight(x = 1, writer = Deno.stdout) {
-    await cursor(x + RIGHT, writer);
-}
-async function goTo(x, y, writer = Deno.stdout) {
-    await write(ESC + y + ";" + x + HOME, writer);
-}
-function restoreSync(writer = Deno.stdout) {
-    writeSync(RESTORE, writer);
-}
 function cursorSync(action, writer = Deno.stdout) {
     writeSync(ESC + action, writer);
-}
-function positionSync(writer = Deno.stdout) {
-    cursorSync(POSITION, writer);
 }
 function hideCursorSync(writer = Deno.stdout) {
     cursorSync(HIDE, writer);
@@ -2288,130 +1539,15 @@ function hideCursorSync(writer = Deno.stdout) {
 function showCursorSync(writer = Deno.stdout) {
     cursorSync(SHOW, writer);
 }
-function scrollUpSync(writer = Deno.stdout) {
-    cursorSync(SCROLL_UP, writer);
-}
-function scrollDownSync(writer = Deno.stdout) {
-    cursorSync(SCROLL_DOWN, writer);
-}
-function clearUpSync(writer = Deno.stdout) {
-    cursorSync(CLEAR_UP, writer);
-}
-function clearDownSync(writer = Deno.stdout) {
-    cursorSync(CLEAR_DOWN, writer);
-}
-function clearLeftSync(writer = Deno.stdout) {
-    cursorSync(CLEAR_LEFT, writer);
-}
-function clearRightSync(writer = Deno.stdout) {
-    cursorSync(CLEAR_RIGHT, writer);
-}
 function clearLineSync(writer = Deno.stdout) {
     cursorSync(CLEAR_LINE, writer);
-}
-function clearScreenSync(writer = Deno.stdout) {
-    cursorSync(CLEAR_SCREEN, writer);
-}
-function nextLineSync(writer = Deno.stdout) {
-    cursorSync(NEXT_LINE, writer);
-}
-function prevLineSync(writer = Deno.stdout) {
-    cursorSync(PREV_LINE, writer);
-}
-function goHomeSync(writer = Deno.stdout) {
-    cursorSync(HOME, writer);
 }
 function goUpSync(y = 1, writer = Deno.stdout) {
     cursorSync(y + UP, writer);
 }
-function goDownSync(y = 1, writer = Deno.stdout) {
-    cursorSync(y + DOWN, writer);
-}
-function goLeftSync(x = 1, writer = Deno.stdout) {
-    cursorSync(x + LEFT, writer);
-}
 function goRightSync(x = 1, writer = Deno.stdout) {
     cursorSync(`${x}${RIGHT}`, writer);
 }
-function goToSync(x, y, writer = Deno.stdout) {
-    writeSync(ESC + y + ";" + x + HOME, writer);
-}
-const mod1 = await async function() {
-    return {
-        ESC: ESC,
-        SAVE: SAVE,
-        RESTORE: RESTORE,
-        POSITION: POSITION,
-        HIDE: HIDE,
-        SHOW: SHOW,
-        SCROLL_UP: SCROLL_UP,
-        SCROLL_DOWN: SCROLL_DOWN,
-        UP: UP,
-        DOWN: DOWN,
-        RIGHT: RIGHT,
-        LEFT: LEFT,
-        CLEAR_RIGHT: CLEAR_RIGHT,
-        CLEAR_LEFT: CLEAR_LEFT,
-        CLEAR_LINE: CLEAR_LINE,
-        CLEAR_DOWN: CLEAR_DOWN,
-        CLEAR_UP: CLEAR_UP,
-        CLEAR_SCREEN: CLEAR_SCREEN,
-        CLEAR: CLEAR,
-        NEXT_LINE: NEXT_LINE,
-        PREV_LINE: PREV_LINE,
-        COLUMN: COLUMN,
-        HOME: HOME,
-        write,
-        restore,
-        cursor,
-        position,
-        hideCursor,
-        showCursor,
-        scrollUp,
-        scrollDown,
-        clearUp,
-        clearDown,
-        clearLeft,
-        clearRight,
-        clearLine,
-        clearScreen,
-        nextLine,
-        prevLine,
-        goHome,
-        goUp,
-        goDown,
-        goLeft,
-        goRight,
-        goTo,
-        writeSync,
-        restoreSync,
-        cursorSync,
-        positionSync,
-        hideCursorSync,
-        showCursorSync,
-        scrollUpSync,
-        scrollDownSync,
-        clearUpSync,
-        clearDownSync,
-        clearLeftSync,
-        clearRightSync,
-        clearLineSync,
-        clearScreenSync,
-        nextLineSync,
-        prevLineSync,
-        goHomeSync,
-        goUpSync,
-        goDownSync,
-        goLeftSync,
-        goRightSync,
-        goToSync,
-        wcswidth,
-        ansiRegex,
-        stripAnsi,
-        isInteractiveAsync,
-        isInteractive
-    };
-}();
 const __default1 = {
     dots: {
         interval: 80,
@@ -3701,29 +2837,29 @@ if ((await Deno.permissions.query({
     supported = supported && (!!Deno.env.get("CI") || Deno.env.get("TERM") === "xterm-256color");
 }
 const main = {
-    info: mod.blue("ℹ"),
-    success: mod.green("✔"),
-    warning: mod.yellow("⚠"),
-    error: mod.red("✖")
+    info: blue("ℹ"),
+    success: green("✔"),
+    warning: yellow("⚠"),
+    error: red("✖")
 };
 const fallbacks = {
-    info: mod.blue("i"),
-    success: mod.green("√"),
-    warning: mod.yellow("‼"),
-    error: mod.red("×")
+    info: blue("i"),
+    success: green("√"),
+    warning: yellow("‼"),
+    error: red("×")
 };
 const symbols = supported ? main : fallbacks;
 const encoder1 = new TextEncoder();
 const colormap = {
-    black: mod.black,
-    red: mod.red,
-    green: mod.green,
-    yellow: mod.yellow,
-    blue: mod.blue,
-    magenta: mod.magenta,
-    cyan: mod.cyan,
-    white: mod.white,
-    gray: mod.gray
+    black: black,
+    red: red,
+    green: green,
+    yellow: yellow,
+    blue: blue,
+    magenta: magenta,
+    cyan: cyan,
+    white: white,
+    gray: gray
 };
 function wait(opts) {
     if (typeof opts === "string") {
@@ -3734,7 +2870,7 @@ function wait(opts) {
     return new Spinner({
         text: opts.text,
         prefix: opts.prefix ?? "",
-        color: opts.color ?? mod.cyan,
+        color: opts.color ?? cyan,
         spinner: opts.spinner ?? "dots",
         hideCursor: opts.hideCursor ?? true,
         indent: opts.indent ?? 0,
@@ -3769,10 +2905,10 @@ class Spinner {
         this.#frameIndex = 0;
         this.#linesToClear = 0;
         this.#linesCount = 1;
-        this.#enabled = typeof opts.enabled === "boolean" ? opts.enabled : mod1.isInteractive(this.#stream);
+        this.#enabled = typeof opts.enabled === "boolean" ? opts.enabled : isInteractive(this.#stream);
         if (opts.hideCursor) {
             addEventListener("unload", ()=>{
-                mod1.showCursorSync(this.#stream);
+                showCursorSync(this.#stream);
             });
         }
         if (opts.interceptConsole) {
@@ -3780,26 +2916,33 @@ class Spinner {
         }
     }
     #spinner = __default1.dots;
-    #color = mod.cyan;
+    #color = cyan;
     #text = "";
     #prefix = "";
     #interceptConsole() {
         const methods = [
             "log",
+            "debug",
+            "info",
+            "dir",
+            "dirxml",
             "warn",
             "error",
-            "info",
-            "debug",
-            "time",
-            "timeEnd",
-            "trace",
-            "dir",
             "assert",
             "count",
             "countReset",
             "table",
-            "dirxml",
-            "timeLog"
+            "time",
+            "timeLog",
+            "timeEnd",
+            "group",
+            "groupCollapsed",
+            "groupEnd",
+            "clear",
+            "trace",
+            "profile",
+            "profileEnd",
+            "timeStamp"
         ];
         for (const method of methods){
             const original = console[method];
@@ -3844,19 +2987,19 @@ class Spinner {
     get prefix() {
         return this.#prefix;
     }
-    write(data) {
+    #write(data) {
         this.#stream.writeSync(encoder1.encode(data));
     }
     start() {
         if (!this.#enabled) {
             if (this.text) {
-                this.write(`- ${this.text}\n`);
+                this.#write(`- ${this.text}\n`);
             }
             return this;
         }
         if (this.isSpinning) return this;
         if (this.#opts.hideCursor) {
-            mod1.hideCursorSync(this.#stream);
+            hideCursorSync(this.#stream);
         }
         this.isSpinning = true;
         this.render();
@@ -3865,7 +3008,7 @@ class Spinner {
     }
     render() {
         this.clear();
-        this.write(`${this.frame()}\n`);
+        this.#write(`${this.frame()}\n`);
         this.updateLines();
         this.#linesToClear = this.#linesCount;
     }
@@ -3881,9 +3024,9 @@ class Spinner {
     clear() {
         if (!this.#enabled) return;
         for(let i = 0; i < this.#linesToClear; i++){
-            mod1.goUpSync(1, this.#stream);
-            mod1.clearLineSync(this.#stream);
-            mod1.goRightSync(this.indent - 1, this.#stream);
+            goUpSync(1, this.#stream);
+            clearLineSync(this.#stream);
+            goRightSync(this.indent - 1, this.#stream);
         }
         this.#linesToClear = 0;
     }
@@ -3893,8 +3036,8 @@ class Spinner {
             columns = Deno.consoleSize().columns ?? columns;
         } catch  {}
         const fullPrefixText = typeof this.prefix === "string" ? this.prefix + "-" : "";
-        this.#linesCount = mod1.stripAnsi(fullPrefixText + "--" + this.text).split("\n").reduce((count, line)=>{
-            return count + Math.max(1, Math.ceil(mod1.wcswidth(line) / columns));
+        this.#linesCount = stripAnsi(fullPrefixText + "--" + this.text).split("\n").reduce((count, line)=>{
+            return count + Math.max(1, Math.ceil(wcswidth(line) / columns));
         }, 0);
     }
     stop() {
@@ -3905,7 +3048,7 @@ class Spinner {
         this.clear();
         this.isSpinning = false;
         if (this.#opts.hideCursor) {
-            mod1.showCursorSync(this.#stream);
+            showCursorSync(this.#stream);
         }
     }
     stopAndPersist(options = {}) {
@@ -3914,7 +3057,7 @@ class Spinner {
         const text = options.text || this.text;
         const fullText = typeof text === "string" ? " " + text : "";
         this.stop();
-        this.write(`${fullPrefix}${options.symbol || " "}${fullText}\n`);
+        this.#write(`${fullPrefix}${options.symbol || " "}${fullText}\n`);
     }
     succeed(text) {
         return this.stopAndPersist({
@@ -3941,30 +3084,6 @@ class Spinner {
         });
     }
 }
-async function parseEntrypoint(entrypoint, root, diagnosticName = "entrypoint") {
-    let entrypointSpecifier;
-    try {
-        if (isURL(entrypoint)) {
-            entrypointSpecifier = new URL(entrypoint);
-        } else {
-            entrypointSpecifier = toFileUrl2(resolve2(root ?? Deno.cwd(), entrypoint));
-        }
-    } catch (err) {
-        throw `Failed to parse ${diagnosticName} specifier '${entrypoint}': ${err.message}`;
-    }
-    if (entrypointSpecifier.protocol == "file:") {
-        try {
-            await Deno.lstat(entrypointSpecifier);
-        } catch (err) {
-            throw `Failed to open ${diagnosticName} file at '${entrypointSpecifier}': ${err.message}`;
-        }
-    }
-    return entrypointSpecifier;
-}
-function isURL(entrypoint) {
-    return entrypoint.startsWith("https://") || entrypoint.startsWith("http://") || entrypoint.startsWith("file://") || entrypoint.startsWith("data:");
-}
-const VERSION = "1.12.0";
 let current = null;
 function wait1(param) {
     if (typeof param === "string") {
@@ -4415,12 +3534,4 @@ export { parseEntrypoint as parseEntrypoint };
 export { API as API, APIError as APIError };
 export { convertPatternToRegExp as convertPatternToRegExp, walk as walk };
 export { fromFileUrl2 as fromFileUrl, resolve2 as resolve };
-function isTerminal(stream) {
-    if (greaterOrEqual(parse(Deno.version.deno), parse("1.40.0"))) {
-        return stream.isTerminal();
-    } else {
-        return Deno.isatty(stream.rid);
-    }
-}
-export { isTerminal as isTerminal };
 

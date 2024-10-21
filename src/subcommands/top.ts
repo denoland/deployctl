@@ -4,11 +4,13 @@ import type { Args } from "../args.ts";
 import { API } from "../utils/api.ts";
 import TokenProvisioner from "../utils/access_token.ts";
 import { wait } from "../utils/spinner.ts";
-import { delay, encodeHex, tty } from "../../deps.ts";
+import * as tty from "@denosaurs/tty";
+import { delay } from "@std/async/delay";
+import { encodeHex } from "@std/encoding/hex";
 import { error } from "../error.ts";
 import type { ProjectStats } from "../utils/api_types.ts";
 import { sha256 } from "../utils/hashing_encoding.ts";
-import { isTerminal } from "../utils/mod.ts";
+import { stringify as stringifyError } from "../error.ts";
 
 const help = `
 Project monitoring (ALPHA)
@@ -59,7 +61,7 @@ export default async function topSubcommand(args: Args) {
       format = args.format;
       break;
     case undefined:
-      format = isTerminal(Deno.stdout) ? "table" : "json";
+      format = Deno.stdout.isTerminal() ? "table" : "json";
       break;
     default:
       error(
@@ -78,7 +80,9 @@ export default async function topSubcommand(args: Args) {
     stats = await api.streamMetering(args.project!);
   } catch (err) {
     spinner.fail(
-      `Failed to connect to the stats stream of project '${args.project}': ${err.message}`,
+      `Failed to connect to the stats stream of project '${args.project}': ${
+        stringifyError(err, { verbose: true })
+      }`,
     );
     return Deno.exit(1);
   }

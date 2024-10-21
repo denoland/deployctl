@@ -1,5 +1,5 @@
-import { yellow } from "../../deps.ts";
-import { assertEquals } from "../../tests/deps.ts";
+import { yellow } from "@std/fmt/colors";
+import { assertEquals } from "@std/assert/assert_equals";
 import { renderTimeDelta } from "./time.ts";
 
 Deno.test("renderTimeDelta returns time in milliseconds if below 1 second", () => {

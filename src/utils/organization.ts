@@ -26,7 +26,7 @@ export default {
         spinner.stop();
       }
     } catch (e) {
-      error(e.message);
+      error(e);
     }
     interruptedSpinner.resume();
     return org;
