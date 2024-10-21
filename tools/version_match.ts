@@ -5,7 +5,7 @@
 // Intended to run when a draft release is created on GitHub.
 
 import { VERSION } from "../src/version.ts";
-import { assertEquals } from "jsr:@std/assert@0.217";
+import { assertEquals } from "@std/assert/assert_equals";
 
 const releaseTagVersion = Deno.env.get("RELEASE_TAG")!;
 assertEquals(VERSION, releaseTagVersion);

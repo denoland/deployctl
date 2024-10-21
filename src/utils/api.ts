@@ -1,4 +1,5 @@
-import { delay, TextLineStream } from "../../deps.ts";
+import { delay } from "@std/async/delay";
+import { TextLineStream } from "@std/streams/text_line_stream";
 import { VERSION } from "../version.ts";
 
 import type {
@@ -36,7 +37,7 @@ export class APIError extends Error {
   code: string;
   xDenoRay: string | null;
 
-  name = "APIError";
+  override name = "APIError";
 
   constructor(code: string, message: string, xDenoRay: string | null) {
     super(message);
@@ -44,7 +45,7 @@ export class APIError extends Error {
     this.xDenoRay = xDenoRay;
   }
 
-  toString() {
+  override toString() {
     let error = `${this.name}: ${this.message}`;
     if (this.xDenoRay !== null) {
       error += `\nx-deno-ray: ${this.xDenoRay}`;

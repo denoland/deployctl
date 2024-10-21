@@ -1,4 +1,4 @@
-import { globToRegExp, isGlob, join, normalize } from "../../deps.ts";
+import { globToRegExp, isGlob, join, normalize } from "@std/path";
 import type { ManifestEntry } from "./api_types.ts";
 
 /** Calculate git object hash, like `git hash-object` does. */

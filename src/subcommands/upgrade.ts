@@ -2,10 +2,10 @@
 
 import { error } from "../error.ts";
 import {
-  semverGreaterThanOrEquals,
-  semverParse,
-  semverValid,
-} from "../../deps.ts";
+  canParse as semverValid,
+  greaterOrEqual as semverGreaterThanOrEquals,
+  parse as semverParse,
+} from "@std/semver";
 import { VERSION } from "../version.ts";
 
 const help = `deployctl upgrade

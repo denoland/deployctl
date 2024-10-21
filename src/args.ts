@@ -1,6 +1,6 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { parse } from "../deps.ts";
+import { parse } from "@std/flags";
 
 export function parseArgs(args: string[]) {
   const parsed = parse(args, {
