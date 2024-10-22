@@ -39,5 +39,8 @@ export async function parseEntrypoint(
 export function isURL(entrypoint: string): boolean {
   return entrypoint.startsWith("https://") ||
     entrypoint.startsWith("http://") ||
-    entrypoint.startsWith("file://");
+    entrypoint.startsWith("file://") ||
+    entrypoint.startsWith("data:") ||
+    entrypoint.startsWith("jsr:") ||
+    entrypoint.startsWith("npm:");
 }

@@ -771,7 +771,7 @@ async function parseEntrypoint(entrypoint, root, diagnosticName = "entrypoint") 
     return entrypointSpecifier;
 }
 function isURL(entrypoint) {
-    return entrypoint.startsWith("https://") || entrypoint.startsWith("http://") || entrypoint.startsWith("file://");
+    return entrypoint.startsWith("https://") || entrypoint.startsWith("http://") || entrypoint.startsWith("file://") || entrypoint.startsWith("data:") || entrypoint.startsWith("jsr:") || entrypoint.startsWith("npm:");
 }
 function delay(ms, options = {}) {
     const { signal, persistent } = options;
