@@ -13,7 +13,6 @@ export function parseArgs(args: string[]) {
       "help",
       "prod",
       "last",
-      "static",
       "version",
       "dry-run",
       "save-config",
@@ -59,7 +58,6 @@ export function parseArgs(args: string[]) {
       "env-file",
     ],
     default: {
-      static: true,
       config: Deno.env.get("DEPLOYCTL_CONFIG_FILE"),
       token: Deno.env.get("DENO_DEPLOY_TOKEN"),
       org: Deno.env.get("DEPLOYCTL_ORGANIZATION"),
