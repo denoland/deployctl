@@ -15,17 +15,16 @@ import type {
 import {
   bold,
   cyan,
-  fromFileUrl,
   green,
   magenta,
   red,
-  type Spinner,
   stripAnsiCode,
-  tty,
   yellow,
-} from "../../deps.ts";
+} from "@std/fmt/colors";
+import type { Spinner } from "@denosaurs/wait";
+import * as tty from "@denosaurs/tty";
+import { fromFileUrl } from "@std/path/from_file_url";
 import { error } from "../error.ts";
-import { isTerminal } from "../utils/mod.ts";
 import { renderCron } from "../utils/crons.ts";
 import { renderTimeDelta } from "../utils/time.ts";
 
@@ -206,7 +205,7 @@ async function listDeployments(args: Args): Promise<void> {
       format = args.format;
       break;
     case undefined:
-      format = isTerminal(Deno.stdout) ? "overview" : "json";
+      format = Deno.stdout.isTerminal() ? "overview" : "json";
       break;
     default:
       error(
@@ -341,7 +340,7 @@ async function showDeployment(args: Args): Promise<void> {
       format = args.format;
       break;
     case undefined:
-      format = isTerminal(Deno.stdout) ? "overview" : "json";
+      format = Deno.stdout.isTerminal() ? "overview" : "json";
       break;
     default:
       error(

@@ -1,4 +1,4 @@
-import { dotenv } from "../../deps.ts";
+import * as dotenv from "@std/dotenv";
 import type { Args } from "../args.ts";
 
 /**

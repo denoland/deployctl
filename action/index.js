@@ -10,6 +10,7 @@ import {
   resolve,
   walk,
 } from "./deps.js";
+import process from "node:process";
 
 // The origin of the server to make Deploy requests to.
 const ORIGIN = process.env.DEPLOY_API_ENDPOINT ?? "https://dash.deno.com";

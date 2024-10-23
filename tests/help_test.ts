@@ -1,4 +1,4 @@
-import { assert, assertEquals, assertStringIncludes } from "./deps.ts";
+import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { output, test } from "./utils.ts";
 
 test({ args: [] }, async (proc) => {

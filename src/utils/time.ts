@@ -1,4 +1,4 @@
-import { yellow } from "../../deps.ts";
+import { yellow } from "@std/fmt/colors";
 
 export function renderTimeDelta(delta: number, language?: string): string {
   const sinces = [delta];

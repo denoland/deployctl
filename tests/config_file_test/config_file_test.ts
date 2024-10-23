@@ -1,6 +1,6 @@
-import { fromFileUrl } from "../../deps.ts";
+import { fromFileUrl } from "@std/path/from_file_url";
 import configFile from "../../src/config_file.ts";
-import { assert, assertEquals } from "../deps.ts";
+import { assert, assertEquals } from "@std/assert";
 
 Deno.test("ConfigFile.diff returns array with additions and removals", async () => {
   const config = await configFile.read(
