@@ -832,7 +832,7 @@ class TextLineStream extends TransformStream {
         });
     }
 }
-const VERSION = "1.12.0";
+const VERSION = "1.13.0";
 const { Deno: Deno2 } = globalThis;
 const noColor = typeof Deno2?.noColor === "boolean" ? Deno2.noColor : false;
 let enabled = !noColor;
