@@ -15,7 +15,7 @@ jobs:
       matrix:
         # Test on the oldest supported, the latest stable, and nightly
         deno: [old, stable, canary]
-        os: [macOS-latest, windows-latest, ubuntu-22.04-xl]
+        os: [macOS-latest, windows-latest, ubuntu-latest]
 
     steps:
       - name: Setup repo
