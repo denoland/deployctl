@@ -1,5 +1,5 @@
 import type { Args } from "../args.ts";
-import { API, isTerminal } from "../utils/mod.ts";
+import { API } from "../utils/mod.ts";
 import TokenProvisioner from "../utils/access_token.ts";
 import { error } from "../error.ts";
 import { wait } from "../utils/spinner.ts";
@@ -49,7 +49,7 @@ export default async function (args: Args): Promise<void> {
       format = args.format;
       break;
     case undefined:
-      format = isTerminal(Deno.stdout) ? "overview" : "body";
+      format = Deno.stdout.isTerminal() ? "overview" : "body";
       break;
     default:
       error(

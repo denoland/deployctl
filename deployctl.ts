@@ -3,10 +3,10 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
 import {
-  semverGreaterThanOrEquals,
-  semverParse,
-  setColorEnabled,
-} from "./deps.ts";
+  greaterOrEqual as semverGreaterThanOrEquals,
+  parse as semverParse,
+} from "@std/semver";
+import { setColorEnabled } from "@std/fmt/colors";
 import { type Args, parseArgs } from "./src/args.ts";
 import { error } from "./src/error.ts";
 import deploySubcommand from "./src/subcommands/deploy.ts";
@@ -21,7 +21,6 @@ import { fetchReleases, getConfigPaths } from "./src/utils/info.ts";
 import configFile from "./src/config_file.ts";
 import inferConfig from "./src/config_inference.ts";
 import { wait } from "./src/utils/spinner.ts";
-import { isTerminal } from "./src/utils/mod.ts";
 
 const help = `deployctl ${VERSION}
 Command line tool for Deno Deploy.
@@ -55,7 +54,7 @@ const args = parseArgs(Deno.args);
 
 setColoring(args);
 
-if (isTerminal(Deno.stdin)) {
+if (Deno.stdin.isTerminal()) {
   let latestVersion;
   // Get the path to the update information json file.
   const { updatePath } = getConfigPaths();
@@ -183,7 +182,7 @@ function setColoring(args: Args) {
 }
 
 function setAutoColoring() {
-  if (isTerminal(Deno.stdout)) {
+  if (Deno.stdout.isTerminal()) {
     setColorEnabled(true);
   } else {
     setColorEnabled(false);

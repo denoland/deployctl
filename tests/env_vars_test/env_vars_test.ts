@@ -1,6 +1,6 @@
 import { parseArgs } from "../../src/args.ts";
 import { envVarsFromArgs } from "../../src/utils/env_vars.ts";
-import { assert, assertEquals } from "../deps.ts";
+import { assert, assertEquals } from "@std/assert";
 
 Deno.test("envVarsFromArgs gets env variables from multiple --env options", async () => {
   const args = parseArgs(["--env=FOO=foo", "--env=BAR=bar"]);

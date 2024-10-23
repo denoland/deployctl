@@ -1,3 +1,7 @@
+import { lessThan as semverLessThan, parse as semverParse } from "@std/semver";
+import { assert } from "@std/assert/assert";
+import { MINIMUM_DENO_VERSION } from "../src/version.ts";
+
 export interface Permissions {
   net: boolean;
   read: boolean;
@@ -31,6 +35,18 @@ export function deployctl(
   if (permissions?.sys) deno.push("--allow-sys");
 
   deno.push("--quiet");
+
+  // Deno 1.x does not support lockfile v4. To work around this, we append
+  // `--no-lock` in this case.
+  const v2 = semverParse("2.0.0");
+  assert(
+    semverLessThan(semverParse(MINIMUM_DENO_VERSION), v2),
+    "We do not support Deno 1.x anymore. Please remove the `isDeno1` check below in the source code.",
+  );
+  const isDeno1 = semverLessThan(semverParse(Deno.version.deno), v2);
+  if (isDeno1) {
+    deno.push("--no-lock");
+  }
 
   deno.push(new URL("../deployctl.ts", import.meta.url).toString());
 

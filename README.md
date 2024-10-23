@@ -5,7 +5,7 @@ contains the `denoland/deployctl` GitHub Action.
 
 ## Prerequisite
 
-You need to have Deno 1.41.1+ installed (latest version is recommended; just run
+You need to have Deno 1.46.0+ installed (latest version is recommended; just run
 `deno upgrade`)
 
 ## Install
