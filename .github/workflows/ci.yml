@@ -43,9 +43,7 @@ jobs:
         run: deno check deployctl.ts
 
       - name: action/deps.js up-to-date
-        # On Linux the bundle command often segfaults. We use windows as a temporary
-        # workaround. See https://github.com/denoland/deployctl/issues/338
-        if: runner.os == 'Windows' && matrix.deno == 'stable'
+        if: runner.os == 'Linux' && matrix.deno == 'stable'
         run: |
           # @deno/emit doesn't work if JSR modules are not in the cache.
           # This is a workaround to cache the JSR modules beforehand.
