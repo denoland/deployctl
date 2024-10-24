@@ -36,7 +36,7 @@ jobs:
           project: happy-rat-64
           root: action
           entrypoint: tests/include_exclude.ts
-          include: foo,tests/include_exclude.ts,bar
+          include: foo, tests/include_exclude.ts,bar
       - name: Deploy with comma-separated exclude
         uses: ./
         with:
