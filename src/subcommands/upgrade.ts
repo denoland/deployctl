@@ -7,6 +7,7 @@ import {
   parse as semverParse,
 } from "@std/semver";
 import { VERSION } from "../version.ts";
+import type { Args as RawArgs } from "../args.ts";
 
 const help = `deployctl upgrade
 Upgrade deployctl to the given version (defaults to latest).
@@ -29,24 +30,33 @@ ARGS:
     <version>         The version to upgrade to (defaults to latest)
 `;
 
-export interface Args {
+type UpgradeArgs = {
   help: boolean;
-}
+  /**
+   * If present, this value will be provided to `deno install` command that the
+   * upgrade subcommand internally invokes. This option is not documented in the
+   * help message as its intended use is for testing.
+   */
+  root: string | null;
+};
 
-// deno-lint-ignore no-explicit-any
-export default async function (rawArgs: Record<string, any>): Promise<void> {
-  const args: Args = {
-    help: !!rawArgs.help,
-  };
+export default async function (rawArgs: RawArgs): Promise<void> {
   const version = typeof rawArgs._[0] === "string" ? rawArgs._[0] : null;
+  const args: UpgradeArgs = {
+    help: !!rawArgs.help,
+    root: rawArgs.root ?? null,
+  };
+
   if (args.help) {
     console.log(help);
-    Deno.exit();
+    Deno.exit(0);
   }
+
   if (rawArgs._.length > 1) {
     console.error(help);
     error("Too many positional arguments given.");
   }
+
   if (version && !semverValid(version)) {
     error(`The provided version is invalid.`);
   }
@@ -70,17 +80,14 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     const process = new Deno.Command(Deno.execPath(), {
       args: [
         "install",
-        "--allow-read",
-        "--allow-write",
-        "--allow-env",
-        "--allow-net",
-        "--allow-run",
-        "--allow-sys",
-        "--no-check",
+        "-A",
+        "--global",
+        args.root ? `--root=${args.root}` : undefined,
+        "--reload",
         "--force",
         "--quiet",
-        `https://deno.land/x/deploy@${version ? version : latest}/deployctl.ts`,
-      ],
+        `jsr:@deno/deployctl@${version || latest}`,
+      ].filter((x) => x !== undefined),
     }).spawn();
     await process.status;
   }
