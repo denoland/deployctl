@@ -11,6 +11,8 @@ Deno.test("upgrade", async () => {
   const tempDir = await Deno.makeTempDir();
   console.log(tempDir);
 
+  const exe = Deno.build.os === "windows" ? "deployctl.cmd" : "deployctl";
+
   // Install the current `deployctl.ts`
   {
     const installCmd = await new Deno.Command(Deno.execPath(), {
@@ -34,7 +36,7 @@ Deno.test("upgrade", async () => {
 
   // Check the version of the installed `deployctl`
   {
-    const versionCmd = await new Deno.Command(`${tempDir}/bin/deployctl`, {
+    const versionCmd = await new Deno.Command(`${tempDir}/bin/${exe}`, {
       args: ["--version"],
     }).output();
     const stdout = decoder.decode(versionCmd.stdout).trim();
@@ -51,7 +53,7 @@ Deno.test("upgrade", async () => {
 
   // "Upgrade" the installed `deployctl` to 1.12.0
   {
-    const upgradeCmd = await new Deno.Command(`${tempDir}/bin/deployctl`, {
+    const upgradeCmd = await new Deno.Command(`${tempDir}/bin/${exe}`, {
       args: [
         "upgrade",
         "--root",
@@ -66,7 +68,7 @@ Deno.test("upgrade", async () => {
 
   // Check the version of the "upgraded" `deployctl`
   {
-    const versionCmd = await new Deno.Command(`${tempDir}/bin/deployctl`, {
+    const versionCmd = await new Deno.Command(`${tempDir}/bin/${exe}`, {
       args: ["--version"],
     }).output();
     const stdout = decoder.decode(versionCmd.stdout).trim();
