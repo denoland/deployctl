@@ -74,8 +74,8 @@ async function main() {
   }
 
   core.debug(`Discovering assets in "${cwd}"`);
-  const includes = include.flatMap((i) => i.split(","));
-  const excludes = exclude.flatMap((e) => e.split(","));
+  const includes = include.flatMap((i) => i.split(",")).map((i) => i.trim());
+  const excludes = exclude.flatMap((e) => e.split(",")).map((i) => i.trim());
   // Exclude node_modules by default unless explicitly specified
   if (!includes.some((i) => i.includes("node_modules"))) {
     excludes.push("**/node_modules");
