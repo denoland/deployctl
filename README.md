@@ -62,7 +62,7 @@ jobs:
 
     steps:
       - name: Clone repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Deploy to Deno Deploy
         uses: denoland/deployctl@v1
