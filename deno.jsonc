@@ -29,9 +29,6 @@
     "@std/assert": "jsr:@std/assert@0.217",
     "@denosaurs/wait": "jsr:@denosaurs/wait@0.2.2",
     "@denosaurs/tty": "jsr:@denosaurs/tty@0.2.1",
-    "@deno/emit": "jsr:@deno/emit@0.45.0",
-    // To make @deno/emit use the latest version of @deno/cache-dir.
-    // Needed until https://github.com/denoland/deno_emit/pull/192 lands
-    "jsr:@deno/cache-dir@0.8": "jsr:@deno/cache-dir@0.13.0"
+    "@deno/emit": "jsr:@deno/emit@0.46.0"
   }
 }
