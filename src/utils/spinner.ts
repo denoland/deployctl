@@ -2,7 +2,7 @@ import {
   type Spinner,
   type SpinnerOptions,
   wait as innerWait,
-} from "../../deps.ts";
+} from "@denosaurs/wait";
 
 let current: Spinner | null = null;
 

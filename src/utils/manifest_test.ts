@@ -1,5 +1,5 @@
-import { dirname, fromFileUrl, join } from "../../deps.ts";
-import { assert, assertEquals, assertFalse } from "../../tests/deps.ts";
+import { dirname, fromFileUrl, join } from "@std/path";
+import { assert, assertEquals, assertFalse } from "@std/assert";
 import type { ManifestEntry } from "./api_types.ts";
 import {
   containsEntryInManifest,

@@ -1,4 +1,5 @@
-import { resolve, toFileUrl } from "../../deps.ts";
+import { resolve, toFileUrl } from "@std/path";
+import { stringify as stringifyError } from "../error.ts";
 
 /**
  * Parses the entrypoint to a URL.
@@ -17,14 +18,18 @@ export async function parseEntrypoint(
       entrypointSpecifier = toFileUrl(resolve(root ?? Deno.cwd(), entrypoint));
     }
   } catch (err) {
-    throw `Failed to parse ${diagnosticName} specifier '${entrypoint}': ${err.message}`;
+    throw `Failed to parse ${diagnosticName} specifier '${entrypoint}': ${
+      stringifyError(err)
+    }`;
   }
 
-  if (entrypointSpecifier.protocol == "file:") {
+  if (entrypointSpecifier.protocol === "file:") {
     try {
       await Deno.lstat(entrypointSpecifier);
     } catch (err) {
-      throw `Failed to open ${diagnosticName} file at '${entrypointSpecifier}': ${err.message}`;
+      throw `Failed to open ${diagnosticName} file at '${entrypointSpecifier}': ${
+        stringifyError(err)
+      }`;
     }
   }
 
@@ -34,5 +39,8 @@ export async function parseEntrypoint(
 export function isURL(entrypoint: string): boolean {
   return entrypoint.startsWith("https://") ||
     entrypoint.startsWith("http://") ||
-    entrypoint.startsWith("file://");
+    entrypoint.startsWith("file://") ||
+    entrypoint.startsWith("data:") ||
+    entrypoint.startsWith("jsr:") ||
+    entrypoint.startsWith("npm:");
 }

@@ -40,7 +40,7 @@ jobs:
       id-token: write # required
       contents: read
     steps:
-      # your steps here...
+# your steps here...
 ```
 
 ### Inputs

@@ -1,4 +1,5 @@
-import { delay, TextLineStream } from "../../deps.ts";
+import { delay } from "@std/async/delay";
+import { TextLineStream } from "@std/streams/text_line_stream";
 import { VERSION } from "../version.ts";
 
 import type {
@@ -36,7 +37,7 @@ export class APIError extends Error {
   code: string;
   xDenoRay: string | null;
 
-  name = "APIError";
+  override name = "APIError";
 
   constructor(code: string, message: string, xDenoRay: string | null) {
     super(message);
@@ -44,7 +45,7 @@ export class APIError extends Error {
     this.xDenoRay = xDenoRay;
   }
 
-  toString() {
+  override toString() {
     let error = `${this.name}: ${this.message}`;
     if (this.xDenoRay !== null) {
       error += `\nx-deno-ray: ${this.xDenoRay}`;
@@ -75,16 +76,54 @@ interface TokenProvisioner {
   revoke(): Promise<void>;
 }
 
+interface Logger {
+  debug: (message: string) => void;
+  info: (message: string) => void;
+  notice: (message: string) => void;
+  warning: (message: string) => void;
+  error: (message: string) => void;
+}
+
+interface APIConfig {
+  /**
+   * When enabled, x-deno-ray in responses will always be printed even if the
+   * request is successful.
+   */
+  alwaysPrintXDenoRay: boolean;
+  /**
+   * Logger interface to use for logging certain events
+   */
+  logger: Logger;
+}
+
 export class API {
   #endpoint: string;
   #authorization: string | TokenProvisioner;
+  #config: APIConfig;
 
   constructor(
     authorization: string | TokenProvisioner,
     endpoint: string,
+    config?: Partial<APIConfig>,
   ) {
     this.#authorization = authorization;
     this.#endpoint = endpoint;
+
+    const DEFAULT_CONFIG: APIConfig = {
+      alwaysPrintXDenoRay: false,
+      logger: {
+        debug: (m) => console.debug(m),
+        info: (m) => console.info(m),
+        notice: (m) => console.log(m),
+        warning: (m) => console.warn(m),
+        error: (m) => console.error(m),
+      },
+    };
+
+    this.#config = DEFAULT_CONFIG;
+    this.#config.alwaysPrintXDenoRay = config?.alwaysPrintXDenoRay ??
+      DEFAULT_CONFIG.alwaysPrintXDenoRay;
+    this.#config.logger = config?.logger ?? DEFAULT_CONFIG.logger;
   }
 
   static fromToken(token: string) {
@@ -119,6 +158,11 @@ export class API {
       ...(sudo ? { ["x-deploy-sudo"]: sudo } : {}),
     };
     let res = await fetch(url, { method, headers, body });
+    if (this.#config.alwaysPrintXDenoRay) {
+      this.#config.logger.notice(
+        `x-deno-ray: ${res.headers.get("x-deno-ray")}`,
+      );
+    }
     if (res.status === 401 && typeof this.#authorization === "object") {
       // Token expired or revoked. Provision again and retry
       headers.Authorization = `Bearer ${await this.#authorization.provision()}`;
