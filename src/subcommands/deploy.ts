@@ -1,6 +1,7 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import { fromFileUrl, type Spinner } from "../../deps.ts";
+import type { Spinner } from "@denosaurs/wait";
+import { fromFileUrl } from "@std/path/from_file_url";
 import { envVarsFromArgs } from "../utils/env_vars.ts";
 import { wait } from "../utils/spinner.ts";
 import configFile from "../config_file.ts";
@@ -200,7 +201,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
     try {
       project = await api.createProject(opts.project, org?.id);
     } catch (e) {
-      error(e.message);
+      error(e);
     }
     projectCreationSpinner.succeed(`Created new project '${opts.project}'.`);
     wait({ text: "", indent: 3 }).start().info(

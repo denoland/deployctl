@@ -3,10 +3,11 @@ import { API, APIError, endpoint } from "../utils/api.ts";
 import TokenProvisioner from "../utils/access_token.ts";
 import { wait } from "../utils/spinner.ts";
 import type { Organization, Project } from "../utils/api_types.ts";
-import { bold, green, magenta, red } from "../../deps.ts";
+import { bold, green, magenta, red } from "@std/fmt/colors";
 import { error } from "../error.ts";
 import organization from "../utils/organization.ts";
 import { renderCron } from "../utils/crons.ts";
+import { stringify as stringifyError } from "../error.ts";
 
 const help = `Manage projects in Deno Deploy
 
@@ -264,7 +265,9 @@ async function createProject(args: Args): Promise<void> {
     );
   } catch (error) {
     spinner.fail(
-      `Cannot create the project '${args.project}': ${error.message}`,
+      `Cannot create the project '${args.project}': ${
+        stringifyError(error, { verbose: true })
+      }`,
     );
   }
 }
@@ -313,7 +316,9 @@ async function renameProject(args: Args): Promise<void> {
     spinner.succeed(`Project '${currentName}' renamed to '${newName}'`);
   } catch (error) {
     spinner.fail(
-      `Cannot rename the project '${currentName}' to '${newName}': ${error.message}`,
+      `Cannot rename the project '${currentName}' to '${newName}': ${
+        stringifyError(error, { verbose: true })
+      }`,
     );
   }
 }

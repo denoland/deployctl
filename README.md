@@ -5,13 +5,13 @@ contains the `denoland/deployctl` GitHub Action.
 
 ## Prerequisite
 
-You need to have Deno 1.41.1+ installed (latest version is recommended; just run
+You need to have Deno 1.46.0+ installed (latest version is recommended; just run
 `deno upgrade`)
 
 ## Install
 
 ```shell
-deno install -Arf jsr:@deno/deployctl
+deno install -gArf jsr:@deno/deployctl
 ```
 
 ## Usage
@@ -48,7 +48,7 @@ jobs:
 
     steps:
       - name: Clone repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Deploy to Deno Deploy
         uses: denoland/deployctl@v1

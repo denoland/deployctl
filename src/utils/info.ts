@@ -1,4 +1,4 @@
-import { join } from "../../deps.ts";
+import { join } from "@std/path/join";
 import { getVersions } from "../subcommands/upgrade.ts";
 
 export function getConfigPaths() {
