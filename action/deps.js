@@ -14,6 +14,21 @@ function isPathSeparator(code) {
 function isWindowsDeviceRoot(code) {
     return code >= 97 && code <= 122 || code >= 65 && code <= 90;
 }
+function assertArg(url) {
+    url = url instanceof URL ? url : new URL(url);
+    if (url.protocol !== "file:") {
+        throw new TypeError("Must be a file URL.");
+    }
+    return url;
+}
+function fromFileUrl(url) {
+    url = assertArg(url);
+    let path = decodeURIComponent(url.pathname.replace(/\//g, "\\").replace(/%(?![0-9A-Fa-f]{2})/g, "%25")).replace(/^\\*([A-Za-z]:)(\\|$)/, "$1\\");
+    if (url.hostname !== "") {
+        path = `\\\\${url.hostname}${path}`;
+    }
+    return path;
+}
 function isAbsolute(path) {
     assertPath(path);
     const len = path.length;
@@ -39,7 +54,7 @@ function assert(expr, msg = "") {
         throw new AssertionError(msg);
     }
 }
-function assertArg(path) {
+function assertArg1(path) {
     assertPath(path);
     if (path.length === 0) return ".";
 }
@@ -97,7 +112,7 @@ function normalizeString(path, allowAboveRoot, separator, isPathSeparator) {
     return res;
 }
 function normalize(path) {
-    assertArg(path);
+    assertArg1(path);
     const len = path.length;
     let rootEnd = 0;
     let device;
@@ -587,12 +602,16 @@ function isGlob(str) {
 function isPosixPathSeparator(code) {
     return code === 47;
 }
+function fromFileUrl1(url) {
+    url = assertArg(url);
+    return decodeURIComponent(url.pathname.replace(/%(?![0-9A-Fa-f]{2})/g, "%25"));
+}
 function isAbsolute1(path) {
     assertPath(path);
     return path.length > 0 && isPosixPathSeparator(path.charCodeAt(0));
 }
 function normalize1(path) {
-    assertArg(path);
+    assertArg1(path);
     const isAbsolute = isPosixPathSeparator(path.charCodeAt(0));
     const trailingSeparator = isPosixPathSeparator(path.charCodeAt(path.length - 1));
     path = normalizeString(path, !isAbsolute, "/", isPosixPathSeparator);
@@ -675,6 +694,9 @@ const osType = (()=>{
     return "linux";
 })();
 const isWindows = osType === "windows";
+function fromFileUrl2(url) {
+    return isWindows ? fromFileUrl(url) : fromFileUrl1(url);
+}
 function join2(...paths) {
     return isWindows ? join(...paths) : join1(...paths);
 }
@@ -3519,4 +3541,5 @@ function convertPatternToRegExp(pattern) {
 export { parseEntrypoint as parseEntrypoint };
 export { API as API, APIError as APIError };
 export { convertPatternToRegExp as convertPatternToRegExp, walk as walk };
+export { fromFileUrl2 as fromFileUrl, resolve2 as resolve };
 
