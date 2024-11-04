@@ -80,11 +80,14 @@ async function main() {
   if (!includes.some((i) => i.includes("node_modules"))) {
     excludes.push("**/node_modules");
   }
-  const assets = new Map();
-  const entries = await walk(cwd, cwd, assets, {
-    include: includes.map(convertPatternToRegExp),
-    exclude: excludes.map(convertPatternToRegExp),
-  });
+  const { manifestEntries: entries, hashPathMap: assets } = await walk(
+    cwd,
+    cwd,
+    {
+      include: includes.map(convertPatternToRegExp),
+      exclude: excludes.map(convertPatternToRegExp),
+    },
+  );
   core.debug(`Discovered ${assets.size} assets`);
 
   const api = new API(`GitHubOIDC ${token}`, ORIGIN, {

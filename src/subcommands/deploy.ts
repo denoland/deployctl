@@ -9,10 +9,16 @@ import { error } from "../error.ts";
 import { API, APIError, endpoint } from "../utils/api.ts";
 import type { ManifestEntry } from "../utils/api_types.ts";
 import { parseEntrypoint } from "../utils/entrypoint.ts";
-import { convertPatternToRegExp, walk } from "../utils/walk.ts";
+import {
+  containsEntryInManifest,
+  convertPatternToRegExp,
+  walk,
+} from "../utils/manifest.ts";
 import TokenProvisioner from "../utils/access_token.ts";
 import type { Args as RawArgs } from "../args.ts";
 import organization from "../utils/organization.ts";
+import { relative } from "@std/path/relative";
+import { yellow } from "@std/fmt/colors";
 
 const help = `deployctl deploy
 Deploy a script with static files to Deno Deploy.
@@ -274,13 +280,45 @@ async function deploy(opts: DeployOpts): Promise<void> {
   if (opts.static) {
     wait("").start().info(`Uploading all files from the current dir (${cwd})`);
     const assetSpinner = wait("Finding static assets...").start();
-    const assets = new Map<string, string>();
     const include = opts.include.map(convertPatternToRegExp);
     const exclude = opts.exclude.map(convertPatternToRegExp);
-    const entries = await walk(cwd, cwd, assets, { include, exclude });
+    const { manifestEntries: entries, hashPathMap: assets } = await walk(
+      cwd,
+      cwd,
+      { include, exclude },
+    );
     assetSpinner.succeed(
       `Found ${assets.size} asset${assets.size === 1 ? "" : "s"}.`,
     );
+
+    // If the import map is specified but not in the manifest, error out.
+    if (
+      opts.importMapUrl !== null &&
+      !containsEntryInManifest(
+        entries,
+        relative(cwd, fromFileUrl(opts.importMapUrl)),
+      )
+    ) {
+      error(
+        `Import map ${opts.importMapUrl} not found in the assets to be uploaded. Please check --include and --exclude options to make sure the import map is included.`,
+      );
+    }
+
+    // If the config file is present but not in the manifest, show a warning
+    // that any import map settings in the config file will not be used.
+    if (
+      opts.importMapUrl === null && opts.config !== null &&
+      !containsEntryInManifest(
+        entries,
+        relative(cwd, opts.config),
+      )
+    ) {
+      wait("").start().warn(
+        yellow(
+          `Config file ${opts.config} not found in the assets to be uploaded; any import map settings in the config file will not be applied during deployment. If this is not your intention, please check --include and --exclude options to make sure the config file is included.`,
+        ),
+      );
+    }
 
     uploadSpinner = wait("Determining assets to upload...").start();
     const neededHashes = await api.projectNegotiateAssets(project.id, {
