@@ -47,6 +47,7 @@ export function parseArgs(args: string[]) {
       "db",
       "env",
       "env-file",
+      "root",
     ],
     collect: [
       "grep",

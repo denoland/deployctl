@@ -14,6 +14,20 @@ You need to have Deno 1.46.0+ installed (latest version is recommended; just run
 deno install -gArf jsr:@deno/deployctl
 ```
 
+## Upgrade
+
+If you have `deployctl` already installed, you can upgrade to the latest version
+by running:
+
+```shell
+deployctl upgrade
+```
+
+> [!WARNING]
+> If your `deployctl` is older than 1.13.0 and you are using Deno v2.x,
+> `deployctl upgrade` does not work. You instead need to run
+> `deno install -gArf jsr:@deno/deployctl` in this case.
+
 ## Usage
 
 The easiest way to get started with `deployctl` is to deploy one of the examples
