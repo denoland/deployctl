@@ -1,17 +1,8 @@
 // Copyright 2021 Deno Land Inc. All rights reserved. MIT license.
 
-import {
-  cyan,
-  dirname,
-  extname,
-  green,
-  join,
-  JSONC,
-  magenta,
-  red,
-  relative,
-  resolve,
-} from "../deps.ts";
+import { cyan, green, magenta, red } from "@std/fmt/colors";
+import * as JSONC from "@std/jsonc";
+import { dirname, extname, join, relative, resolve } from "@std/path";
 import { error } from "./error.ts";
 import { isURL } from "./utils/entrypoint.ts";
 import { wait } from "./utils/spinner.ts";

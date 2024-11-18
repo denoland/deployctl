@@ -1,4 +1,4 @@
-import { green, red, stripAnsiCode } from "../../deps.ts";
+import { green, red, stripAnsiCode } from "@std/fmt/colors";
 import type { Cron, CronExecutionRetry } from "./api_types.ts";
 import { renderTimeDelta } from "./time.ts";
 export function renderCron(cron: Cron): string {

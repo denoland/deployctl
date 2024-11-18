@@ -30,21 +30,21 @@ jobs:
           root: action/tests
           entrypoint: include_exclude.ts
           include: include_exclude.ts
-      - name: Deploy with comma-separated include 
+      - name: Deploy with comma-separated include
         uses: ./
         with:
           project: happy-rat-64
           root: action
           entrypoint: tests/include_exclude.ts
-          include: foo,tests/include_exclude.ts,bar
-      - name: Deploy with comma-separated exclude 
+          include: foo, tests/include_exclude.ts,bar
+      - name: Deploy with comma-separated exclude
         uses: ./
         with:
           project: happy-rat-64
           root: action/tests
           entrypoint: include_exclude.ts
           exclude: import_bomb1,import_bomb2
-      - name: Deploy with multiline exclude 
+      - name: Deploy with multiline exclude
         uses: ./
         with:
           project: happy-rat-64
@@ -75,3 +75,9 @@ jobs:
           project: happy-rat-64
           root: action/tests
           entrypoint: always_exclude_node_modules/main.ts
+      - name: data URL entrypoint
+        uses: ./
+        with:
+          project: happy-rat-64
+          root: action/tests
+          entrypoint: "data:,Deno.serve(() => new Response())"
