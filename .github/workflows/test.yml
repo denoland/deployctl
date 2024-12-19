@@ -14,7 +14,7 @@ jobs:
       id-token: write
       contents: read
     env:
-      PROJECT_NAME: test-deployctl-fork # happy-rat-64
+      PROJECT_NAME: happy-rat-64
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
