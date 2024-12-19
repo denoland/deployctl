@@ -81,3 +81,7 @@ jobs:
           project: happy-rat-64
           root: action/tests
           entrypoint: "data:,Deno.serve(() => new Response())"
+      - name: Deploy with deno.jsonc file
+        uses: ./
+        with:
+          root: action/tests/with-deno-config

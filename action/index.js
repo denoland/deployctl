@@ -21,11 +21,12 @@ const ORIGIN = process.env.DEPLOY_API_ENDPOINT ?? "https://dash.deno.com";
 
 async function main() {
   // Try to resolve and parse a deno config file
+  const cwd = resolve(process.cwd(), core.getInput("root", {}));
   let denoConfig = core.getInput("deno-config", {});
   let denoConfigHasDeployInfo = false;
   const denoParsedConfig = {};
   for (let path of [denoConfig, "deno.json", "deno.jsonc"]) {
-    path = resolve(process.cwd(), path);
+    path = resolve(cwd, path);
     if (existsSync(path)) {
       denoConfig = path;
       break;
@@ -55,7 +56,7 @@ async function main() {
     // This lets user use deno.jsonc files as import-map since jsonc is not directly supported
     if (denoParsedConfig.imports) {
       core.info(`The configuration file has a "imports" field`);
-      denoParsedConfig.importMap = path.join(tmpdir(), "importMap.json");
+      denoParsedConfig.importMap = resolve(tmpdir(), "importMap.json");
       await writeFile(
         denoParsedConfig.importMap,
         JSON.stringify({ imports: denoParsedConfig.imports }),
@@ -75,7 +76,6 @@ async function main() {
     core.getMultilineInput("include", {});
   const exclude = denoParsedConfig.deploy?.exclude ||
     core.getMultilineInput("exclude", {});
-  const cwd = resolve(process.cwd(), core.getInput("root", {}));
 
   if (github.context.eventName === "pull_request") {
     const pr = github.context.payload.pull_request;

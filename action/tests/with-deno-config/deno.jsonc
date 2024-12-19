@@ -1,0 +1,9 @@
+{
+  "deploy": {
+    "project": "happy-rat-64",
+    "entrypoint": "deno-config/hello.ts"
+  },
+  "imports": {
+    "std/": "https://deno.land/std@0.128.0/"
+  }
+}
