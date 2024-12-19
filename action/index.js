@@ -12,7 +12,6 @@ import {
 } from "./deps.js";
 import process from "node:process";
 import { jsonc } from "jsonc";
-import { tmpdir } from "node:os";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 
@@ -56,10 +55,16 @@ async function main() {
     // This lets user use deno.jsonc files as import-map since jsonc is not directly supported
     if (denoParsedConfig.imports) {
       core.info(`The configuration file has a "imports" field`);
-      denoParsedConfig.importMap = resolve(tmpdir(), "importMap.json");
+      denoParsedConfig.importMap = resolve(
+        root,
+        core.getInput("import-map-autogen-temp", {}),
+      );
       await writeFile(
         denoParsedConfig.importMap,
         JSON.stringify({ imports: denoParsedConfig.imports }),
+      );
+      core.info(
+        `Created temporary import map in ${denoParsedConfig.importMap}`,
       );
     }
   }

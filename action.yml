@@ -17,8 +17,12 @@ inputs:
     description: The path or URL to the entrypoint file (required, defaults to "deploy.entrypoint" of deno config if present)
     required: false
   import-map:
-    description: The path or URL to an import map file (defaults to "importMap" or auto-generated from "imports" of deno config if present)
+    description: The path or URL to an import map file (defaults to "importMap" of deno config if present)
     required: false
+  import-map-autogen-temp:
+    description: If "imports" is present in deno config, the path to store the auto-generated import map (relative to root, overrides the "importMap" valud of deno config if present)
+    required: false
+    default: ".importMap.generated.json"
   include:
     description: Only upload files that match this pattern (multiline and/or comma-separated, defaults to "deploy.exclude" of deno config if present)
     required: false
