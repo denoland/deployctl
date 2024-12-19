@@ -56,7 +56,7 @@ async function main() {
     if (denoParsedConfig.imports) {
       core.info(`The configuration file has a "imports" field`);
       denoParsedConfig.importMap = resolve(
-        root,
+        cwd,
         core.getInput("import-map-autogen-temp", {}),
       );
       await writeFile(
