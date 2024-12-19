@@ -8,22 +8,22 @@ branding:
 
 inputs:
   deno-config:
-    description: The path to a local Deno config file (deno.json and deno.jsonc are auto-discovered). If it contains a "deploy" field, other inputs will default to its content.
+    description: The path to a deno config file (deno.json and deno.jsonc are auto-discovered)
     required: false
   project:
-    description: The name or ID of the project to deploy (required if when not set in Deno config)
+    description: The name or ID of the project to deploy (required, defaults to "deploy.project" of deno config if present)
     required: false
   entrypoint:
-    description: The path or URL to the entrypoint file (required if when not set in Deno config)
+    description: The path or URL to the entrypoint file (required, defaults to "deploy.entrypoint" of deno config if present)
     required: false
   import-map:
-    description: The path or URL to an import map file
+    description: The path or URL to an import map file (defaults to "importMap" or auto-generated from "imports" of deno config if present)
     required: false
   include:
-    description: Only upload files that match this pattern (multiline and/or comma-separated)
+    description: Only upload files that match this pattern (multiline and/or comma-separated, defaults to "deploy.exclude" of deno config if present)
     required: false
   exclude:
-    description: Exclude files that match this pattern (multiline and/or comma-separated)
+    description: Exclude files that match this pattern (multiline and/or comma-separated, defaults to "deploy.exclude" of deno config if present)
     required: false
   root:
     description: The path to the directory containing the code and assets to upload
