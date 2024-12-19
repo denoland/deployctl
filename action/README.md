@@ -49,14 +49,22 @@ jobs:
 - name: Deploy to Deno Deploy
   uses: denoland/deployctl@v1
   with:
+    # Path to the deno config file
+    # Auto-discovered from the root directory if it is named "deno.json" or "deno.jsonc".
+    # If present, other inputs will defaults to their value in the config file.
+    # Optional.
+    deno-config:
+
     # Name of the project on Deno Deploy
     # Required.
+    # Defaults to "deploy.project" of deno config file if present.
     project:
 
     # Entrypoint location executed by Deno Deploy
     # The entrypoint can be a relative path or an absolute URL.
     # If it is a relative path, it will be resolved relative to the `root` directory.
     # Required.
+    # Defaults to "deploy.entrypoint" of deno config file if present.
     entrypoint:
 
     # Root directory to deploy
@@ -67,17 +75,26 @@ jobs:
     # Filter which files to include in the deployment
     # It supports a single file, multiple files separated by a comma or by a newline
     # Optional.
+    # Defaults to "include" of deno config file if present.
     include:
 
     # Filter which files to exclude in the deployment
     # It supports a single file, multiple files separated by a comma or by a newline
     # Optional.
+    # Defaults to "exclude" of deno config file if present.
     exclude:
 
     # Location of an import map
     # Must be relative to root directory
     # Optional.
+    # Defaults to "importMap" of deno config file if present.
     import-map:
+
+    # Location of the auto-generated import map if the deno config file contains
+    # an "imports" field (allowing support for jsonc config files).
+    # Relative to root directory
+    # Optional.
+    import-map-autogen-temp:
 ```
 
 ## Examples
