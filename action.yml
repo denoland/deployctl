@@ -7,12 +7,15 @@ branding:
   icon: globe
 
 inputs:
+  deno-config:
+    description: The path to a local Deno config file (deno.json and deno.jsonc are auto-discovered). If it contains a "deploy" field, other inputs will default to its content.
+    required: false
   project:
-    description: The name or ID of the project to deploy
-    required: true
+    description: The name or ID of the project to deploy (required if when not set in Deno config)
+    required: false
   entrypoint:
-    description: The path or URL to the entrypoint file
-    required: true
+    description: The path or URL to the entrypoint file (required if when not set in Deno config)
+    required: false
   import-map:
     description: The path or URL to an import map file
     required: false
