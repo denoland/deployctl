@@ -25,7 +25,7 @@ async function main() {
   let denoConfig = core.getInput("deno-config", {});
   let denoConfigHasDeployInfo = false;
   const denoParsedConfig = {};
-  for (let path of [denoConfig, "deno.json", "deno.jsonc"]) {
+  for (let path of [denoConfig, "deno.json", "deno.jsonc"].filter(Boolean)) {
     path = resolve(cwd, path);
     if (existsSync(path)) {
       denoConfig = path;
