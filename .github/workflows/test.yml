@@ -83,7 +83,11 @@ jobs:
           project: ${{ env.PROJECT_NAME }}
           root: action/tests
           entrypoint: "data:,Deno.serve(() => new Response())"
+      - name: "Setup test: Deploy with deno.jsonc file"
+        run: sed -i 's/\$PROJECT_NAME/${{ env.PROJECT_NAME }}/g' action/tests/with-deno-config/deno.jsonc
       - name: Deploy with deno.jsonc file
         uses: ./
         with:
           root: action/tests/with-deno-config
+      - name: "Cleanup test: Deploy with deno.jsonc file"
+        run: git checkout action/tests/with-deno-config/deno.jsonc
