@@ -355,6 +355,7 @@ async function deploy(opts: DeployOpts): Promise<void> {
             deploySpinner!.text = "Setting environment variables...";
             // Hack while Deno Deploy implements settings env variables during deployment_with_assets
             const redeployed = await api.redeployDeployment(event.id, {
+              prod: opts.prod,
               env_vars: opts.envVars,
             });
             // NULL SAFETY: deployment was just created
