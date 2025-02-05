@@ -6,21 +6,16 @@ export function getConfigPaths() {
     ? Deno.env.get("USERPROFILE")!
     : Deno.env.get("HOME")!;
   const xdgCacheDir = Deno.env.get("XDG_CACHE_HOME");
-  const xdgConfigDir = Deno.env.get("XDG_CONFIG_HOME");
 
-  const denoDir = Deno.env.get("DENO_DIR") || join(homeDir, ".deno");
+  const denoDir = Deno.env.get("DENO_DIR");
   const cacheDir = join(
-    xdgCacheDir ? join(xdgCacheDir, "deno") : denoDir,
-    "deployctl",
-  );
-  const configDir = join(
-    xdgConfigDir ? join(xdgConfigDir, "deno") : denoDir,
+    denoDir ||
+      (xdgCacheDir ? join(xdgCacheDir, "deno") : join(homeDir, ".deno")),
     "deployctl",
   );
 
   return {
     cacheDir,
-    configDir,
     updatePath: join(cacheDir, "update.json"),
     credentialsPath: join(cacheDir, "credentials.json"),
   };
