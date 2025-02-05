@@ -1,7 +1,7 @@
-import { getConfigPaths } from "../info.ts";
+import { getCachePaths } from "../info.ts";
 
 export async function get(): Promise<string | null> {
-  const { credentialsPath } = getConfigPaths();
+  const { credentialsPath } = getCachePaths();
   try {
     const info = await Deno.lstat(credentialsPath);
     if (!info.isFile || (info.mode !== null && (info.mode & 0o777) !== 0o600)) {
@@ -27,7 +27,7 @@ export async function get(): Promise<string | null> {
 }
 
 export async function store(token: string): Promise<void> {
-  const { credentialsPath, cacheDir } = getConfigPaths();
+  const { credentialsPath, cacheDir } = getCachePaths();
   await Deno.mkdir(cacheDir, { recursive: true });
   await Deno.writeTextFile(
     credentialsPath,
@@ -38,7 +38,7 @@ export async function store(token: string): Promise<void> {
 }
 
 export async function remove(): Promise<void> {
-  const { credentialsPath, cacheDir } = getConfigPaths();
+  const { credentialsPath, cacheDir } = getCachePaths();
   await Deno.mkdir(cacheDir, { recursive: true });
   await Deno.writeTextFile(credentialsPath, "{}", { mode: 0o600 });
   return Promise.resolve();
