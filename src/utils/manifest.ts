@@ -38,7 +38,25 @@ function include(
 export async function walk(
   cwd: string,
   dir: string,
-  files: Map<string, string>,
+  options: { include: RegExp[]; exclude: RegExp[] },
+): Promise<
+  {
+    manifestEntries: Record<string, ManifestEntry>;
+    hashPathMap: Map<string, string>;
+  }
+> {
+  const hashPathMap = new Map<string, string>();
+  const manifestEntries = await walkInner(cwd, dir, hashPathMap, options);
+  return {
+    manifestEntries,
+    hashPathMap,
+  };
+}
+
+async function walkInner(
+  cwd: string,
+  dir: string,
+  hashPathMap: Map<string, string>,
   options: { include: RegExp[]; exclude: RegExp[] },
 ): Promise<Record<string, ManifestEntry>> {
   const entries: Record<string, ManifestEntry> = {};
@@ -65,12 +83,12 @@ export async function walk(
         gitSha1,
         size: data.byteLength,
       };
-      files.set(gitSha1, path);
+      hashPathMap.set(gitSha1, path);
     } else if (file.isDirectory) {
       if (relative === "/.git") continue;
       entry = {
         kind: "directory",
-        entries: await walk(cwd, path, files, options),
+        entries: await walkInner(cwd, path, hashPathMap, options),
       };
     } else if (file.isSymlink) {
       const target = await Deno.readLink(path);
@@ -97,4 +115,43 @@ export function convertPatternToRegExp(pattern: string): RegExp {
     // slice is used to remove the end-of-string anchor '$'
     ? new RegExp(globToRegExp(normalize(pattern)).toString().slice(1, -2))
     : new RegExp(`^${normalize(pattern)}`);
+}
+
+/**
+ * Determines if the manifest contains the entry at the given relative path.
+ *
+ * @param manifestEntries manifest entries to search
+ * @param entryRelativePathToLookup a relative path to look up in the manifest
+ * @returns `true` if the manifest contains the entry at the given relative path
+ */
+export function containsEntryInManifest(
+  manifestEntries: Record<string, ManifestEntry>,
+  entryRelativePathToLookup: string,
+): boolean {
+  for (const [entryName, entry] of Object.entries(manifestEntries)) {
+    switch (entry.kind) {
+      case "file":
+      case "symlink": {
+        if (entryName === entryRelativePathToLookup) {
+          return true;
+        }
+        break;
+      }
+      case "directory": {
+        if (!entryRelativePathToLookup.startsWith(entryName)) {
+          break;
+        }
+
+        const relativePath = entryRelativePathToLookup.slice(
+          entryName.length + 1,
+        );
+        return containsEntryInManifest(entry.entries, relativePath);
+      }
+      default: {
+        const _: never = entry;
+      }
+    }
+  }
+
+  return false;
 }
