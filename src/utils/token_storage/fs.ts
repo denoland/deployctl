@@ -27,8 +27,8 @@ export async function get(): Promise<string | null> {
 }
 
 export async function store(token: string): Promise<void> {
-  const { credentialsPath, configDir } = getConfigPaths();
-  await Deno.mkdir(configDir, { recursive: true });
+  const { credentialsPath, cacheDir } = getConfigPaths();
+  await Deno.mkdir(cacheDir, { recursive: true });
   await Deno.writeTextFile(
     credentialsPath,
     JSON.stringify({ token }, null, 2),
@@ -38,8 +38,8 @@ export async function store(token: string): Promise<void> {
 }
 
 export async function remove(): Promise<void> {
-  const { credentialsPath, configDir } = getConfigPaths();
-  await Deno.mkdir(configDir, { recursive: true });
+  const { credentialsPath, cacheDir } = getConfigPaths();
+  await Deno.mkdir(cacheDir, { recursive: true });
   await Deno.writeTextFile(credentialsPath, "{}", { mode: 0o600 });
   return Promise.resolve();
 }
