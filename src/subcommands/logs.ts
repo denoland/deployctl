@@ -255,7 +255,7 @@ async function liveLogs(api: API, opts: LiveLogOpts): Promise<void> {
       projectSpinner.fail("This project doesn't have a production deployment");
       Deno.exit(1);
     }
-    opts.deploymentId = project.productionDeployment?.id ?? null;
+    opts.deploymentId = project.productionDeployment?.deploymentId ?? null;
   }
   projectSpinner.succeed(`Project: ${project.name}`);
   const logs = opts.deploymentId
@@ -307,7 +307,7 @@ async function queryLogs(api: API, opts: QueryLogOpts): Promise<void> {
       projectSpinner.fail("This project doesn't have a production deployment");
       Deno.exit(1);
     }
-    opts.deploymentId = project.productionDeployment?.id ?? null;
+    opts.deploymentId = project.productionDeployment?.deploymentId ?? null;
   }
   projectSpinner.succeed(`Project: ${project.name}`);
 
