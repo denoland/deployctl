@@ -2,7 +2,7 @@
   "version": "4",
   "specifiers": {
     "jsr:@deno/cache-dir@0.13.2": "0.13.2",
-    "jsr:@deno/cache-dir@0.17": "0.17.0",
+    "jsr:@deno/cache-dir@0.18": "0.18.0",
     "jsr:@deno/emit@0.46.0": "0.46.0",
     "jsr:@denosaurs/tty@0.2.1": "0.2.1",
     "jsr:@denosaurs/tty@~0.2.1": "0.2.1",
@@ -22,7 +22,7 @@
     "jsr:@std/fmt@1": "1.0.5",
     "jsr:@std/fmt@^1.0.3": "1.0.5",
     "jsr:@std/fs@0.223": "0.223.0",
-    "jsr:@std/fs@^1.0.6": "1.0.11",
+    "jsr:@std/fs@^1.0.6": "1.0.14",
     "jsr:@std/io@0.217": "0.217.0",
     "jsr:@std/io@0.223": "0.223.0",
     "jsr:@std/io@0.225": "0.225.2",
@@ -46,8 +46,8 @@
         "jsr:@std/path@0.223"
       ]
     },
-    "@deno/cache-dir@0.17.0": {
-      "integrity": "c3fca070e1727a30a67352fdbb994fc8125c19c536a536cee8aba741e91eb1de",
+    "@deno/cache-dir@0.18.0": {
+      "integrity": "25ef3ef94fe9d0681201efd879f4b7d417262124a204a546afba91590b309182",
       "dependencies": [
         "jsr:@std/fmt@^1.0.3",
         "jsr:@std/fs@^1.0.6",
@@ -129,8 +129,8 @@
     "@std/fs@1.0.6": {
       "integrity": "42b56e1e41b75583a21d5a37f6a6a27de9f510bcd36c0c85791d685ca0b85fa2"
     },
-    "@std/fs@1.0.11": {
-      "integrity": "ba674672693340c5ebdd018b4fe1af46cb08741f42b4c538154e97d217b55bdd"
+    "@std/fs@1.0.14": {
+      "integrity": "1e84bf0b95fe08f41f1f4aea9717bbf29f45408a56ce073b0114474ce1c9fccf"
     },
     "@std/io@0.217.0": {
       "integrity": "08d3dd7c10956d1433be95306ec15179cdebe49a0ce5a74238fabf140bb74382",
@@ -205,7 +205,7 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@deno/cache-dir@0.17",
+      "jsr:@deno/cache-dir@0.18",
       "jsr:@deno/emit@0.46.0",
       "jsr:@denosaurs/tty@0.2.1",
       "jsr:@denosaurs/wait@0.2.2",

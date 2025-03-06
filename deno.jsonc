@@ -14,7 +14,7 @@
     "version-match": "deno run --allow-read --allow-env ./tools/version_match.ts"
   },
   "imports": {
-    "@deno/cache-dir": "jsr:@deno/cache-dir@^0.17.0",
+    "@deno/cache-dir": "jsr:@deno/cache-dir@^0.18.0",
     "@std/fmt": "jsr:@std/fmt@0.217",
     "@std/fmt/colors": "jsr:@std/fmt@0.217/colors",
     "@std/path": "jsr:@std/path@0.217",
