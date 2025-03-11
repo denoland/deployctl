@@ -11,17 +11,76 @@ import {
   walk,
 } from "./deps.js";
 import process from "node:process";
+import { jsonc } from "jsonc";
+import { existsSync } from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
 
 // The origin of the server to make Deploy requests to.
 const ORIGIN = process.env.DEPLOY_API_ENDPOINT ?? "https://dash.deno.com";
 
 async function main() {
-  const projectId = core.getInput("project", { required: true });
-  const entrypoint = core.getInput("entrypoint", { required: true });
-  const importMap = core.getInput("import-map", {});
-  const include = core.getMultilineInput("include", {});
-  const exclude = core.getMultilineInput("exclude", {});
+  // Try to resolve and parse a deno config file
   const cwd = resolve(process.cwd(), core.getInput("root", {}));
+  let denoConfig = core.getInput("deno-config", {});
+  let denoConfigHasDeployInfo = false;
+  const denoParsedConfig = {};
+  for (let path of [denoConfig, "deno.json", "deno.jsonc"].filter(Boolean)) {
+    path = resolve(cwd, path);
+    if (existsSync(path)) {
+      denoConfig = path;
+      break;
+    }
+  }
+  if (denoConfig) {
+    core.info(`Found a Deno configuration file: ${denoConfig}`);
+    Object.assign(
+      denoParsedConfig,
+      jsonc.parse(await readFile(denoConfig, "utf-8")),
+    );
+    // Defaults deno deploy inputs if present in configuration file
+    if (denoParsedConfig.deploy) {
+      core.info(`The configuration file has a "deploy" field`);
+      if (
+        denoParsedConfig.deploy.project && denoParsedConfig.deploy.entrypoint
+      ) {
+        denoConfigHasDeployInfo = true;
+        core.info(`The "deploy" field seems to be valid`);
+      } else {
+        core.warning(
+          `Could not read "project" and "entrypoint" values from the "deploy" field of the configuration file`,
+        );
+      }
+    }
+    // Create an temporary import map if present in configuration file
+    // This lets user use deno.jsonc files as import-map since jsonc is not directly supported
+    if (denoParsedConfig.imports) {
+      core.info(`The configuration file has a "imports" field`);
+      denoParsedConfig.importMap = resolve(
+        cwd,
+        core.getInput("import-map-autogen-temp", {}),
+      );
+      await writeFile(
+        denoParsedConfig.importMap,
+        JSON.stringify({ imports: denoParsedConfig.imports }),
+      );
+      core.info(
+        `Created temporary import map in ${denoParsedConfig.importMap}`,
+      );
+    }
+  }
+
+  const projectId =
+    core.getInput("project", { required: !denoConfigHasDeployInfo }) ||
+    denoParsedConfig.deploy?.project;
+  const entrypoint =
+    core.getInput("entrypoint", { required: !denoConfigHasDeployInfo }) ||
+    denoParsedConfig.deploy?.entrypoint;
+  const importMap = core.getInput("import-map", {}) ||
+    (denoParsedConfig.importMap ?? "");
+  const include = denoParsedConfig.deploy?.include ||
+    core.getMultilineInput("include", {});
+  const exclude = denoParsedConfig.deploy?.exclude ||
+    core.getMultilineInput("exclude", {});
 
   if (github.context.eventName === "pull_request") {
     const pr = github.context.payload.pull_request;
