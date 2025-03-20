@@ -17,7 +17,7 @@ import projectsSubcommand from "./src/subcommands/projects.ts";
 import deploymentsSubcommand from "./src/subcommands/deployments.ts";
 import apiSubcommand from "./src/subcommands/api.ts";
 import { MINIMUM_DENO_VERSION, VERSION } from "./src/version.ts";
-import { fetchReleases, getConfigPaths } from "./src/utils/info.ts";
+import { fetchReleases, getCachePaths } from "./src/utils/info.ts";
 import configFile from "./src/config_file.ts";
 import inferConfig from "./src/config_inference.ts";
 import { wait } from "./src/utils/spinner.ts";
@@ -57,7 +57,7 @@ setColoring(args);
 if (Deno.stdin.isTerminal()) {
   let latestVersion;
   // Get the path to the update information json file.
-  const { updatePath } = getConfigPaths();
+  const { updatePath } = getCachePaths();
   // Try to read the json file.
   const updateInfoJson = await Deno.readTextFile(updatePath).catch((error) => {
     if (error.name == "NotFound") return null;

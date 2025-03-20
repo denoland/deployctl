@@ -1,16 +1,18 @@
 import { join } from "@std/path/join";
 import { getVersions } from "../subcommands/upgrade.ts";
+import { DenoDir } from "@deno/cache-dir";
 
-export function getConfigPaths() {
-  const homeDir = Deno.build.os == "windows"
-    ? Deno.env.get("USERPROFILE")!
-    : Deno.env.get("HOME")!;
-  const configDir = join(homeDir, ".deno", "deployctl");
+export function getCachePaths() {
+  const denoCacheDir = new DenoDir().root;
+  const cacheDir = join(
+    denoCacheDir,
+    "deployctl",
+  );
 
   return {
-    configDir,
-    updatePath: join(configDir, "update.json"),
-    credentialsPath: join(configDir, "credentials.json"),
+    cacheDir,
+    updatePath: join(cacheDir, "update.json"),
+    credentialsPath: join(cacheDir, "credentials.json"),
   };
 }
 
@@ -18,8 +20,8 @@ export async function fetchReleases() {
   try {
     const { latest } = await getVersions();
     const updateInfo = { lastFetched: Date.now(), latest };
-    const { updatePath, configDir } = getConfigPaths();
-    await Deno.mkdir(configDir, { recursive: true });
+    const { updatePath, cacheDir } = getCachePaths();
+    await Deno.mkdir(cacheDir, { recursive: true });
     await Deno.writeFile(
       updatePath,
       new TextEncoder().encode(JSON.stringify(updateInfo, null, 2)),
