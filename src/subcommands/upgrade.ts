@@ -70,6 +70,7 @@ export default async function (rawArgs: Record<string, any>): Promise<void> {
     const process = new Deno.Command(Deno.execPath(), {
       args: [
         "install",
+        "--global",
         "--allow-read",
         "--allow-write",
         "--allow-env",
