@@ -233,7 +233,10 @@ export default async function inferConfig(
     }
   }
 
-  if (!args.include.some((i) => i.includes("node_modules"))) {
+  if (
+    !args.include.some((i) => i.includes("node_modules")) &&
+    !args.exclude.some((e) => e === "**/node_modules")
+  ) {
     args.exclude.push("**/node_modules");
   }
 }
