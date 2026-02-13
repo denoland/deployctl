@@ -1,3 +1,6 @@
+> [!NOTE]
+> This tool is only used for managing [Deno Deploy Classic](https://docs.deno.com/deploy/classic/) organizations and their projects. New Deno Deploy organizations use the `deno deploy` command built into the Deno Runtime. Learn more about the new `deno deploy` command in the [reference docs](https://docs.deno.com/runtime/reference/cli/deploy/)
+
 # deployctl
 
 `deployctl` is the command line tool for Deno Deploy. This repository also
