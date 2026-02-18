@@ -13,41 +13,51 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    env:
+      PROJECT_NAME: happy-rat-64
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Deploy to Deno Deploy
         uses: ./
         with:
-          project: happy-rat-64
+          project: ${{ env.PROJECT_NAME }}
           root: action/tests
           entrypoint: hello.ts
           import-map: ./import_map.json
+      - name: "Setup test: Deploy to Deno Deploy with deno.jsonc file"
+        run: sed -i 's/\$PROJECT_NAME/${{ env.PROJECT_NAME }}/g' action/tests/with-deno-config/deno.jsonc
+      - name: Deploy to Deno Deploy with deno.jsonc file
+        uses: ./
+        with:
+          root: action/tests/with-deno-config
+      - name: "Cleanup test: Deploy to Deno Deploy with deno.jsonc file"
+        run: git checkout action/tests/with-deno-config/deno.jsonc
       - name: Deploy with single include
         uses: ./
         with:
-          project: happy-rat-64
+          project: ${{ env.PROJECT_NAME }}
           root: action/tests
           entrypoint: include_exclude.ts
           include: include_exclude.ts
       - name: Deploy with comma-separated include
         uses: ./
         with:
-          project: happy-rat-64
+          project: ${{ env.PROJECT_NAME }}
           root: action
           entrypoint: tests/include_exclude.ts
           include: foo, tests/include_exclude.ts,bar
       - name: Deploy with comma-separated exclude
         uses: ./
         with:
-          project: happy-rat-64
+          project: ${{ env.PROJECT_NAME }}
           root: action/tests
           entrypoint: include_exclude.ts
           exclude: import_bomb1,import_bomb2
       - name: Deploy with multiline exclude
         uses: ./
         with:
-          project: happy-rat-64
+          project: ${{ env.PROJECT_NAME }}
           root: action/tests
           entrypoint: include_exclude.ts
           exclude: |
@@ -56,7 +66,7 @@ jobs:
       - name: Deploy combine include and exclude
         uses: ./
         with:
-          project: happy-rat-64
+          project: ${{ env.PROJECT_NAME }}
           root: action
           entrypoint: tests/include_exclude.ts
           include: tests
@@ -66,18 +76,18 @@ jobs:
       - name: Always exclude node_modules directory
         uses: ./
         with:
-          project: happy-rat-64
+          project: ${{ env.PROJECT_NAME }}
           root: action/tests/always_exclude_node_modules
           entrypoint: main.ts
       - name: Always exclude nested node_modules directory
         uses: ./
         with:
-          project: happy-rat-64
+          project: ${{ env.PROJECT_NAME }}
           root: action/tests
           entrypoint: always_exclude_node_modules/main.ts
       - name: data URL entrypoint
         uses: ./
         with:
-          project: happy-rat-64
+          project: ${{ env.PROJECT_NAME }}
           root: action/tests
           entrypoint: "data:,Deno.serve(() => new Response())"

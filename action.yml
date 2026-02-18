@@ -7,12 +7,15 @@ branding:
   icon: globe
 
 inputs:
+  deno-config:
+    description: The path to a deno config file that will populate other inputs (optional, deno.json and deno.jsonc are auto-discovered)
+    required: false
   project:
-    description: The name or ID of the project to deploy
-    required: true
+    description: The name or ID of the project to deploy (required)
+    required: false
   entrypoint:
-    description: The path or URL to the entrypoint file
-    required: true
+    description: The path or URL to the entrypoint file (required)
+    required: false
   import-map:
     description: The path or URL to an import map file
     required: false
@@ -25,6 +28,10 @@ inputs:
   root:
     description: The path to the directory containing the code and assets to upload
     required: false
+  import-map-autogen-temp:
+    description: The path to store the auto-generated import map if deno config file is present (relative to root)
+    required: false
+    default: ".importMap.generated.json"
 
 outputs:
   deployment-id:

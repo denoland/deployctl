@@ -1,0 +1,102 @@
+{
+  "name": "jsonc",
+  "version": "2.0.0",
+  "description": "Everything you need in JSON land. Parse JSON with comments, stringify objects with circular references, etc...",
+  "author": "Onur Yıldırım <onur@cutepilot.com>",
+  "license": "MIT",
+  "homepage": "https://onury.io/jsonc",
+  "repository": "onury/jsonc",
+  "main": "index.js",
+  "files": [
+    "lib",
+    "index.js",
+    "LICENSE"
+  ],
+  "types": "./lib/jsonc.d.ts",
+  "engines": {
+    "node": ">=8"
+  },
+  "scripts": {
+    "clean": "rimraf ./lib",
+    "build": "npm run clean && npm run cover && mkdirp ./lib && tsc",
+    "test": "jest --verbose --no-cache",
+    "cover": "jest --coverage --verbose --no-cache",
+    "coveralls": "cat ./test/coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js -v",
+    "report": "open ./test/coverage/lcov-report/index.html",
+    "docs": "docma -c ./docma.json"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "globals": {
+      "ts-jest": {
+        "diagnostics": false
+      }
+    },
+    "roots": [
+      "<rootDir>/src",
+      "<rootDir>/lib",
+      "<rootDir>/test"
+    ],
+    "transform": {
+      "^.+\\.tsx?$": "ts-jest"
+    },
+    "testRegex": "(/test/.*|(\\.|/)(test|spec))\\.tsx?$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "json"
+    ],
+    "testPathIgnorePatterns": [
+      "/backup/",
+      "/helpers/",
+      "/coverage/"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.ts",
+      "!src/interfaces.ts"
+    ],
+    "coverageDirectory": "./test/coverage"
+  },
+  "keywords": [
+    "json",
+    "object",
+    "notation",
+    "safe",
+    "stringify",
+    "parse",
+    "read-file",
+    "write-file",
+    "comments",
+    "circular",
+    "cyclic",
+    "console",
+    "log",
+    "uglify",
+    "beautify",
+    "typescript"
+  ],
+  "dependencies": {
+    "fast-safe-stringify": "^2.0.6",
+    "graceful-fs": "^4.1.15",
+    "mkdirp": "^0.5.1",
+    "parse-json": "^4.0.0",
+    "strip-bom": "^4.0.0",
+    "strip-json-comments": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^24.0.15",
+    "@types/mkdirp": "^0.5.2",
+    "@types/node": "^12.0.8",
+    "@types/parse-json": "^4.0.0",
+    "@types/strip-bom": "^4.0.1",
+    "@types/strip-json-comments": "0.0.30",
+    "coveralls": "^3.0.4",
+    "docma": "^3.2.2",
+    "jest": "^24.8.0",
+    "jest-cli": "^24.8.0",
+    "rimraf": "^2.6.3",
+    "ts-jest": "^24.0.2",
+    "typescript": "^3.5.2"
+  }
+}

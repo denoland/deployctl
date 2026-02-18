@@ -5,6 +5,7 @@
     "@actions/github": "^5.1.1",
     "@deno/shim-deno": "^0.19.2",
     "formdata-polyfill": "^4.0.10",
+    "jsonc": "^2.0.0",
     "undici": "^5.11.0"
   }
 }
