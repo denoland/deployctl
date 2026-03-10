@@ -6,7 +6,7 @@ import {
   greaterOrEqual as semverGreaterThanOrEquals,
   parse as semverParse,
 } from "@std/semver";
-import { setColorEnabled } from "@std/fmt/colors";
+import { bold, setColorEnabled, yellow } from "@std/fmt/colors";
 import { type Args, parseArgs } from "./src/args.ts";
 import { error } from "./src/error.ts";
 import deploySubcommand from "./src/subcommands/deploy.ts";
@@ -23,7 +23,7 @@ import inferConfig from "./src/config_inference.ts";
 import { wait } from "./src/utils/spinner.ts";
 
 const help = `deployctl ${VERSION}
-Command line tool for Deno Deploy.
+Command line tool for Deno Deploy Classic.
 
 SUBCOMMANDS:
     deploy      Deploy a script with static files to Deno Deploy
@@ -95,6 +95,57 @@ if (Deno.stdin.isTerminal()) {
         "To upgrade, run `deployctl upgrade`",
         `https://github.com/denoland/deployctl/releases/tag/${latestVersion}\n`,
       ].join("\n"),
+    );
+  }
+}
+
+// Show a deprecation notice directing users to the new "deno deploy" command.
+// - Interactive terminals: always show
+// - Non-interactive (CI): show once per day, cached to disk
+// - Set DEPLOYCTL_NO_DEPRECATION_NOTICE=1 to suppress entirely
+if (!Deno.env.get("DEPLOYCTL_NO_DEPRECATION_NOTICE")) {
+  let showNotice = false;
+
+  if (Deno.stdin.isTerminal()) {
+    showNotice = true;
+  } else {
+    // In non-interactive environments, only show once per day
+    const { deprecationNoticePath, configDir } = getConfigPaths();
+    try {
+      const json = await Deno.readTextFile(deprecationNoticePath);
+      const { lastShown } = JSON.parse(json) as { lastShown: number };
+      const moreThanADay =
+        Math.abs(Date.now() - lastShown) > 24 * 60 * 60 * 1000;
+      if (moreThanADay) {
+        showNotice = true;
+      }
+    } catch {
+      // File doesn't exist yet or is unreadable — show the notice
+      showNotice = true;
+    }
+
+    if (showNotice) {
+      // Update the cache so we don't show again for 24 hours
+      try {
+        await Deno.mkdir(configDir, { recursive: true });
+        await Deno.writeTextFile(
+          deprecationNoticePath,
+          JSON.stringify({ lastShown: Date.now() }, null, 2),
+        );
+      } catch {
+        // Not critical — if we can't write the cache, the notice will
+        // just show again next time.
+      }
+    }
+  }
+
+  if (showNotice) {
+    console.error(
+      yellow(bold("warning")) +
+        `: deployctl is for Deno Deploy Classic only.\n` +
+        `         For the new Deno Deploy, use the "deno deploy" command built into the Deno runtime.\n` +
+        `         Learn more: https://docs.deno.com/runtime/reference/cli/deploy/\n` +
+        `         To suppress this warning, set DEPLOYCTL_NO_DEPRECATION_NOTICE=1\n`,
     );
   }
 }
