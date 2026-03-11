@@ -11,6 +11,7 @@ export function getConfigPaths() {
     configDir,
     updatePath: join(configDir, "update.json"),
     credentialsPath: join(configDir, "credentials.json"),
+    deprecationNoticePath: join(configDir, "deprecation_notice.json"),
   };
 }
 
