@@ -41,10 +41,10 @@ OPTIONS:
         --grep=<WORD>                 Filter logs by a word
                                       Multiple words can be specified for AND search. For example, "--grep=foo --grep=bar" will match logs containing both "foo" and "bar"
         --levels=<LEVELS>             Filter logs by log levels (defaults to all log levels)
-                                      Mutliple levels can be specified, e.g. --levels=info,error
+                                      Multiple levels can be specified, e.g. --levels=info,error
         --regions=<REGIONS>           Filter logs by regions (defaults to all regions)
                                       Multiple regions can be specified, e.g. --regions=region1,region2
-        --limit=<LIMIT>               Limit the number of logs to return (defualts to 100)
+        --limit=<LIMIT>               Limit the number of logs to return (defaults to 100)
                                       This flag is effective only when --since and/or --until is specified
 `;
 

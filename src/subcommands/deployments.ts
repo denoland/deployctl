@@ -326,7 +326,7 @@ async function showDeployment(args: Args): Promise<void> {
   }
   let organization = project.organization;
   if (!organization.name && !organization.members) {
-    // project.organization does not incude members array, and we need it for naming personal orgs
+    // project.organization does not include members array, and we need it for naming personal orgs
     organization = await api.getOrganizationById(organization.id);
   }
   spinner.succeed(

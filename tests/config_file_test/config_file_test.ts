@@ -32,7 +32,7 @@ Deno.test("ConfigFile.diff returns array with additions and removals", async () 
   ]);
 });
 
-Deno.test("ConfigFile.diff reports inculde and exclude changes when one of the entries changed", async () => {
+Deno.test("ConfigFile.diff reports include and exclude changes when one of the entries changed", async () => {
   const config = await configFile.read(
     fromFileUrl(new URL(import.meta.resolve("./config.json"))),
   );

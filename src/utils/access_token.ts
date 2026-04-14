@@ -90,10 +90,10 @@ async function provision(): Promise<string> {
     wait("").start().warn(warn);
     let error = new TextDecoder().decode((await open.output()).stderr);
     const errIndent = 2;
-    const elipsis = "...";
+    const ellipsis = "...";
     const maxErrLength = warn.length - errIndent;
     if (error.length > maxErrLength) {
-      error = error.slice(0, maxErrLength - elipsis.length) + elipsis;
+      error = error.slice(0, maxErrLength - ellipsis.length) + ellipsis;
     }
     // resulting indentation is 1 less than configured
     wait({ text: "", indent: errIndent + 1 }).start().fail(error);

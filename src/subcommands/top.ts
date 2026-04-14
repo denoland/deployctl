@@ -24,7 +24,7 @@ Definition of the table columns:
     CPU/req     CPU time per request, in milliseconds. 
     RSS/5min    Max RSS used by the project during the last 5 minutes, in MB. 
     Ingress/min Data received by the project per minute, in KB.
-    Egress/min  Data outputed by the project per minute, in KB.
+    Egress/min  Data outputted by the project per minute, in KB.
     KVr/min     KV reads performed by the project per minute.
     KVw/min     KV writes performed by the project per minute.
     QSenq/min   Queues enqueues performed by the project per minute.

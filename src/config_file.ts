@@ -73,7 +73,7 @@ class ConfigFile {
   /** Returns all the differences between this `ConfigArgs` and the one provided as argument.
    *
    * The comparison is performed against the JSON output of each config. The "other" args are
-   * sematically considered additions in the return value.  Ignores any property in `args` not meant
+   * semantically considered additions in the return value.  Ignores any property in `args` not meant
    * to be persisted.
    */
   diff(args: ConfigArgs): Change[] {
